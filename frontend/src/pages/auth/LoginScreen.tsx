@@ -1,4 +1,8 @@
+<<<<<<< HEAD
   import React, { useState, useEffect, useRef } from 'react';
+=======
+import { useState } from 'react';
+>>>>>>> b9c105ee4694423a96fb9c8a0a84590b21b36123
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -650,7 +654,7 @@ export const LoginScreen = () => {
                               !showPassword
                             )
                           }
-                          className="mr-2 text-red-500"
+                          className="mr-1 text-red-500"
                         >
                           {showPassword ? (
                             <EyeOff size={20} />
