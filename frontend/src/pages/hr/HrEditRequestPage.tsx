@@ -55,12 +55,12 @@ export default function HrEditRequestPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
       <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
-      <div className="p-4 lg:p-6 lg:ml-64 space-y-6">
-        <div className="block md:hidden">
-          <AdminMobileProfile />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Edit Request</h1>
+      <div className="lg:ml-64">
+        <AdminMobileProfile />
+        
+        <div className="p-4 lg:p-6 space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Edit Request</h1>
           <p className="text-gray-600 dark:text-gray-400">Review and approve or reject this employee edit request</p>
         </div>
 
@@ -115,6 +115,7 @@ export default function HrEditRequestPage() {
             </div>
           )}
         </Card>
+      </div>
       </div>
     </div>
   );

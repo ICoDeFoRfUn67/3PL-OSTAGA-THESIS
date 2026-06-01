@@ -66,10 +66,9 @@ export const AdminEmployeesPage = () => {
         />
       </div>
 
-      <div className="px-4 pt-5 lg:p-6 lg:ml-64 space-y-6 max-md:space-y-4 pb-32 lg:pb-6">
-
-        {/* MOBILE HEADER */}
+      <div className="lg:ml-64">
         <AdminMobileProfile />
+        <div className="p-4 lg:p-6 space-y-6 max-md:p-3 max-md:space-y-4 pb-32 lg:pb-6">
 
         {/* Mobile title removed — AdminMobileProfile provides the header */}
 
@@ -149,6 +148,7 @@ export const AdminEmployeesPage = () => {
             <Plus className="w-6 h-6" />
           </button>
         )}
+      </div>
       </div>
     </div>
   );
