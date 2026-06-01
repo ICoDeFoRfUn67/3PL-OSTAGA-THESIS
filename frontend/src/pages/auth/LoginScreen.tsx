@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-  import React, { useState, useEffect, useRef } from 'react';
-=======
-import { useState } from 'react';
->>>>>>> b9c105ee4694423a96fb9c8a0a84590b21b36123
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -702,7 +698,7 @@ export const LoginScreen = () => {
                       </>
                     )}
                   </motion.button>
-                </form>
+                </motion.form>
 
                 {/* FOOTER */}
                 <div className="mt-6 text-center">
