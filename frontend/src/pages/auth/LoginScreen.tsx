@@ -410,11 +410,7 @@ export const LoginScreen = () => {
                   <div className="mx-auto mt-5 h-1 w-16 rounded-full bg-white" />
                 </div>
 
-                {loginError && (
-                  <div className="mt-8 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white backdrop-blur-md">
-                    {loginError}
-                  </div>
-                )}
+                {/* loginError is shown inline inside the form so inputs remain visible */}
 
                 <motion.form
                   onSubmit={handleLogin}
@@ -454,6 +450,12 @@ export const LoginScreen = () => {
                     </div>
                   </motion.div>
 
+                  {loginError && (
+                    <div className="mt-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white backdrop-blur-md">
+                      {loginError}
+                    </div>
+                  )}
+
                   {/* PASSWORD */}
                   <motion.div variants={fieldVariants}>
                     <label className="mb-3 block text-base font-semibold text-white">
@@ -480,14 +482,15 @@ export const LoginScreen = () => {
 
                       {/* Desktop-only show password checkbox */}
                       <div className="mt-2 hidden lg:flex items-center">
-                        <label className="inline-flex items-center text-sm text-white/90 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="mr-3 w-4 h-4 rounded border-white/30 bg-white/10"
-                            checked={showPassword}
-                            onChange={() => setShowPassword(!showPassword)}
-                            aria-label="Show password"
-                          />
+                        <input
+                          id="show-password-desktop"
+                          type="checkbox"
+                          className="mr-3 w-4 h-4 rounded border-white/30 bg-white/10 accent-white"
+                          checked={showPassword}
+                          onChange={(e) => setShowPassword(e.target.checked)}
+                          aria-label="Show password"
+                        />
+                        <label htmlFor="show-password-desktop" className="text-sm text-white/90 cursor-pointer">
                           Show password
                         </label>
                       </div>
@@ -567,11 +570,7 @@ export const LoginScreen = () => {
                 </div>
 
                 {/* ERROR */}
-                {loginError && (
-                  <div className="mt-5 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white backdrop-blur-md">
-                    {loginError}
-                  </div>
-                )}
+                {/* mobile error will be shown inline inside the form so inputs remain visible */}
 
                 {/* FORM */}
                 <motion.form
@@ -652,6 +651,12 @@ export const LoginScreen = () => {
                       </div>
                     </div>
                   </motion.div>
+
+                  {loginError && (
+                    <div className="mt-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white backdrop-blur-md">
+                      {loginError}
+                    </div>
+                  )}
 
                   {/* MOBILE BUTTON */}
                   <motion.button
