@@ -27,6 +27,7 @@ export const AdminEmployeesPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [searchEmployeesTerm, setSearchEmployeesTerm] = useState('');
 
   const handleLogout = () => {
     logout();
@@ -75,8 +76,8 @@ export const AdminEmployeesPage = () => {
         {/* (moved below desktop header so it sits above the employee table) */}
 
         {/* DESKTOP HEADER */}
-        <div className="hidden md:flex items-center justify-between">
-          <div>
+        <div className="hidden md:flex items-center justify-between w-full gap-4">
+          <div className="flex-1">
             <h1 className="text-3xl font-bold mb-2">
               Employee Management
             </h1>
@@ -86,14 +87,29 @@ export const AdminEmployeesPage = () => {
             </p>
           </div>
 
-          {canEditEmployeeInfo && (
-            <button
-              onClick={() => setShowAdd(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
-            >
-              Add Employee
-            </button>
-          )}
+          {/* Search container */}
+          <div className="flex items-center gap-3 w-full max-w-md">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={searchEmployeesTerm}
+                onChange={(e) => setSearchEmployeesTerm(e.target.value)}
+                className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pl-9 pr-3 text-sm text-gray-800 dark:text-gray-100 outline-none transition-colors duration-150 focus:ring-2 focus:ring-red-300/30"
+                aria-label="Search employees"
+              />
+            </div>
+
+            {canEditEmployeeInfo && (
+              <button
+                onClick={() => setShowAdd(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+              >
+                Add Employee
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ONLINE PRESENCE (Admins/HR only) */}
@@ -104,7 +120,7 @@ export const AdminEmployeesPage = () => {
         )}
 
         {/* EMPLOYEE PANEL */}
-        <EmployeeManagePanel />
+        <EmployeeManagePanel searchTerm={searchEmployeesTerm} />
 
         {/* MOBILE FLOATING ADD BUTTON */}
         {canEditEmployeeInfo && (
@@ -113,8 +129,8 @@ export const AdminEmployeesPage = () => {
             onClick={() => setShowAdd(true)}
             className="
                 md:hidden
-                  fixed
-                  bottom-24
+                    fixed
+                    bottom-20
               right-4
               z-50
               w-14

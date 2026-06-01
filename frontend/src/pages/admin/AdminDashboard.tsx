@@ -291,9 +291,9 @@ export const AdminDashboard = () => {
     />
   </div>
 
-    <div className="p-4 lg:p-6 lg:ml-64 space-y-6 pb-20 lg:pb-6">
+    <div className="p-4 lg:p-6 lg:ml-64 space-y-6 pb-20 lg:pb-6 pt-6 lg:pt-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mt-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold mb-2">Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-400">

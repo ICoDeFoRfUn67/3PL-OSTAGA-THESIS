@@ -197,7 +197,7 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
             <button
               onClick={handleClearAll}
               disabled={clearAllMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
             >
               {clearAllMutation.isPending ? (
                 <LoadingSpinner size="sm" />
@@ -373,6 +373,38 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
           type={previewFile.type}
           onClose={() => setPreviewFile(null)}
         />
+      )}
+      {/* MOBILE FLOATING CLEAR BUTTON */}
+      {leaveRequests.length > 0 && (
+        <button
+          onClick={handleClearAll}
+          disabled={clearAllMutation.isPending}
+          className="
+            md:hidden
+            fixed
+            bottom-20
+            right-4
+            z-50
+            w-14
+            h-14
+            rounded-full
+            bg-red-600
+            hover:bg-red-700
+            text-white
+            shadow-xl
+            flex
+            items-center
+            justify-center
+            disabled:opacity-50
+          "
+          aria-label="Clear All Requests"
+        >
+          {clearAllMutation.isPending ? (
+            <LoadingSpinner size="sm" />
+          ) : (
+            <Trash2 className="w-6 h-6" />
+          )}
+        </button>
       )}
     </div>
   );

@@ -20,6 +20,7 @@ const getStatusBadgeVariant = (status: string) => {
 
 interface EmployeeManagePanelProps {
   hubId?: number;
+  searchTerm?: string;
 }
 
 interface Employee {
@@ -39,7 +40,7 @@ interface Employee {
   profile_image_url?: string;
 }
 
-export const EmployeeManagePanel = (_props: EmployeeManagePanelProps) => {
+export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
   const navigate = useNavigate();
   const { user, canDeleteEmployees } = useAuth();
   const { data, isLoading } = useGetEmployees();
@@ -50,7 +51,17 @@ export const EmployeeManagePanel = (_props: EmployeeManagePanelProps) => {
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, employeeId: 0 });
 
-  const employees = normalizeApiResponse(data);
+  let employees = normalizeApiResponse(data);
+
+  // apply search filter if provided
+  if (props.searchTerm && props.searchTerm.trim() !== '') {
+    const q = props.searchTerm.trim().toLowerCase();
+    employees = employees.filter((emp: Employee) => (
+      (emp.full_name || '').toLowerCase().includes(q) ||
+      (emp.employee_id || '').toLowerCase().includes(q) ||
+      (emp.position || '').toLowerCase().includes(q)
+    ));
+  }
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
