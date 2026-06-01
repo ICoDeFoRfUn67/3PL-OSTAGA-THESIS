@@ -1,1 +1,0 @@
-declare module '@headlessui/react';
