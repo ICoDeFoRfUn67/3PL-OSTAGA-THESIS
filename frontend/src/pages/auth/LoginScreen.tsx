@@ -1,4 +1,4 @@
-  import { useState } from 'react';
+  import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -30,6 +30,22 @@ export const LoginScreen = () => {
   const loginMutation = useLogin();
 
   const { success, error } = useToast();
+
+  const usernameRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    usernameRef.current?.focus();
+  }, []);
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { staggerChildren: 0.06 } },
+  } as const;
+
+  const fieldVariants = {
+    hidden: { opacity: 0, y: 8 },
+    visible: { opacity: 1, y: 0 },
+  } as const;
 
   const [username, setUsername] =
     useState<string>('');
@@ -414,12 +430,19 @@ export const LoginScreen = () => {
                   </div>
                 )}
 
-                <form
+                <motion.form
                   onSubmit={handleLogin}
+                  initial="hidden"
+                  animate={
+                    loginError
+                      ? { x: [0, -8, 8, -6, 6, 0] }
+                      : 'visible'
+                  }
+                  variants={containerVariants}
                   className="mt-10 space-y-7"
                 >
                   {/* USERNAME */}
-                  <div>
+                  <motion.div variants={fieldVariants}>
                     <label className="mb-3 block text-base font-semibold text-white">
                       Username
                     </label>
@@ -434,22 +457,19 @@ export const LoginScreen = () => {
                         />
 
                         <input
+                          ref={usernameRef}
                           type="text"
                           value={username}
-                          onChange={(e) =>
-                            setUsername(
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => setUsername(e.target.value)}
                           placeholder="Enter your username"
-                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none"
+                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-300 focus:bg-white/20"
                         />
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* PASSWORD */}
-                  <div>
+                  <motion.div variants={fieldVariants}>
                     <label className="mb-3 block text-base font-semibold text-white">
                       Password
                     </label>
@@ -468,7 +488,7 @@ export const LoginScreen = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-12"
+                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-12 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-300 focus:bg-white/20"
                         />
 
                         <button
@@ -481,22 +501,19 @@ export const LoginScreen = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* DESKTOP BUTTON */}
                   <motion.button
-                    whileHover={{
-                      scale: 1.02,
-                    }}
-                    whileTap={{
-                      scale: 0.98,
-                    }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={isLoading}
-                    className={`group relative mt-4 flex h-[76px] w-full items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-[0_12px_35px_rgba(255,255,255,0.25)] transition-all duration-300 ${
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    className={`group relative mt-4 flex h-[76px] w-full items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-[0_12px_35px_rgba(0,0,0,0.25)] transition-all duration-300 ${
                       isLoading
                         ? 'bg-white/80 text-red-400'
-                        : 'bg-white text-red-600'
+                        : 'bg-gradient-to-r from-[#ff6b6b] to-[#ff2d2d] text-white'
                     }`}
                   >
                     {isLoading ? (
@@ -523,7 +540,7 @@ export const LoginScreen = () => {
                       </>
                     )}
                   </motion.button>
-                </form>
+                </motion.form>
               </div>
 
               {/* ================= MOBILE UI ================= */}
@@ -566,12 +583,19 @@ export const LoginScreen = () => {
                 )}
 
                 {/* FORM */}
-                <form
+                <motion.form
                   onSubmit={handleLogin}
+                  initial="hidden"
+                  animate={
+                    loginError
+                      ? { x: [0, -8, 8, -6, 6, 0] }
+                      : 'visible'
+                  }
+                  variants={containerVariants}
                   className="mt-7 space-y-5"
                 >
                   {/* USERNAME */}
-                  <div>
+                  <motion.div variants={fieldVariants}>
                     <label className="mb-2 block text-sm font-semibold text-white">
                       Username
                     </label>
@@ -588,20 +612,16 @@ export const LoginScreen = () => {
                         <input
                           type="text"
                           value={username}
-                          onChange={(e) =>
-                            setUsername(
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => setUsername(e.target.value)}
                           placeholder="Enter your username"
-                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none"
+                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none transition-all duration-200 focus:ring-2 focus:ring-red-200"
                         />
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* PASSWORD */}
-                  <div>
+                  <motion.div variants={fieldVariants}>
                     <label className="mb-2 block text-sm font-semibold text-white">
                       Password
                     </label>
@@ -616,19 +636,11 @@ export const LoginScreen = () => {
                         </div>
 
                         <input
-                          type={
-                            showPassword
-                              ? 'text'
-                              : 'password'
-                          }
+                          type={showPassword ? 'text' : 'password'}
                           value={password}
-                          onChange={(e) =>
-                            setPassword(
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => setPassword(e.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none"
+                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none transition-all duration-200 focus:ring-2 focus:ring-red-200"
                         />
 
                         <button
@@ -648,19 +660,18 @@ export const LoginScreen = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* MOBILE BUTTON */}
                   <motion.button
-                    whileTap={{
-                      scale: 0.98,
-                    }}
+                    whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={isLoading}
-                    className={`group mt-2 flex h-[64px] w-full items-center justify-center rounded-full text-[24px] font-black shadow-[0_14px_40px_rgba(255,255,255,0.25)] transition-all duration-300 ${
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    className={`group mt-2 flex h-[64px] w-full items-center justify-center rounded-full text-[24px] font-black shadow-[0_14px_40px_rgba(0,0,0,0.15)] transition-all duration-300 ${
                       isLoading
                         ? 'bg-white/80 text-red-400'
-                        : 'bg-white text-red-600'
+                        : 'bg-gradient-to-r from-[#ff6b6b] to-[#ff2d2d] text-white'
                     }`}
                   >
                     {isLoading ? (
