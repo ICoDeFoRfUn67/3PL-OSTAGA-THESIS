@@ -468,19 +468,23 @@ export const LoginScreen = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-12"
+                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none"
                         />
-
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="text-white absolute right-4"
-                          aria-label="toggle password visibility"
-                        >
-                          {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
-                        </button>
                       </div>
                     </div>
+
+                    {/* SHOW PASSWORD CHECKBOX */}
+                    <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm font-medium text-white">
+                      <input
+                        type="checkbox"
+                        checked={showPassword}
+                        onChange={(e) =>
+                          setShowPassword(e.target.checked)
+                        }
+                        className="h-4 w-4 cursor-pointer rounded border-white/30 accent-white"
+                      />
+                      Show Password
+                    </label>
                   </div>
 
                   {/* DESKTOP BUTTON */}
