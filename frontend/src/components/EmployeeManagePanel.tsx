@@ -39,7 +39,7 @@ interface Employee {
   profile_image_url?: string;
 }
 
-export const EmployeeManagePanel = () => {
+export const EmployeeManagePanel = (_props: EmployeeManagePanelProps) => {
   const navigate = useNavigate();
   const { user, canDeleteEmployees } = useAuth();
   const { data, isLoading } = useGetEmployees();
@@ -143,6 +143,8 @@ export const EmployeeManagePanel = () => {
                       <th className="px-4 py-3 text-left">
                         <input
                           type="checkbox"
+                          aria-label="Select all employees"
+                          title="Select all employees"
                           checked={selectedEmployees.length === employees.length && employees.length > 0}
                           onChange={(e) => handleSelectAll(e.target.checked)}
                           className="rounded"
@@ -160,12 +162,14 @@ export const EmployeeManagePanel = () => {
                     {employees.map((emp: Employee) => (
                       <tr key={emp.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedEmployees.includes(emp.id)}
-                            onChange={(e) => handleSelectEmployee(emp.id, e.target.checked)}
-                            className="rounded"
-                          />
+                              <input
+                                type="checkbox"
+                                aria-label={`Select employee ${emp.full_name || emp.employee_id}`}
+                                title={`Select ${emp.full_name || emp.employee_id}`}
+                                checked={selectedEmployees.includes(emp.id)}
+                                onChange={(e) => handleSelectEmployee(emp.id, e.target.checked)}
+                                className="rounded"
+                              />
                         </td>
                         <td className="px-4 py-3 text-sm font-medium">{emp.full_name}</td>
                         <td className="px-4 py-3 text-sm">{emp.employee_id}</td>
@@ -228,6 +232,8 @@ export const EmployeeManagePanel = () => {
                       <div className="pt-1">
                         <input
                           type="checkbox"
+                          aria-label={`Select employee ${emp.full_name || emp.employee_id}`}
+                          title={`Select ${emp.full_name || emp.employee_id}`}
                           checked={selectedEmployees.includes(emp.id)}
                           onChange={(e) => handleSelectEmployee(emp.id, e.target.checked)}
                           className="rounded"

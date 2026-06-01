@@ -395,7 +395,7 @@ export const LoginScreen = () => {
           >
             <div className="rounded-[38px] bg-transparent px-0 py-0 shadow-none">
               {/* ================= DESKTOP UI ================= */}
-              <div className="hidden rounded-[38px] bg-white/10 lg:block p-8 backdrop-blur-md">
+              <div className="hidden rounded-[38px] bg-transparent lg:block">
                 <motion.div
                   animate={{
                     y: [0, -10, 0],
@@ -494,7 +494,7 @@ export const LoginScreen = () => {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="text-white absolute right-4 top-1/2 transform -translate-y-1/2"
+                          className="text-white absolute right-4"
                           aria-label="toggle password visibility"
                         >
                           {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
