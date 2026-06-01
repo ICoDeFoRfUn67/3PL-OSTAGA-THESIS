@@ -145,7 +145,7 @@ export const SecurityAlertsPage = () => {
 
         <div className="p-4 lg:p-6 space-y-6 max-md:p-3 max-md:space-y-4 max-md:pb-32 pb-32 lg:pb-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           <div className="p-3 max-md:p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
             <AlertTriangle size={28} className="text-red-600 dark:text-red-400 max-md:w-6 max-md:h-6" />
         </div>

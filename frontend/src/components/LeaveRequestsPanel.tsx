@@ -188,7 +188,7 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
         <AdminMobileProfile />
         <div className="p-4 lg:p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
+            <div className="hidden md:block">
               <h1 className="text-3xl font-bold mb-2">Leave Requests</h1>
               <p className="text-gray-600 dark:text-gray-400">Review and approve/reject employee leave requests</p>
             </div>
@@ -382,7 +382,7 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
           className="
             md:hidden
             fixed
-            bottom-20
+            bottom-24
             right-4
             z-50
             w-14

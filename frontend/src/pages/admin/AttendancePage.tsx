@@ -266,7 +266,7 @@ export const AttendancePage = () => {
 
 
           {/* Header */}
-          <div>
+          <div className="hidden md:block">
             <h1 className="text-3xl max-md:text-2xl font-bold mb-2 max-md:mb-1">Attendance Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">Real-time employee attendance tracking by hub</p>
           </div>
