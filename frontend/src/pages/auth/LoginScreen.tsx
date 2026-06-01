@@ -150,31 +150,17 @@ export const LoginScreen = () => {
         }
       }
     } catch (err: unknown) {
-      let errorMessage =
-        'Login failed. Please try again.';
+      let errorMessage = 'Login failed. Please try again.';
 
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err
-      ) {
-        const errorObj = err as {
-          response?: {
-            data?: {
-              error?: string;
-              detail?: string;
-              non_field_errors?: string[];
-            };
-          };
-        };
-
-        const data = errorObj.response?.data;
-
+      try {
+        const data = (err as any)?.response?.data;
         errorMessage =
           data?.error ||
           data?.detail ||
           data?.non_field_errors?.[0] ||
           errorMessage;
+      } catch (e) {
+        // ignore
       }
 
       setLoginError(errorMessage);
@@ -488,20 +474,25 @@ export const LoginScreen = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-12 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-300 focus:bg-white/20"
+                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-4 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-300 focus:bg-white/20"
                         />
-
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="text-white absolute right-4"
-                          aria-label="toggle password visibility"
-                        >
-                          {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
-                        </button>
                       </div>
-                    </div>
-                  </motion.div>
+
+                      {/* Desktop-only show password checkbox */}
+                      <div className="mt-2 hidden lg:flex items-center">
+                        <label className="inline-flex items-center text-sm text-white/90 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="mr-3 w-4 h-4 rounded border-white/30 bg-white/10"
+                            checked={showPassword}
+                            onChange={() => setShowPassword(!showPassword)}
+                            aria-label="Show password"
+                          />
+                          Show password
+                        </label>
+                      </div>
+                        </div>
+                      </motion.div>
 
                   {/* DESKTOP BUTTON */}
                   <motion.button
