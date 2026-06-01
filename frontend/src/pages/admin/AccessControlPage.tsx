@@ -127,12 +127,7 @@ export const AccessControlPage = () => {
         <AdminMobileProfile />
 
         <div className="p-4 lg:p-6 space-y-6 pb-32 lg:pb-6 max-md:p-3 max-md:space-y-4 max-md:pb-32">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl max-md:text-2xl font-bold mb-2 max-md:mb-1">Access Control</h1>
-          <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">Manage user access and security</p>
-        </div>
-
+      
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-md:gap-3">
           <Card className="border-4 border-orange-500 max-md:p-3">
