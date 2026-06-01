@@ -473,22 +473,26 @@ export const LoginScreen = () => {
                       </div>
                     </div>
 
-                    {/* SHOW PASSWORD CHECKBOX */}
-                    <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm font-medium text-white">
-                      <input
-                        type="checkbox"
-                        checked={showPassword}
-                        onChange={(e) =>
-                          setShowPassword(e.target.checked)
-                        }
-                        className="h-4 w-4 cursor-pointer rounded border-white/30 accent-white"
-                      />
-                      Show Password
-                    </label>
+                          {/* SHOW PASSWORD CHECKBOX */}
+                    <div className="mt-5 ml-8 mb-6">
+                      <label className="flex cursor-pointer items-center gap-3 text-base font-semibold text-white">
+                        <input
+                          type="checkbox"
+                          checked={showPassword}
+                          onChange={(e) =>
+                            setShowPassword(e.target.checked)
+                          }
+                          className="h-5 w-5 cursor-pointer rounded accent-white"
+                        />
+                        <span className="tracking-wide">
+                          Show Password
+                        </span>
+                      </label>
+                    </div>
                   </div>
-
                   {/* DESKTOP BUTTON */}
-                  <motion.button
+                  <div className="pt-3">
+                    <motion.button
                     whileHover={{
                       scale: 1.02,
                     }}
@@ -527,6 +531,7 @@ export const LoginScreen = () => {
                       </>
                     )}
                   </motion.button>
+                </div>  
                 </form>
               </div>
 
