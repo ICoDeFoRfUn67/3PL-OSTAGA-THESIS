@@ -14,6 +14,7 @@ import {
   Moon,
   Plus,
   User,
+  Search,
 } from 'lucide-react';
 
 import AdminMobileProfile from '@/components/AdminMobileProfile';

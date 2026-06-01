@@ -602,7 +602,7 @@ export const AdminDashboard = () => {
 
   {/* MAP HUB DETAILS (Placed Below Map) */}
   {selectedMapHub && (
-    <div className="bg-white dark:bg-[#0F172A] border-t border-gray-200 dark:border-gray-800 p-4 fade-in flex flex-col md:flex-row gap-4 items-start md:items-center justify-between z-10 relative">
+    <div className="bg-white dark:bg-[#0F172A] border-t border-gray-200 dark:border-gray-800 pt-4 pb-8 px-5 fade-in flex flex-col md:flex-row gap-4 items-start md:items-center justify-between z-10 relative">
       <div className="flex justify-between items-start w-full md:w-auto">
         <div>
           <h3 className="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-2">

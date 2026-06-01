@@ -204,28 +204,33 @@ function AdminMobileProfile() {
               >
                 <button
                   onClick={() => setOpen(!open)}
-                  className={`flex items-center gap-2 rounded-full border px-2 py-1 ${isDarkMode ? 'border-white/10 bg-white/[0.04] backdrop-blur-xl' : 'border-gray-200 bg-white'}`}>
+                  className={`flex items-center gap-2.5 rounded-full border pl-1.5 pr-3 py-1.5 ${isDarkMode ? 'border-white/10 bg-white/[0.04] backdrop-blur-xl' : 'border-gray-200 bg-white'}`}>
 
                   {/* AVATAR */}
                   <div className="relative">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold ${isDarkMode ? 'bg-gradient-to-br from-red-600 to-red-500 text-white shadow-[0_0_18px_rgba(255,0,0,0.35)]' : 'bg-gray-200 text-gray-800' } text-sm` }>
                       {user?.username?.charAt(0)?.toUpperCase() || 'A'}
                     </div>
-                    <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-white" />
+                    <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ${isDarkMode ? 'ring-[#040B18]' : 'ring-white'}`} />
                   </div>
 
-                  <div className="text-left max-w-[70px]">
-                    <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm font-semibold truncate`}>{user?.username || 'admin'}</p>
-                    <p className={`${isDarkMode ? 'text-white/50' : 'text-gray-600'} text-[11px]`}>{user?.role || 'Admin'}</p>
+                  <div className="flex flex-col text-left justify-center">
+                    <div className="flex items-center gap-1.5 leading-none">
+                      <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm font-semibold truncate max-w-[70px]`}>
+                        {user?.username || 'admin'}
+                      </span>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-white/50 transition-transform duration-300 ${
+                          open
+                            ? 'rotate-180'
+                            : ''
+                        }`}
+                      />
+                    </div>
+                    <span className={`${isDarkMode ? 'text-white/50' : 'text-gray-600'} text-[10px] uppercase font-bold mt-0.5`}>
+                      {user?.role || 'Admin'}
+                    </span>
                   </div>
-
-                  <ChevronDown
-                    className={`w-4 h-4 text-white/50 transition-transform duration-300 ${
-                      open
-                        ? 'rotate-180'
-                        : ''
-                    }`}
-                  />
                 </button>
 
                 {/* DROPDOWN */}

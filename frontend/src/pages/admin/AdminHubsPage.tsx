@@ -1548,7 +1548,31 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
         </div>
     
 
-      {/* Mobile FAB removed temporarily to fix syntax while updating header */}
+      {/* Mobile FAB */}
+      <button
+        onClick={() => setShowAddModal(true)}
+        className="
+          md:hidden
+          fixed
+          bottom-24
+          right-4
+          z-50
+          w-14
+          h-14
+          rounded-full
+          bg-gradient-to-br
+          from-red-500
+          to-rose-600
+          text-white
+          shadow-xl
+          flex
+          items-center
+          justify-center
+        "
+        aria-label="Add Hub"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
 
       {/* ========== MODALS ========== */}
       <AnimatePresence>

@@ -398,7 +398,7 @@ export const ActivityLogsPage = () => {
           className="
             md:hidden
             fixed
-            bottom-20
+            bottom-24
             right-4
             z-50
             w-14
