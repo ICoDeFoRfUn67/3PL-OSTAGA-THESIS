@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+  import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -30,22 +30,6 @@ export const LoginScreen = () => {
   const loginMutation = useLogin();
 
   const { success, error } = useToast();
-
-  const usernameRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    usernameRef.current?.focus();
-  }, []);
-
-  const containerVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { staggerChildren: 0.06 } },
-  } as const;
-
-  const fieldVariants = {
-    hidden: { opacity: 0, y: 8 },
-    visible: { opacity: 1, y: 0 },
-  } as const;
 
   const [username, setUsername] =
     useState<string>('');
@@ -150,17 +134,31 @@ export const LoginScreen = () => {
         }
       }
     } catch (err: unknown) {
-      let errorMessage = 'Login failed. Please try again.';
+      let errorMessage =
+        'Login failed. Please try again.';
 
-      try {
-        const data = (err as any)?.response?.data;
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err
+      ) {
+        const errorObj = err as {
+          response?: {
+            data?: {
+              error?: string;
+              detail?: string;
+              non_field_errors?: string[];
+            };
+          };
+        };
+
+        const data = errorObj.response?.data;
+
         errorMessage =
           data?.error ||
           data?.detail ||
           data?.non_field_errors?.[0] ||
           errorMessage;
-      } catch (e) {
-        // ignore
       }
 
       setLoginError(errorMessage);
@@ -410,21 +408,18 @@ export const LoginScreen = () => {
                   <div className="mx-auto mt-5 h-1 w-16 rounded-full bg-white" />
                 </div>
 
-                {/* loginError is shown inline inside the form so inputs remain visible */}
+                {loginError && (
+                  <div className="mt-8 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white backdrop-blur-md">
+                    {loginError}
+                  </div>
+                )}
 
-                <motion.form
+                <form
                   onSubmit={handleLogin}
-                  initial="hidden"
-                  animate={
-                    loginError
-                      ? { x: [0, -8, 8, -6, 6, 0] }
-                      : 'visible'
-                  }
-                  variants={containerVariants}
                   className="mt-10 space-y-7"
                 >
                   {/* USERNAME */}
-                  <motion.div variants={fieldVariants}>
+                  <div>
                     <label className="mb-3 block text-base font-semibold text-white">
                       Username
                     </label>
@@ -439,25 +434,22 @@ export const LoginScreen = () => {
                         />
 
                         <input
-                          ref={usernameRef}
                           type="text"
                           value={username}
-                          onChange={(e) => setUsername(e.target.value)}
+                          onChange={(e) =>
+                            setUsername(
+                              e.target.value
+                            )
+                          }
                           placeholder="Enter your username"
-                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-300 focus:bg-white/20"
+                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none"
                         />
                       </div>
                     </div>
-                  </motion.div>
-
-                  {loginError && (
-                    <div className="mt-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white backdrop-blur-md">
-                      {loginError}
-                    </div>
-                  )}
+                  </div>
 
                   {/* PASSWORD */}
-                  <motion.div variants={fieldVariants}>
+                  <div>
                     <label className="mb-3 block text-base font-semibold text-white">
                       Password
                     </label>
@@ -476,38 +468,35 @@ export const LoginScreen = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Enter your password"
-                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-4 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-300 focus:bg-white/20"
+                          className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none pr-12"
                         />
-                      </div>
 
-                      {/* Desktop-only show password checkbox */}
-                      <div className="mt-2 hidden lg:flex items-center">
-                        <input
-                          id="show-password-desktop"
-                          type="checkbox"
-                          className="mr-3 w-4 h-4 rounded border-white/30 bg-white/10 accent-white"
-                          checked={showPassword}
-                          onChange={(e) => setShowPassword(e.target.checked)}
-                          aria-label="Show password"
-                        />
-                        <label htmlFor="show-password-desktop" className="text-sm text-white/90 cursor-pointer">
-                          Show password
-                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="text-white absolute right-4"
+                          aria-label="toggle password visibility"
+                        >
+                          {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
+                        </button>
                       </div>
-                        </div>
-                      </motion.div>
+                    </div>
+                  </div>
 
                   {/* DESKTOP BUTTON */}
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{
+                      scale: 1.02,
+                    }}
+                    whileTap={{
+                      scale: 0.98,
+                    }}
                     type="submit"
                     disabled={isLoading}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    className={`group relative mt-4 flex h-[76px] w-full items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-[0_12px_35px_rgba(0,0,0,0.25)] transition-all duration-300 ${
+                    className={`group relative mt-4 flex h-[76px] w-full items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-[0_12px_35px_rgba(255,255,255,0.25)] transition-all duration-300 ${
                       isLoading
                         ? 'bg-white/80 text-red-400'
-                        : 'bg-gradient-to-r from-[#ff6b6b] to-[#ff2d2d] text-white'
+                        : 'bg-white text-red-600'
                     }`}
                   >
                     {isLoading ? (
@@ -534,7 +523,7 @@ export const LoginScreen = () => {
                       </>
                     )}
                   </motion.button>
-                </motion.form>
+                </form>
               </div>
 
               {/* ================= MOBILE UI ================= */}
@@ -570,22 +559,19 @@ export const LoginScreen = () => {
                 </div>
 
                 {/* ERROR */}
-                {/* mobile error will be shown inline inside the form so inputs remain visible */}
+                {loginError && (
+                  <div className="mt-5 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white backdrop-blur-md">
+                    {loginError}
+                  </div>
+                )}
 
                 {/* FORM */}
-                <motion.form
+                <form
                   onSubmit={handleLogin}
-                  initial="hidden"
-                  animate={
-                    loginError
-                      ? { x: [0, -8, 8, -6, 6, 0] }
-                      : 'visible'
-                  }
-                  variants={containerVariants}
                   className="mt-7 space-y-5"
                 >
                   {/* USERNAME */}
-                  <motion.div variants={fieldVariants}>
+                  <div>
                     <label className="mb-2 block text-sm font-semibold text-white">
                       Username
                     </label>
@@ -602,16 +588,20 @@ export const LoginScreen = () => {
                         <input
                           type="text"
                           value={username}
-                          onChange={(e) => setUsername(e.target.value)}
+                          onChange={(e) =>
+                            setUsername(
+                              e.target.value
+                            )
+                          }
                           placeholder="Enter your username"
-                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none transition-all duration-200 focus:ring-2 focus:ring-red-200"
+                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none"
                         />
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
 
                   {/* PASSWORD */}
-                  <motion.div variants={fieldVariants}>
+                  <div>
                     <label className="mb-2 block text-sm font-semibold text-white">
                       Password
                     </label>
@@ -626,11 +616,19 @@ export const LoginScreen = () => {
                         </div>
 
                         <input
-                          type={showPassword ? 'text' : 'password'}
+                          type={
+                            showPassword
+                              ? 'text'
+                              : 'password'
+                          }
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) =>
+                            setPassword(
+                              e.target.value
+                            )
+                          }
                           placeholder="Enter your password"
-                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none transition-all duration-200 focus:ring-2 focus:ring-red-200"
+                          className="h-full w-full bg-white px-4 text-[15px] font-medium text-[#222] placeholder:text-gray-400 outline-none"
                         />
 
                         <button
@@ -640,7 +638,7 @@ export const LoginScreen = () => {
                               !showPassword
                             )
                           }
-                          className="mr-1 text-red-500"
+                          className="mr-2 text-red-500"
                         >
                           {showPassword ? (
                             <EyeOff size={20} />
@@ -650,24 +648,19 @@ export const LoginScreen = () => {
                         </button>
                       </div>
                     </div>
-                  </motion.div>
-
-                  {loginError && (
-                    <div className="mt-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white backdrop-blur-md">
-                      {loginError}
-                    </div>
-                  )}
+                  </div>
 
                   {/* MOBILE BUTTON */}
                   <motion.button
-                    whileTap={{ scale: 0.98 }}
+                    whileTap={{
+                      scale: 0.98,
+                    }}
                     type="submit"
                     disabled={isLoading}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    className={`group mt-2 flex h-[64px] w-full items-center justify-center rounded-full text-[24px] font-black shadow-[0_14px_40px_rgba(0,0,0,0.15)] transition-all duration-300 ${
+                    className={`group mt-2 flex h-[64px] w-full items-center justify-center rounded-full text-[24px] font-black shadow-[0_14px_40px_rgba(255,255,255,0.25)] transition-all duration-300 ${
                       isLoading
                         ? 'bg-white/80 text-red-400'
-                        : 'bg-gradient-to-r from-[#ff6b6b] to-[#ff2d2d] text-white'
+                        : 'bg-white text-red-600'
                     }`}
                   >
                     {isLoading ? (
@@ -694,7 +687,7 @@ export const LoginScreen = () => {
                       </>
                     )}
                   </motion.button>
-                </motion.form>
+                </form>
 
                 {/* FOOTER */}
                 <div className="mt-6 text-center">
