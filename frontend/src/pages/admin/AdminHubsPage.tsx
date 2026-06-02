@@ -1109,7 +1109,7 @@ export const AdminHubsPage = () => {
         <AdminMobileProfile />
         
         <div className="p-3 sm:p-5 lg:p-8 space-y-5 max-w-[1400px] mx-auto lg:px-10">
-            <div className="hidden md:flex items-start justify-between gap-4 mb-2">
+          <div className="hidden md:flex items-start justify-between gap-4 mb-2">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
                 Hub Management
@@ -1122,7 +1122,7 @@ export const AdminHubsPage = () => {
             {/* DESKTOP ADD HUB */}
             <button
               onClick={() => setShowAddModal(true)}
-              className="hidden sm:flex h-9 px-4 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-semibold items-center gap-2"
+              className="hidden sm:flex h-10 px-5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-semibold items-center gap-2"
             >
               <Plus size={16} />
               Add Hub
@@ -1148,12 +1148,11 @@ export const AdminHubsPage = () => {
           {/* ========== MAP + SIDE PANEL ========== */}
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
             {/* MAP */}
-            <div ref={containerRef} className="xl:col-span-8 relative rounded-3xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220] shadow-lg h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
+            <div ref={containerRef} className="xl:col-span-8 rounded-3xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220] shadow-lg h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
                 <MapContainer
                   center={[14.5995, 120.9842]}
                   zoom={6}
                   style={{ height: '100%', width: '100%' }}
-                  attributionControl={false}
                   ref={mapRef}
                 >
                   <TileLayer
@@ -1190,50 +1189,10 @@ export const AdminHubsPage = () => {
                     />
                   )}
                 </MapContainer>
-
-                {/* Floating info panel inside the map for desktop */}
-                {hubState.selectedHub && (
-                  <div className="hidden xl:block absolute top-6 right-6 z-50 w-[360px] max-w-[92%]">
-                    <div className="rounded-2xl bg-white dark:bg-[#071022] border border-gray-200 dark:border-white/[0.06] overflow-hidden h-full flex flex-col shadow-xl">
-                      <div className="p-5 border-b border-gray-100 dark:border-white/[0.06] flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{hubState.selectedHub.name}</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{hubState.selectedHub.city}</p>
-                        </div>
-                        <div className="ml-3">
-                          <button onClick={handleCloseHub} aria-label="Close hub panel" title="Close" className="h-9 w-9 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.04] flex items-center justify-center text-gray-400">
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="p-5 flex-1 overflow-y-auto space-y-3">
-                        {hubState.selectedHub.address && (
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{hubState.selectedHub.address}</p>
-                        )}
-
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Users size={16} className="text-gray-400" />
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{getHubEmployeeCount(hubState.selectedHub.id)} {getHubEmployeeCount(hubState.selectedHub.id) === 1 ? 'employee' : 'employees'}</span>
-                          </div>
-                          <div className="px-3 py-1 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 text-[10px] font-bold text-gray-500">Map</div>
-                        </div>
-
-                        <div className="pt-3">
-                          <div className="flex gap-2">
-                            <button onClick={handleGetDirections} className="flex-1 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Get Directions</button>
-                            <button onClick={() => setShowAddModal(true)} className="flex-1 h-9 rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06] text-sm">Add Hub</button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
             {/* RIGHT PANEL */}
-            <div className="xl:col-span-4 h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)] xl:hidden">
+            <div className="xl:col-span-4 h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
               <div className="rounded-2xl bg-white dark:bg-[#071022] border border-gray-200 dark:border-white/[0.06] overflow-hidden h-full flex flex-col">
                 {hubState.selectedHub ? (
                   <div className="flex flex-col h-full">
@@ -1250,7 +1209,6 @@ export const AdminHubsPage = () => {
                       <button
                         onClick={handleCloseHub}
                         title="Close"
-                        aria-label="Close hub panel"
                         className="h-8 w-8 shrink-0 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-400 dark:text-gray-500 transition-colors"
                       >
                         <X size={18} />
@@ -1429,7 +1387,6 @@ export const AdminHubsPage = () => {
                             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                             title="Previous page"
-                            aria-label="Previous page"
                             className="h-8 w-8 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-400 dark:text-gray-500 disabled:opacity-30 transition-colors"
                           >
                             <ChevronLeft size={16} />
@@ -1443,7 +1400,6 @@ export const AdminHubsPage = () => {
                             }
                             disabled={currentPage === totalPages || totalPages === 0}
                             title="Next page"
-                            aria-label="Next page"
                             className="h-8 w-8 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-400 dark:text-gray-500 disabled:opacity-30 transition-colors"
                           >
                             <ChevronRight size={16} />
