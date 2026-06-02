@@ -90,7 +90,30 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return EmployeeSerializer
     
     def update(self, request, *args, **kwargs):
-        """Handle full update with activity logging"""
+        """Handle full update with activity logging and permission checks"""
+        # Check if HR user has permission to edit employee info
+        try:
+            requester_employee = Employee.objects.get(user=request.user)
+            is_admin = requester_employee.role == 'Admin'
+        except Employee.DoesNotExist:
+            is_admin = request.user.is_superuser or request.user.is_staff
+        
+        if not is_admin:
+            try:
+                requester_employee = Employee.objects.get(user=request.user)
+                if requester_employee.role == 'HR':
+                    perms = requester_employee.hr_permissions
+                    if not perms.can_edit_employee_info:
+                        return Response(
+                            {"error": "You do not have permission to edit employee information."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+            except (Employee.DoesNotExist, AttributeError):
+                return Response(
+                    {"error": "Unauthorized: Unable to verify permissions."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
         employee = self.get_object()
         old_data = EmployeeSerializer(employee).data
         
@@ -111,7 +134,30 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return response
     
     def partial_update(self, request, *args, **kwargs):
-        """Handle partial update with activity logging"""
+        """Handle partial update with activity logging and permission checks"""
+        # Check if HR user has permission to edit employee info
+        try:
+            requester_employee = Employee.objects.get(user=request.user)
+            is_admin = requester_employee.role == 'Admin'
+        except Employee.DoesNotExist:
+            is_admin = request.user.is_superuser or request.user.is_staff
+        
+        if not is_admin:
+            try:
+                requester_employee = Employee.objects.get(user=request.user)
+                if requester_employee.role == 'HR':
+                    perms = requester_employee.hr_permissions
+                    if not perms.can_edit_employee_info:
+                        return Response(
+                            {"error": "You do not have permission to edit employee information."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+            except (Employee.DoesNotExist, AttributeError):
+                return Response(
+                    {"error": "Unauthorized: Unable to verify permissions."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
         employee = self.get_object()
         old_data = EmployeeSerializer(employee).data
         
@@ -164,7 +210,30 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return response
 
     def destroy(self, request, *args, **kwargs):
-        """Override delete to ensure associated User is also deleted"""
+        """Override delete to ensure associated User is also deleted with permission checks"""
+        # Check if HR user has permission to delete employees
+        try:
+            requester_employee = Employee.objects.get(user=request.user)
+            is_admin = requester_employee.role == 'Admin'
+        except Employee.DoesNotExist:
+            is_admin = request.user.is_superuser or request.user.is_staff
+        
+        if not is_admin:
+            try:
+                requester_employee = Employee.objects.get(user=request.user)
+                if requester_employee.role == 'HR':
+                    perms = requester_employee.hr_permissions
+                    if not perms.can_delete_employees:
+                        return Response(
+                            {"error": "You do not have permission to delete employees."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+            except (Employee.DoesNotExist, AttributeError):
+                return Response(
+                    {"error": "Unauthorized: Unable to verify permissions."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
         instance = self.get_object()
         user = instance.user
         
@@ -188,6 +257,21 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
+        # Check if HR user has permission to view employees
+        try:
+            requester_employee = Employee.objects.filter(user=self.request.user).first()
+            if requester_employee and requester_employee.role == 'HR':
+                try:
+                    perms = requester_employee.hr_permissions
+                    if not perms.can_view_employees:
+                        # HR without permission sees no employees
+                        return Employee.objects.none()
+                except (AttributeError, HRPermission.DoesNotExist):
+                    # HR without permissions sees no employees
+                    return Employee.objects.none()
+        except Exception:
+            pass
+        
         queryset = Employee.objects.all()
         hub_id = self.request.query_params.get('hub_id')
         if hub_id:
@@ -1609,7 +1693,24 @@ class PayrollViewSet(viewsets.ModelViewSet):
         return results
 
     def perform_create(self, serializer):
-        """Compute attendance, government deductions, and net_pay before persisting a new Payroll."""
+        """Compute attendance, government deductions, and net_pay before persisting a new Payroll with permission checks."""
+        # Check if HR user has permission to edit payroll
+        try:
+            requester_employee = Employee.objects.get(user=self.request.user)
+            is_admin = requester_employee.role == 'Admin'
+        except Employee.DoesNotExist:
+            is_admin = self.request.user.is_superuser or self.request.user.is_staff
+        
+        if not is_admin:
+            try:
+                requester_employee = Employee.objects.get(user=self.request.user)
+                if requester_employee.role == 'HR':
+                    perms = requester_employee.hr_permissions
+                    if not perms.can_edit_payslip:
+                        raise PermissionDenied("You do not have permission to manage payroll.")
+            except (Employee.DoesNotExist, AttributeError):
+                raise PermissionDenied("Unauthorized: Unable to verify permissions.")
+        
         try:
             emp = serializer.validated_data.get('employee')
             period_start = serializer.validated_data.get('period_start')
@@ -1683,7 +1784,24 @@ class PayrollViewSet(viewsets.ModelViewSet):
         return serializer.save()
 
     def perform_update(self, serializer):
-        """When updating a Payroll, recompute derived fields from the newest values and persist them."""
+        """When updating a Payroll, recompute derived fields with permission checks."""
+        # Check if HR user has permission to edit payroll
+        try:
+            requester_employee = Employee.objects.get(user=self.request.user)
+            is_admin = requester_employee.role == 'Admin'
+        except Employee.DoesNotExist:
+            is_admin = self.request.user.is_superuser or self.request.user.is_staff
+        
+        if not is_admin:
+            try:
+                requester_employee = Employee.objects.get(user=self.request.user)
+                if requester_employee.role == 'HR':
+                    perms = requester_employee.hr_permissions
+                    if not perms.can_edit_payslip:
+                        raise PermissionDenied("You do not have permission to manage payroll.")
+            except (Employee.DoesNotExist, AttributeError):
+                raise PermissionDenied("Unauthorized: Unable to verify permissions.")
+        
         old_status = getattr(serializer.instance, 'status', None)
         try:
             # Determine effective values (use existing instance values for missing fields)
@@ -2438,6 +2556,37 @@ class HRPermissionViewSet(viewsets.ModelViewSet):
         
         # HR can only view their own permissions
         return queryset.filter(hr_employee__user=self.request.user)
+    
+    def _check_admin_permission(self):
+        """Ensure only Admin users can create/update HR permissions"""
+        try:
+            user_employee = Employee.objects.filter(user=self.request.user).first()
+            is_admin = self.request.user.is_superuser or self.request.user.is_staff or (user_employee and user_employee.role == 'Admin')
+            if not is_admin:
+                raise PermissionDenied('Only Admin users can manage HR permissions')
+        except Employee.DoesNotExist:
+            if not (self.request.user.is_superuser or self.request.user.is_staff):
+                raise PermissionDenied('Only Admin users can manage HR permissions')
+    
+    def create(self, request, *args, **kwargs):
+        """Only Admin can create HR permissions"""
+        self._check_admin_permission()
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        """Only Admin can update HR permissions"""
+        self._check_admin_permission()
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Only Admin can update HR permissions"""
+        self._check_admin_permission()
+        return super().partial_update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Only Admin can delete HR permissions"""
+        self._check_admin_permission()
+        return super().destroy(request, *args, **kwargs)
 
 
 # ===================== ACCOUNT MANAGEMENT ENDPOINTS =====================

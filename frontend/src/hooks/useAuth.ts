@@ -62,8 +62,8 @@ export const useAuth = () => {
 };
 
 export const useIsDarkMode = () => {
-  const isDarkMode = useAuthStore((state) => state.isDarkMode);
-  const toggleDarkMode = useAuthStore((state) => state.toggleDarkMode);
+  const isDarkMode = useAuthStore((state: any) => state.isDarkMode);
+  const toggleDarkMode = useAuthStore((state: any) => state.toggleDarkMode);
   
   return { isDarkMode, toggleDarkMode };
 };

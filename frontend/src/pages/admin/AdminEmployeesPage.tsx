@@ -104,8 +104,9 @@ export const AdminEmployeesPage = () => {
             {canEditEmployeeInfo && (
               <button
                 onClick={() => setShowAdd(true)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                className="inline-flex items-center h-9 px-3 gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
               >
+                <Plus className="w-4 h-4" />
                 Add Employee
               </button>
             )}

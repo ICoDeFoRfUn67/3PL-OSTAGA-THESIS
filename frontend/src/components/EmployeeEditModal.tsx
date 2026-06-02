@@ -184,31 +184,32 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
       case 'text':
       case 'email':
       case 'number':
-        return <input type={field.type} value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass} />;
+        return <input id={`field-${field.name}`} type={field.type} value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass} />;
       case 'date':
-        return <input type="date" value={value ? value.split('T')[0] : ''} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass} />;
+        return <input id={`field-${field.name}`} type="date" value={value ? value.split('T')[0] : ''} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass} />;
       case 'textarea':
-        return <textarea value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={`${baseInputClass} min-h-[80px] resize-y`} />;
-      case 'select':
+        return <textarea id={`field-${field.name}`} value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={`${baseInputClass} min-h-[80px] resize-y`} />;
+      case 'select': {
         let options = field.options || [];
         if (field.name === 'hub') {
           options = hubsList.map((h: any) => ({ value: String(h.id), label: h.name }));
         }
         return (
-          <select value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass}>
+          <select id={`field-${field.name}`} value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass}>
             <option value="">Select {field.label}</option>
-            {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            {options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         );
+      }
       case 'boolean':
         return (
           <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={!!value} onChange={(e) => handleChange(field.name, e.target.checked)} className="sr-only peer" />
+            <input id={`field-${field.name}`} type="checkbox" checked={!!value} onChange={(e) => handleChange(field.name, e.target.checked)} className="sr-only peer" />
             <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#8B0000]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8B0000]"></div>
           </label>
         );
       default:
-        return <input type="text" value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass} />;
+        return <input id={`field-${field.name}`} type="text" value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass} />;
     }
   };
   
@@ -224,7 +225,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
         {title === 'Personal Information' && (
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Profile Picture</label>
+            <label htmlFor="field-profile_image" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Profile Picture</label>
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-0.5">
                 {previewUrl ? (
@@ -236,6 +237,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
 
               <div>
                 <input
+                  id="field-profile_image"
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleFileChange(e.target.files?.[0])}
@@ -247,7 +249,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
         )}
         {FIELD_DEFINITIONS.filter(f => fields.includes(f.name)).map((field) => (
           <div key={field.name} className={field.type === 'textarea' ? 'sm:col-span-2' : ''}>
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">{field.label}{field.required && <span className="text-red-500 ml-1">*</span>}</label>
+            <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">{field.label}{field.required && <span className="text-red-500 ml-1">*</span>}</label>
             {renderField(field)}
             {errors[field.name] && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors[field.name]}</p>}
           </div>
