@@ -249,41 +249,6 @@ export const EmployeeDashboard = () => {
             </span>
           </div>
 
-          {/* EDIT PROFILE CARD */}
-          <button
-            onClick={() => setEditOpen(true)}
-            className="mt-8 w-full bg-white rounded-3xl p-5 flex items-center justify-between shadow-2xl transition hover:scale-[1.01]"
-          >
-
-            <div className="flex items-center gap-4">
-
-              <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
-                <User
-                  size={24}
-                  className="text-red-700"
-                />
-              </div>
-
-              <div className="text-left">
-
-                <h3 className="font-bold text-gray-900">
-                  Edit Profile
-                </h3>
-
-                <p className="text-sm text-gray-500">
-                  Update your personal information
-                </p>
-
-              </div>
-
-            </div>
-
-            <span className="text-gray-400 text-3xl">
-              ›
-            </span>
-
-          </button>
-
         </div>
       </div>
 
