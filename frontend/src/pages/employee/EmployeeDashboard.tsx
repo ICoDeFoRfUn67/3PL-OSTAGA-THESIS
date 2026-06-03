@@ -212,6 +212,8 @@ export const EmployeeDashboard = () => {
             <button
               onClick={() => setEditOpen(true)}
               className="absolute bottom-1 right-1 w-12 h-12 md:w-14 md:h-14 rounded-full bg-red-500 border-4 border-white flex items-center justify-center shadow-xl"
+              title="Edit Profile"
+              aria-label="Edit Profile"
             >
               <Pencil size={18} className="text-white" />
             </button>
@@ -339,22 +341,13 @@ export const EmployeeDashboard = () => {
 
       case 'attendance':
         return (
-          <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 dark:from-gray-800/50 to-transparent">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Attendance Records
-              </h2>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">View and track your attendance</p>
-            </div>
-
-            <div className="p-4 md:p-6">
-              <EmployeeSidebar
-                employeeId={
-                  employee?.id || 0
-                }
-                employee={employee || {}}
-              />
-            </div>
+          <div>
+            <EmployeeSidebar
+              employeeId={
+                employee?.id || 0
+              }
+              employee={employee || {}}
+            />
           </div>
         );
 
