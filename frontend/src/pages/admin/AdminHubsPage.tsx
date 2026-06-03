@@ -1205,23 +1205,23 @@ export const AdminHubsPage = () => {
                 </MapContainer>
               {weatherData && (
                 <div
-                  className={`absolute top-4 right-4 z-[1000] backdrop-blur-xl rounded-2xl px-3 py-2 min-w-[150px] shadow-2xl border ${
+                  className={`absolute top-2 right-2 md:top-4 md:right-4 z-[1000] backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 min-w-[120px] md:min-w-[150px] shadow-lg md:shadow-2xl border ${
                     isDarkMode
                       ? 'bg-[#071a3d]/90 border-white/10 text-white'
                       : 'bg-white/[0.95] border-gray-200 text-gray-900'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="text-xl">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="text-lg md:text-xl">
                       {weatherData.icon}
                     </div>
 
                     <div>
-                      <p className={`${isDarkMode ? 'text-[10px] text-white/60' : 'text-[10px] text-gray-500'} uppercase`}>
-                        Current Weather
+                      <p className={`${isDarkMode ? 'text-[9px] md:text-[10px] text-white/60' : 'text-[9px] md:text-[10px] text-gray-500'} uppercase`}>
+                        Weather
                       </p>
 
-                      <p className={`${isDarkMode ? 'text-lg font-bold text-white' : 'text-lg font-bold text-gray-900'}`}>
+                      <p className={`${isDarkMode ? 'text-base md:text-lg font-bold text-white' : 'text-base md:text-lg font-bold text-gray-900'}`}>
                         {weatherData.temp}°C
                       </p>
 
@@ -1234,49 +1234,49 @@ export const AdminHubsPage = () => {
               )}
 
               {showDirections && routeData && (
-                <div className="absolute bottom-4 left-3 right-3 z-[1000] grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className={`backdrop-blur-xl rounded-2xl px-3 py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
-                    <div className="flex items-center gap-3">
-                      <Footprints size={16} className={isDarkMode ? 'text-emerald-400' : 'text-emerald-600'} />
+                <div className="absolute bottom-24 md:bottom-4 left-2 md:left-3 right-2 md:right-3 z-[1000] grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                  <div className={`backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <Footprints size={14} className={`md:w-4 md:h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
 
                       <div>
-                        <p className={`${isDarkMode ? 'text-white text-sm font-semibold' : 'text-gray-900 text-sm font-semibold'}`}>
+                        <p className={`${isDarkMode ? 'text-white text-xs md:text-sm font-semibold' : 'text-gray-900 text-xs md:text-sm font-semibold'}`}>
                           Walking
                         </p>
 
-                        <p className={`${isDarkMode ? 'text-xs text-white/60' : 'text-xs text-gray-500'}`}>
+                        <p className={`${isDarkMode ? 'text-[11px] md:text-xs text-white/60' : 'text-[11px] md:text-xs text-gray-500'}`}>
                           {formatDistance(routeData.walking.distanceM)} • {formatDuration(routeData.walking.durationSec)}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className={`backdrop-blur-xl rounded-2xl px-3 py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
-                    <div className="flex items-center gap-3">
-                      <Bike size={16} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
+                  <div className={`backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <Bike size={14} className={`md:w-4 md:h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
 
                       <div>
-                        <p className={`${isDarkMode ? 'text-white text-sm font-semibold' : 'text-gray-900 text-sm font-semibold'}`}>
+                        <p className={`${isDarkMode ? 'text-white text-xs md:text-sm font-semibold' : 'text-gray-900 text-xs md:text-sm font-semibold'}`}>
                           Cycling
                         </p>
 
-                        <p className={`${isDarkMode ? 'text-xs text-white/60' : 'text-xs text-gray-500'}`}>
+                        <p className={`${isDarkMode ? 'text-[11px] md:text-xs text-white/60' : 'text-[11px] md:text-xs text-gray-500'}`}>
                           {formatDistance(routeData.riding.distanceM)} • {formatDuration(routeData.riding.durationSec)}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className={`backdrop-blur-xl rounded-2xl px-3 py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
-                    <div className="flex items-center gap-3">
-                      <Car size={16} className={isDarkMode ? 'text-orange-400' : 'text-orange-600'} />
+                  <div className={`backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <Car size={14} className={`md:w-4 md:h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`} />
 
                       <div>
-                        <p className={`${isDarkMode ? 'text-white text-sm font-semibold' : 'text-gray-900 text-sm font-semibold'}`}>
+                        <p className={`${isDarkMode ? 'text-white text-xs md:text-sm font-semibold' : 'text-gray-900 text-xs md:text-sm font-semibold'}`}>
                           Driving
                         </p>
 
-                        <p className={`${isDarkMode ? 'text-xs text-white/60' : 'text-xs text-gray-500'}`}>
+                        <p className={`${isDarkMode ? 'text-[11px] md:text-xs text-white/60' : 'text-[11px] md:text-xs text-gray-500'}`}>
                           {formatDistance(routeData.car.distanceM)} • {formatDuration(routeData.car.durationSec)}
                         </p>
                       </div>

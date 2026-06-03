@@ -107,7 +107,7 @@ export const AdminEmployeesPage = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               title="Filter by employee status"
               aria-label="Filter by status"
-              className="h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-800 dark:text-gray-100 outline-none transition-colors duration-150 focus:ring-2 focus:ring-red-300/30"
+              className="h-10 min-w-[140px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 pr-8 text-sm text-gray-800 dark:text-gray-100 outline-none transition-colors duration-150 focus:ring-2 focus:ring-red-300/30 appearance-none"
             >
               <option value="All">All Status</option>
               <option value="Active">Active</option>
@@ -146,7 +146,7 @@ export const AdminEmployeesPage = () => {
             className="
                 md:hidden
                     fixed
-                    bottom-20
+                    bottom-24
               right-4
               z-50
               w-14
