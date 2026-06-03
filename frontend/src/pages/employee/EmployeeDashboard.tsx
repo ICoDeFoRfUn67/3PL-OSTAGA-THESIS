@@ -251,7 +251,7 @@ export const EmployeeDashboard = () => {
             </div>
 
             {/* STATS */}
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {[
                 {
                   label: 'Employment',
@@ -280,13 +280,13 @@ export const EmployeeDashboard = () => {
               ].map((item, index) => (
                 <div
                   key={index}
-                  className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-5 shadow-sm"
+                  className="rounded-2xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow h-full"
                 >
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-tight">
                     {item.label}
                   </p>
 
-                  <h3 className="mt-2 font-bold text-lg text-gray-500 dark:text-gray-400">
+                  <h3 className="mt-2 font-bold text-base md:text-lg text-gray-900 dark:text-gray-100">
                     {item.value}
                   </h3>
                 </div>
@@ -301,15 +301,15 @@ export const EmployeeDashboard = () => {
 
       case 'attendance':
         return (
-          <div className="rounded-[30px] bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-2xl font-bold text-gray-500 dark:text-gray-400">
-                Attendance
+          <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 dark:from-gray-800/50 to-transparent">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                Attendance Records
               </h2>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">View and track your attendance</p>
             </div>
 
-            {/* ONLY ATTENDANCE */}
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               <EmployeeSidebar
                 employeeId={
                   employee?.id || 0
@@ -327,53 +327,60 @@ export const EmployeeDashboard = () => {
       case 'payroll':
         return (
           <div className="space-y-4">
-            {payrolls?.map(
-              (payroll: any) => (
-                <div
-                  key={payroll.id}
-                  className="rounded-[28px] bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-5 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold text-gray-500 dark:text-gray-400 text-lg">
-                        {
-                          payroll.pay_period
-                        }
-                      </p>
+            {payrolls && payrolls.length > 0 ? (
+              payrolls.map(
+                (payroll: any) => (
+                  <div
+                    key={payroll.id}
+                    className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-5 md:p-6 shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="w-full sm:w-auto">
+                        <p className="font-bold text-gray-900 dark:text-gray-100 text-lg md:text-xl">
+                          {
+                            payroll.pay_period
+                          }
+                        </p>
 
-                      <p className="mt-2 text-3xl font-bold text-green-600">
-                        {formatCurrency(
-                          payroll.net_pay
-                        )}
-                      </p>
+                        <p className="mt-2 text-2xl md:text-3xl font-bold text-green-600 dark:text-green-500">
+                          {formatCurrency(
+                            payroll.net_pay
+                          )}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap ${
+                          payroll.status ===
+                          'paid'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}
+                      >
+                        {payroll.status.toUpperCase()}
+                      </span>
                     </div>
 
-                    <span
-                      className={`px-4 py-2 rounded-full text-xs font-semibold ${
-                        payroll.status ===
-                        'paid'
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
+                    <button
+                      onClick={() => {
+                        setSelectedPayslip(
+                          payroll
+                        );
+
+                        setPayslipOpen(true);
+                      }}
+                      className="mt-5 w-full rounded-2xl bg-[#4F7BFF] hover:bg-[#3d66ff] text-white py-3 font-semibold transition-colors"
                     >
-                      {payroll.status}
-                    </span>
+                      View Payslip Details
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => {
-                      setSelectedPayslip(
-                        payroll
-                      );
-
-                      setPayslipOpen(true);
-                    }}
-                    className="mt-5 w-full rounded-2xl bg-[#4F7BFF] text-white py-3 font-semibold hover:opacity-90 transition"
-                  >
-                    View Payslip
-                  </button>
-                </div>
+                )
               )
+            ) : (
+              <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-8 text-center">
+                <Wallet size={40} className="mx-auto mb-3 text-gray-400" />
+                <p className="text-gray-600 dark:text-gray-400">No payroll records found</p>
+              </div>
             )}
           </div>
         );
@@ -384,14 +391,15 @@ export const EmployeeDashboard = () => {
 
       case 'documents':
         return (
-          <div className="rounded-[30px] bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-2xl font-bold text-gray-500 dark:text-gray-400">
-                Documents
+          <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 dark:from-gray-800/50 to-transparent">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                Your Documents
               </h2>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">Manage and view your employee documents</p>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               <DocumentsSection
                 documents={
                   employee?.documents || []
@@ -412,15 +420,13 @@ export const EmployeeDashboard = () => {
       case 'information':
         return (
           <div className="space-y-6">
-            <div className="rounded-[30px] bg-gradient-to-r from-[#8B0000] to-red-700 p-6 md:p-8 text-white shadow-xl">
-              <h2 className="text-3xl font-bold">
+            <div className="rounded-3xl bg-gradient-to-r from-[#8B0000] to-red-700 p-6 md:p-8 text-white shadow-xl">
+              <h2 className="text-2xl md:text-3xl font-bold leading-tight">
                 Employee Information
               </h2>
 
-              <p className="mt-2 text-white/80">
-                Personal details,
-                emergency contact, and
-                government information.
+              <p className="mt-2 text-white/85 text-sm md:text-base leading-relaxed">
+                Personal details, emergency contact, and government information.
               </p>
             </div>
 
@@ -569,7 +575,7 @@ export const EmployeeDashboard = () => {
       case 'leave':
         return (
           <div className="space-y-6">
-            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#4F7BFF] to-[#315BFF] p-8 md:p-10 text-white shadow-2xl">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4F7BFF] to-[#315BFF] p-6 md:p-10 text-white shadow-2xl">
               <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
 
               <div className="relative z-10 max-w-2xl">
@@ -577,30 +583,30 @@ export const EmployeeDashboard = () => {
                   <Briefcase size={32} />
                 </div>
 
-                <h2 className="mt-6 text-3xl md:text-4xl font-bold">
+                <h2 className="mt-6 text-2xl md:text-3xl font-bold leading-tight">
                   Leave Request
                 </h2>
 
-                <p className="mt-4 text-lg text-white/80 leading-relaxed">
-                  Submit your leave request
-                  and monitor approval
-                  status through the portal.
+                <p className="mt-4 text-sm md:text-base text-white/85 leading-relaxed">
+                  Submit your leave request and monitor approval status through the portal.
                 </p>
 
-                <button
-                  onClick={() =>
-                    setLeaveFormOpen(true)
-                  }
-                  className="mt-8 px-8 py-4 rounded-2xl bg-white text-[#315BFF] font-bold shadow-xl hover:scale-[1.02] transition-all"
-                >
-                  Submit Leave
-                </button>
-                <button
-                  onClick={() => setLeaveHistoryOpen(true)}
-                  className="mt-8 ml-3 px-6 py-3 rounded-2xl bg-white/10 text-white/90 font-semibold border border-white/20"
-                >
-                  View History
-                </button>
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() =>
+                      setLeaveFormOpen(true)
+                    }
+                    className="px-6 md:px-8 py-3 rounded-2xl bg-white text-[#315BFF] font-bold shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex-1 sm:flex-initial"
+                  >
+                    Submit Leave
+                  </button>
+                  <button
+                    onClick={() => setLeaveHistoryOpen(true)}
+                    className="px-6 md:px-8 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20 transition-all flex-1 sm:flex-initial"
+                  >
+                    View History
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -612,7 +618,7 @@ export const EmployeeDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#070B14] transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#070B14] transition-colors">
       {/* MOBILE OVERLAY */}
       {mobileOpen && (
         <div
@@ -626,48 +632,43 @@ export const EmployeeDashboard = () => {
       <div className="flex">
         {/* SIDEBAR */}
         <aside
-          className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[280px] bg-white dark:bg-[#0F172A]/95 backdrop-blur border-r border-gray-200 dark:border-gray-700 shadow-2xl lg:shadow-none transform transition-transform duration-300 ${
-            mobileOpen
-              ? 'translate-x-0'
-              : '-translate-x-full lg:translate-x-0'
-          }`}
+          className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[280px] bg-white dark:bg-[#0F172A]/95 backdrop-blur border-r border-gray-200 dark:border-gray-700 shadow-2xl lg:shadow-none transform transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         >
           {/* LOGO */}
           <div className="h-20 px-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4">
             <img
               src={logo}
-              alt=""
+              alt="Company Logo"
               className="w-12 h-12 object-contain"
             />
 
             <div>
-              <h2 className="font-bold text-gray-500 dark:text-gray-400">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 text-sm">
                 3PL COMPANY
               </h2>
-
             </div>
           </div>
 
           {/* PROFILE */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full overflow-hidden">
+              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
                 <img
                   src={
                     employee?.profile_image_url ||
                     'https://via.placeholder.com/150'
                   }
-                  alt=""
+                  alt={employee?.full_name || 'Profile'}
                   className="w-full h-full object-cover"
                 />
               </div>
 
-              <div>
-                <h3 className="font-semibold text-gray-500 dark:text-gray-400">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
                   {employee?.full_name}
                 </h3>
 
-                <p className="text-sm text-gray-500">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
                   {employee?.position}
                 </p>
               </div>
@@ -675,7 +676,7 @@ export const EmployeeDashboard = () => {
           </div>
 
           {/* NAVIGATION */}
-          <div className="p-4 space-y-2">
+          <div className="flex-1 p-4 space-y-2 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
 
@@ -692,7 +693,7 @@ export const EmployeeDashboard = () => {
 
                     setMobileOpen(false);
                   }}
-                  className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${
+                  className={`w-full flex items-center gap-4 px-4 py-3 md:py-4 rounded-2xl transition-all ${
                     active
                       ? 'bg-gradient-to-r from-[#8B0000] to-red-700 text-white shadow-lg'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -700,7 +701,7 @@ export const EmployeeDashboard = () => {
                 >
                   <Icon size={20} />
 
-                  <span className="font-medium">
+                  <span className="font-medium text-sm">
                     {item.label}
                   </span>
                 </button>
@@ -709,15 +710,13 @@ export const EmployeeDashboard = () => {
           </div>
 
           {/* FOOTER */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
-            
-
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={() => {
                 logout();
                 navigate('/login');
               }}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors font-semibold text-sm"
             >
               <LogOut size={18} />
               Logout
@@ -728,35 +727,35 @@ export const EmployeeDashboard = () => {
         {/* MAIN */}
         <div className="flex-1 min-w-0">
           {/* HEADER */}
-          <header className="sticky top-0 z-30 h-20 bg-white/90 dark:bg-[#0F172A]/80 backdrop-blur-xl backdrop-blur border-b border-gray-200 dark:border-gray-700 px-4 md:px-8 flex items-center justify-between">
+          <header className="sticky top-0 z-30 h-20 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 px-4 md:px-8 flex items-center justify-between">
             {/* LEFT */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={() =>
                   setMobileOpen(true)
                 }
-                className="lg:hidden w-11 h-11 rounded-2xl bg-gray-100 dark:bg-gray-700 hover:dark:bg-gray-600 flex items-center justify-center"
+                className="lg:hidden w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors text-gray-900 dark:text-gray-100"
+                aria-label="Open navigation menu"
+                title="Open menu"
               >
                 <Menu size={20} />
               </button>
 
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-500 dark:text-gray-400">
+              <div className="hidden sm:block">
+                <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100">
                   3PL COMPANY
                 </h1>
               </div>
             </div>
 
             {/* RIGHT */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className="flex items-center w-14 h-8 rounded-full px-1 transition-colors
-                          bg-gray-300 dark:bg-gray-700"
+                className="flex items-center w-14 h-8 rounded-full px-1 transition-colors bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
               >
                 <div
-                  className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform flex items-center justify-center
-                    ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}
+                  className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform flex items-center justify-center ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}
                 >
                   {darkMode ? (
                     <Sun size={14} className="text-yellow-500" />
@@ -766,13 +765,13 @@ export const EmployeeDashboard = () => {
                 </div>
               </button>
 
-              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                 <img
                   src={
                     employee?.profile_image_url ||
                     'https://via.placeholder.com/150'
                   }
-                  alt=""
+                  alt={employee?.full_name || 'Profile'}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -780,7 +779,7 @@ export const EmployeeDashboard = () => {
           </header>
 
           {/* CONTENT */}
-          <main className="p-4 md:p-8">
+          <main className="p-4 md:p-8 bg-gray-50 dark:bg-[#070B14] min-h-[calc(100vh-5rem)]">
             {renderSection()}
           </main>
         </div>

@@ -212,16 +212,16 @@ export const EmployeeProfileDetailPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#070B14]">
       {showAdminSidebar && (
         <Sidebar
           open={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
       )}
-      <div className={`p-4 lg:p-6 space-y-6 ${showAdminSidebar ? 'lg:ml-64' : ''}`}>
+      <div className={`p-4 md:p-6 lg:p-8 space-y-6 ${showAdminSidebar ? 'lg:ml-64' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button variant="secondary" onClick={() => navigate(-1)}>
+          <Button variant="secondary" onClick={() => navigate(-1)} className="text-sm">
             <ArrowLeft size={18} className="mr-2" /> Back
           </Button>
         </div>
@@ -245,24 +245,24 @@ export const EmployeeProfileDetailPage = () => {
 
         {!isLoading && !hasError && (
           <>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-1">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+              <div className="flex-1">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-1">
                   {formData.full_name || 'Employee Profile'}
                 </h1>
-                <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{formData.position}</p>
+                <p className="text-xs md:text-sm font-black uppercase tracking-wider text-red-600 dark:text-red-500">{formData.position}</p>
               </div>
               
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 {isOwnProfile && (
-                  <Button variant="secondary" onClick={() => setShowChangePasswordModal(true)}>
-                    <Key size={18} className="mr-2" /> Password
+                  <Button variant="secondary" onClick={() => setShowChangePasswordModal(true)} className="text-xs md:text-sm flex-1 md:flex-initial">
+                    <Key size={16} className="mr-2" /> Password
                   </Button>
                 )}
                 
                 {isOwnProfile && !isEditing && !isHRorAdmin && (
-                  <Button variant="secondary" onClick={() => setShowEditRequestModal(true)}>
-                    <Send size={18} className="mr-2" /> Request Changes
+                  <Button variant="secondary" onClick={() => setShowEditRequestModal(true)} className="text-xs md:text-sm flex-1 md:flex-initial">
+                    <Send size={16} className="mr-2" /> Request Changes
                   </Button>
                 )}
                 
@@ -270,16 +270,16 @@ export const EmployeeProfileDetailPage = () => {
                 {canEdit && (
                   <>
                     {!isEditing ? (
-                      <Button variant="primary" onClick={() => setIsEditing(true)}>
-                        <Edit2 size={18} className="mr-2" /> Edit
+                      <Button variant="primary" onClick={() => setIsEditing(true)} className="text-xs md:text-sm flex-1 md:flex-initial">
+                        <Edit2 size={16} className="mr-2" /> Edit
                       </Button>
                     ) : (
                       <>
-                        <Button variant="primary" onClick={handleSave}>
-                          <Save size={18} className="mr-2" /> Save
+                        <Button variant="primary" onClick={handleSave} className="text-xs md:text-sm flex-1 md:flex-initial">
+                          <Save size={16} className="mr-2" /> Save
                         </Button>
-                        <Button variant="secondary" onClick={() => setIsEditing(false)}>
-                          <X size={18} className="mr-2" /> Cancel
+                        <Button variant="secondary" onClick={() => setIsEditing(false)} className="text-xs md:text-sm flex-1 md:flex-initial">
+                          <X size={16} className="mr-2" /> Cancel
                         </Button>
                       </>
                     )}
@@ -289,67 +289,67 @@ export const EmployeeProfileDetailPage = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 lg:sticky lg:top-4 h-fit space-y-6">
-                <Card className="overflow-hidden border-none shadow-2xl shadow-gray-200/50 dark:shadow-none">
-                  <div className="relative group aspect-square">
+              <div className="lg:col-span-1 space-y-6">
+                <Card className="overflow-hidden border-none shadow-md dark:shadow-lg dark:shadow-black/50">
+                  <div className="relative group aspect-square bg-gray-100 dark:bg-gray-800">
                     {formData.profile_image_url ? (
                       <img src={formData.profile_image_url} alt={formData.full_name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     ) : (
-                      <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                        <span className="text-gray-400 font-black uppercase tracking-widest text-[10px]">No Image</span>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-gray-400 font-black uppercase tracking-widest text-xs">No Image</span>
                       </div>
                     )}
                     {isEditing && (
                       <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white">
                         <Upload size={32} className="mb-2" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Update Photo</span>
+                        <span className="text-xs font-black uppercase tracking-widest">Update Photo</span>
                         <input type="file" accept="image/*" onChange={handleProfileImageChange} className="hidden" />
                       </label>
                     )}
                   </div>
-                  <div className="p-6 bg-white dark:bg-gray-900 border-t dark:border-gray-800">
+                  <div className="p-5 md:p-6 bg-white dark:bg-gray-900 border-t dark:border-gray-800">
                     <div className="mb-4">
-                      <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tight">
+                      <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tight">
                         {formData.full_name}
                       </h2>
-                      <p className="text-sm font-bold text-red-650 uppercase tracking-widest mt-1">
+                      <p className="text-xs md:text-sm font-bold text-red-600 dark:text-red-500 uppercase tracking-widest mt-2">
                         {formData.position}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between mb-4 border-t pt-4 dark:border-gray-800">
-                      <Badge variant={formData.status?.toLowerCase() === 'active' ? 'success' : formData.status?.toLowerCase() === 'resign' ? 'neutral' : formData.status?.toLowerCase() === 'awol' ? 'orange' : 'error'} className="font-black tracking-widest uppercase text-[9px] px-3">
+                    <div className="flex items-center justify-between mb-4 border-t dark:border-gray-800 pt-4">
+                      <Badge variant={formData.status?.toLowerCase() === 'active' ? 'success' : formData.status?.toLowerCase() === 'resign' ? 'neutral' : formData.status?.toLowerCase() === 'awol' ? 'orange' : 'error'} className="font-black tracking-widest uppercase text-xs px-3">
                         {formData.status}
                       </Badge>
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">#{formData.employee_id}</span>
+                      <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">#{formData.employee_id}</span>
                     </div>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Company Role</p>
+                    <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-2">Company Role</p>
                     <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{formData.role}</p>
                   </div>
                 </Card>
 
                 {latestAttendance && (
                   <Card className="border-l-4 border-red-600">
-                    <div className="flex items-center gap-4 mb-4">
-                      <Clock size={18} className="text-red-600" />
-                      <h3 className="text-xs font-black uppercase tracking-widest">Latest Session</h3>
+                    <div className="flex items-center gap-3 mb-4">
+                      <Clock size={16} className="text-red-600 flex-shrink-0" />
+                      <h3 className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white">Latest Session</h3>
                     </div>
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 font-bold uppercase">Status</span>
-                        <Badge variant={latestAttendance.status === 'Present' ? 'success' : 'warning'} className="text-[10px]">{latestAttendance.status}</Badge>
+                      <div className="flex justify-between items-center text-xs gap-2">
+                        <span className="text-gray-600 dark:text-gray-400 font-bold uppercase">Status</span>
+                        <Badge variant={latestAttendance.status === 'Present' ? 'success' : 'warning'} className="text-xs">{latestAttendance.status}</Badge>
                       </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 font-bold uppercase">Date</span>
-                        <span className="font-black dark:text-white">{latestAttendance.date}</span>
+                      <div className="flex justify-between items-center text-xs gap-2">
+                        <span className="text-gray-600 dark:text-gray-400 font-bold uppercase">Date</span>
+                        <span className="font-black dark:text-white text-gray-900">{latestAttendance.date}</span>
                       </div>
-                      <div className="pt-2 grid grid-cols-2 gap-4 border-t dark:border-gray-800">
+                      <div className="pt-3 grid grid-cols-2 gap-3 border-t dark:border-gray-800">
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Clock In</p>
-                          <p className="text-xs font-black text-green-600">{latestAttendance.clock_in_time || 'N/A'}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-1">Clock In</p>
+                          <p className="text-sm font-black text-green-600 dark:text-green-500">{latestAttendance.clock_in_time || 'N/A'}</p>
                         </div>
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Clock Out</p>
-                          <p className="text-xs font-black text-red-600">{latestAttendance.clock_out_time || 'N/A'}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase mb-1">Clock Out</p>
+                          <p className="text-sm font-black text-red-600 dark:text-red-500">{latestAttendance.clock_out_time || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
@@ -357,10 +357,10 @@ export const EmployeeProfileDetailPage = () => {
                 )}
               </div>
 
-              <div className="lg:col-span-2 space-y-4">
+              <div className="lg:col-span-2 space-y-5">
                 <Card>
-                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-red-600 mb-4 flex items-center gap-2">
-                    <span className="w-6 h-0.5 bg-red-600"></span> Personal Records
+                  <h2 className="text-xs md:text-sm font-black uppercase tracking-[0.15em] text-red-600 dark:text-red-500 mb-6 flex items-center gap-3">
+                    <span className="w-6 h-0.5 bg-red-600 dark:bg-red-500"></span> Personal Records
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {['firstname', 'lastname', 'middle_initial', 'place_of_birth', 'date_of_birth', 'gender', 'nationality', 'marital_status'].map(field => (
@@ -370,8 +370,8 @@ export const EmployeeProfileDetailPage = () => {
                 </Card>
 
                 <Card>
-                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-red-600 mb-4 flex items-center gap-2">
-                    <span className="w-6 h-0.5 bg-red-600"></span> Contact Detail
+                  <h2 className="text-xs md:text-sm font-black uppercase tracking-[0.15em] text-red-600 dark:text-red-500 mb-6 flex items-center gap-3">
+                    <span className="w-6 h-0.5 bg-red-600 dark:bg-red-500"></span> Contact Details
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {['email_address', 'phone_number', 'current_address', 'permanent_address'].map(field => (
@@ -381,14 +381,13 @@ export const EmployeeProfileDetailPage = () => {
                 </Card>
 
                 <Card>
-                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-red-600 mb-4 flex items-center gap-2">
-                    <span className="w-6 h-0.5 bg-red-600"></span> Employment Scope
+                  <h2 className="text-xs md:text-sm font-black uppercase tracking-[0.15em] text-red-600 dark:text-red-500 mb-6 flex items-center gap-3">
+                    <span className="w-6 h-0.5 bg-red-600 dark:bg-red-500"></span> Employment Scope
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {['position', 'employment_type', 'status', 'role', 'hired_date', 'jtp_code', 'employee_id', 'hub'].map(field => {
                       const baseConfig = (FIELD_CONFIG as any)[field] || {};
                       const config = { ...baseConfig };
-                      // restrict sensitive fields to HR/Admin only
                       if (['employee_id', 'hub', 'status'].includes(field) && !isHRorAdmin) {
                         config.disabled = true;
                       }
@@ -403,8 +402,8 @@ export const EmployeeProfileDetailPage = () => {
                 </Card>
 
                 <Card>
-                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-red-600 mb-4 flex items-center gap-2">
-                    <span className="w-6 h-0.5 bg-red-600"></span> Statutory IDs
+                  <h2 className="text-xs md:text-sm font-black uppercase tracking-[0.15em] text-red-600 dark:text-red-500 mb-6 flex items-center gap-3">
+                    <span className="w-6 h-0.5 bg-red-600 dark:bg-red-500"></span> Statutory IDs
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {['tin', 'sss', 'philhealth', 'pagibig'].map(field => (
@@ -445,18 +444,18 @@ const FormField = ({ field, value, config, isEditing, onChange }: FormFieldProps
   const { label, type, options, disabled } = config;
 
   return (
-    <div className="space-y-1.5">
-      <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400">
+    <div className="space-y-2">
+      <label className="block text-xs md:text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
         {label}
       </label>
       {!isEditing || (disabled && isEditing) ? (
-        <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+        <div className="p-3 md:p-4 bg-gray-50 dark:bg-gray-800/70 rounded-lg border border-gray-200 dark:border-gray-700">
           {type === 'checkbox' ? (
-            <div className={`w-4 h-4 rounded border flex items-center justify-center ${value ? 'bg-red-600 border-red-600' : 'bg-gray-100 border-gray-300'}`}>
+            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${value ? 'bg-red-600 border-red-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'}`}>
               {value && <X size={10} className="text-white" />}
             </div>
           ) : (
-            <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{value || '---'}</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{value || '—'}</p>
           )}
         </div>
       ) : (
@@ -466,13 +465,17 @@ const FormField = ({ field, value, config, isEditing, onChange }: FormFieldProps
               type={type}
               value={value || ''}
               onChange={e => onChange(field, e.target.value)}
-              className="w-full px-4 py-2.5 text-xs font-bold border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-red-600 outline-none transition-all"
+              placeholder={label}
+              aria-label={label}
+              className="w-full px-4 py-2.5 text-sm font-semibold border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition-all"
             />
           ) : type === 'textarea' ? (
             <textarea
               value={value || ''}
               onChange={e => onChange(field, e.target.value)}
-              className="w-full px-4 py-2.5 text-xs font-bold border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-red-600 outline-none transition-all"
+              placeholder={label}
+              aria-label={label}
+              className="w-full px-4 py-2.5 text-sm font-semibold border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition-all"
               rows={2}
             />
           ) : type === 'select' ? (
@@ -480,11 +483,12 @@ const FormField = ({ field, value, config, isEditing, onChange }: FormFieldProps
               value={value ?? ''}
               onChange={e => {
                 const val = e.target.value;
-                // if numeric id expected, coerce to number for hub
                 if (field === 'hub') onChange(field, val === '' ? '' : Number(val));
                 else onChange(field, val);
               }}
-              className="w-full px-4 py-2.5 text-xs font-bold border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-red-600 outline-none appearance-none transition-all"
+              aria-label={label}
+              title={label}
+              className="w-full px-4 py-2.5 text-sm font-semibold border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none appearance-none transition-all"
             >
               <option value="">{label}</option>
               {options && options.map((opt: any) => (
@@ -500,7 +504,9 @@ const FormField = ({ field, value, config, isEditing, onChange }: FormFieldProps
               type="checkbox"
               checked={value || false}
               onChange={e => onChange(field, e.target.checked)}
-              className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-600"
+              aria-label={label}
+              title={label}
+              className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-600 cursor-pointer"
             />
           ) : null}
         </div>

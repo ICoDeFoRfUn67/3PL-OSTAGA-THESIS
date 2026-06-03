@@ -69,20 +69,20 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="My Leave History" size="xl">
-      <div className="flex flex-col h-[75vh] bg-white dark:bg-dark-bg overflow-hidden rounded-b-xl md:flex-row">
+      <div className="flex flex-col h-[75vh] bg-white dark:bg-[#0F172A] overflow-hidden rounded-b-xl md:flex-row border-t border-gray-200 dark:border-gray-700">
         {/* Desktop Sidebar - Hidden on mobile */}
-        <div className="hidden md:flex w-full md:w-80 border-r dark:border-gray-800 overflow-y-auto bg-gray-50/30 dark:bg-gray-900/30 flex-col">
+        <div className="hidden md:flex w-full md:w-80 border-r dark:border-gray-700 overflow-y-auto bg-gray-50 dark:bg-gray-900/50 flex-col">
           {loading ? (
             <div className="flex items-center justify-center p-8">
               <LoadingSpinner />
             </div>
           ) : items.length === 0 ? (
             <div className="text-center p-12">
-              <Calendar size={40} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-xs text-gray-500 font-medium">No leave requests found</p>
+              <Calendar size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">No leave requests found</p>
             </div>
           ) : (
-            <div className="divide-y dark:divide-gray-800">
+            <div className="divide-y dark:divide-gray-700">
               {items.map((r) => (
                 <button
                   key={r.id}
@@ -93,15 +93,15 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-[10px] font-black uppercase text-gray-500 tracking-tight">{r.leave_type}</span>
-                      <Badge variant={getStatusVariant(r.status)} size="sm" className="text-[8px] uppercase px-1.5 py-0">{r.status}</Badge>
+                      <span className="text-xs font-bold uppercase text-gray-700 dark:text-gray-400 tracking-tight">{r.leave_type}</span>
+                      <Badge variant={getStatusVariant(r.status)} size="sm" className="text-xs uppercase px-2 py-0.5">{r.status}</Badge>
                     </div>
-                    <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100">
+                    <p className="font-bold text-sm text-gray-900 dark:text-gray-100">
                       {new Date(r.start_date).toLocaleDateString()} - {new Date(r.end_date).toLocaleDateString()}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-1 font-medium italic">{new Date(r.created_at).toLocaleString()}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium italic">{new Date(r.created_at).toLocaleString()}</p>
                   </div>
-                  <ChevronRight size={16} className={`text-gray-300 transition-transform ${selected?.id === r.id ? 'translate-x-1 text-red-600' : 'group-hover:translate-x-0.5'}`} />
+                  <ChevronRight size={18} className={`text-gray-400 dark:text-gray-500 transition-transform flex-shrink-0 ${selected?.id === r.id ? 'translate-x-1 text-red-600' : 'group-hover:translate-x-0.5'}`} />
                 </button>
               ))}
             </div>
@@ -117,11 +117,11 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
               </div>
             ) : items.length === 0 ? (
               <div className="text-center p-12 h-full flex flex-col items-center justify-center">
-                <Calendar size={40} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-xs text-gray-500 font-medium">No leave requests found</p>
+                <Calendar size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">No leave requests found</p>
               </div>
             ) : (
-              <div className="divide-y dark:divide-gray-800">
+              <div className="divide-y dark:divide-gray-700">
                 {items.map((r) => (
                   <button
                     key={r.id}
@@ -130,15 +130,15 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-tight">{r.leave_type}</span>
-                        <Badge variant={getStatusVariant(r.status)} size="sm" className="text-[8px] uppercase px-1.5 py-0">{r.status}</Badge>
+                        <span className="text-xs font-bold uppercase text-gray-700 dark:text-gray-400 tracking-tight">{r.leave_type}</span>
+                        <Badge variant={getStatusVariant(r.status)} size="sm" className="text-xs uppercase px-2 py-0.5">{r.status}</Badge>
                       </div>
-                      <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100">
+                      <p className="font-bold text-sm text-gray-900 dark:text-gray-100">
                         {new Date(r.start_date).toLocaleDateString()} - {new Date(r.end_date).toLocaleDateString()}
                       </p>
-                      <p className="text-[10px] text-gray-400 mt-1 font-medium italic">{new Date(r.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium italic">{new Date(r.created_at).toLocaleString()}</p>
                     </div>
-                    <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight size={18} className="text-gray-400 dark:text-gray-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                   </button>
                 ))}
               </div>
@@ -148,30 +148,30 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
 
         {/* Main Content - Request Details */}
         {selected && (
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar flex flex-col">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar flex flex-col bg-white dark:bg-[#0F172A]">
             {/* Mobile Header */}
-            <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b dark:border-gray-800">
+            <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setSelected(null)}
                 aria-label="Go back to leave requests"
                 title="Go back"
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-900 dark:text-white"
               >
-                <ArrowLeft size={24} className="text-gray-900 dark:text-white" />
+                <ArrowLeft size={24} />
               </button>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Leave History</h2>
               <button
                 onClick={onClose}
                 aria-label="Close leave history"
                 title="Close"
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-900 dark:text-white"
               >
-                <X size={24} className="text-gray-900 dark:text-white" />
+                <X size={24} />
               </button>
             </div>
 
             {/* Leave Card - Mobile Style */}
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-3xl p-5 mb-6 text-white">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-3xl p-5 md:p-6 mb-6 text-white">
               <div className="flex items-start gap-4">
                 {/* Icon */}
                 <div className="flex-shrink-0 w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
@@ -179,20 +179,20 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                 </div>
                 
                 {/* Content */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-bold">{selected.leave_type}</h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <h3 className="text-lg font-bold truncate">{selected.leave_type}</h3>
                     <Badge 
                       variant={getStatusVariant(selected.status)} 
-                      className="text-[10px] uppercase px-2 py-1 font-black"
+                      className="text-xs uppercase px-2 py-1 font-bold flex-shrink-0"
                     >
                       {selected.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-300 mb-2">
+                  <p className="text-sm text-gray-200 mb-2">
                     {new Date(selected.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(selected.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {new Date(selected.end_date).getFullYear()}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-300">
                     {Math.ceil((new Date(selected.end_date).getTime() - new Date(selected.start_date).getTime()) / (1000 * 60 * 60 * 24))} Days
                   </p>
                 </div>
@@ -200,19 +200,19 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
             </div>
 
             {/* Request Timeline */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Clock size={18} className="text-red-600" />
-                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Request Timeline</h4>
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-4">
+                <Clock size={18} className="text-red-600 flex-shrink-0" />
+                <h4 className="text-sm md:text-base font-bold text-gray-900 dark:text-white">Request Timeline</h4>
               </div>
               
               <div className="space-y-4 pl-6 border-l-2 border-red-600">
                 {/* Timeline Item 1 */}
                 <div className="relative">
-                  <div className="absolute -left-8 w-4 h-4 bg-red-600 rounded-full border-4 border-white dark:border-gray-900"></div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4">
+                  <div className="absolute -left-8 w-4 h-4 bg-red-600 rounded-full border-4 border-white dark:border-[#0F172A]"></div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 md:p-4">
                     <p className="text-sm font-bold text-gray-900 dark:text-white">Requested</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       {new Date(selected.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(selected.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -220,22 +220,22 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
 
                 {/* Timeline Item 2 */}
                 <div className="relative">
-                  <div className={`absolute -left-8 w-4 h-4 rounded-full border-4 border-white dark:border-gray-900 ${
+                  <div className={`absolute -left-8 w-4 h-4 rounded-full border-4 border-white dark:border-[#0F172A] ${
                     selected.status === 'pending' ? 'bg-gray-400' : 'bg-green-600'
                   }`}></div>
-                  <div className={`rounded-2xl p-4 ${
+                  <div className={`rounded-xl p-3 md:p-4 ${
                     selected.status === 'pending' 
                       ? 'bg-gray-50 dark:bg-gray-800/50' 
-                      : 'bg-green-50/30 dark:bg-green-900/10'
+                      : 'bg-green-50 dark:bg-green-900/10'
                   }`}>
                     <p className={`text-sm font-bold ${
                       selected.status === 'pending' 
-                        ? 'text-gray-600 dark:text-gray-400' 
+                        ? 'text-gray-700 dark:text-gray-300' 
                         : 'text-green-700 dark:text-green-400'
                     }`}>
                       {selected.status === 'pending' ? 'Pending Approval' : 'Approved'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       {selected.status === 'pending' ? 'Waiting for manager review' : `Approved on ${new Date(selected.reviewed_at).toLocaleDateString()}`}
                     </p>
                   </div>
@@ -244,20 +244,20 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
             </div>
 
             {/* Leave Dates */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 mb-6">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 md:p-5 mb-8">
               <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Calendar size={18} className="text-red-600" />
+                <Calendar size={18} className="text-red-600 flex-shrink-0" />
                 Leave Dates
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">Start Date</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold mb-1">Start Date</p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
                     {new Date(selected.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">End Date</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold mb-1">End Date</p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
                     {new Date(selected.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
@@ -266,12 +266,12 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
             </div>
 
             {/* Reason for Leave */}
-            <div className="mb-6">
+            <div className="mb-8">
               <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <MessageSquare size={18} className="text-red-600" />
+                <MessageSquare size={18} className="text-red-600 flex-shrink-0" />
                 Reason for Leave
               </h4>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-700 dark:text-gray-300 italic font-medium">
                   &ldquo;{selected.reason || 'No reason provided'}&rdquo;
                 </p>
@@ -281,17 +281,17 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
             {/* Attachments */}
             <div className="mb-6">
               <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Paperclip size={18} className="text-red-600" />
-                Attachments <span className="bg-red-100 dark:bg-red-900/30 text-red-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-1">({selected.attachments?.length || 0})</span>
+                <Paperclip size={18} className="text-red-600 flex-shrink-0" />
+                Attachments <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2.5 py-0.5 rounded-full text-xs font-bold ml-1">({selected.attachments?.length || 0})</span>
               </h4>
               
               {(!selected.attachments || selected.attachments.length === 0) ? (
-                <div className="bg-gray-50 dark:bg-gray-800/30 rounded-2xl p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center flex flex-col items-center justify-center">
-                  <Paperclip size={28} className="text-gray-300 mb-3" />
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No attachments</p>
+                <div className="bg-gray-50 dark:bg-gray-800/30 rounded-xl p-6 md:p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center flex flex-col items-center justify-center">
+                  <Paperclip size={28} className="text-gray-400 dark:text-gray-600 mb-3" />
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">No attachments</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {selected.attachments.map((url: string, idx: number) => {
                     const filename = url.split('/').pop()?.split('?')[0] || 'Document';
                     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
@@ -315,7 +315,7 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                     return (
                       <div 
                         key={idx} 
-                        className="group relative bg-white dark:bg-gray-800/50 rounded-2xl overflow-hidden aspect-square border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                        className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden aspect-square border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300 cursor-pointer"
                       >
                         {isImage ? (
                           <>
@@ -324,7 +324,7 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                               <button 
                                 onClick={() => handlePreview(url)}
                                 aria-label="View image"
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-900 rounded-lg text-[10px] font-bold uppercase tracking-tight hover:bg-red-600 hover:text-white transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-900 rounded-lg text-xs font-bold uppercase tracking-tight hover:bg-red-600 hover:text-white transition-all"
                               >
                                 <Eye size={12} /> View
                               </button>
@@ -332,16 +332,16 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                           </>
                         ) : (
                           <div 
-                            className={`w-full h-full flex flex-col items-center justify-center p-3 ${bgColor} bg-opacity-10 dark:bg-opacity-20 cursor-pointer hover:bg-opacity-20 dark:hover:bg-opacity-30 transition-all`}
+                            className={`w-full h-full flex flex-col items-center justify-center p-3 ${bgColor} bg-opacity-15 dark:bg-opacity-20 hover:bg-opacity-25 dark:hover:bg-opacity-30 transition-all`}
                             onClick={() => handlePreview(url)}
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => e.key === 'Enter' && handlePreview(url)}
                           >
-                            <div className={`w-12 h-12 rounded-full ${bgColor} flex items-center justify-center mb-2`}>
-                              <Icon size={24} className="text-white" />
+                            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${bgColor} flex items-center justify-center mb-2`}>
+                              <Icon size={20} className="text-white" />
                             </div>
-                            <span className="text-[9px] font-bold text-gray-700 dark:text-gray-300 text-center truncate w-full px-2 lowercase">
+                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 text-center truncate w-full px-1">
                               {filename.length > 15 ? filename.substring(0, 12) + '...' : filename}
                             </span>
                           </div>
