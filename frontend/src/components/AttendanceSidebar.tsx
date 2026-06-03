@@ -106,7 +106,9 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
   };
   
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 rounded-[32px] p-5
+      dark:bg-gradient-to-b dark:from-[#050B16] dark:via-[#071220] dark:to-[#030814]
+      bg-gradient-to-b from-[#F8FAFC] to-[#EEF2F7]">
       {/* Header with Calendar Button */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -119,7 +121,7 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
       </div>
 
       {/* Main Clock In/Out Card */}
-      <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#4A0000] via-[#8B0000] to-[#3B0000] p-8 shadow-2xl border border-red-900/30">
+      <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-[#2E0008] via-[#7D0018] to-[#D90429] p-8 border border-red-400/10 shadow-[0_30px_100px_rgba(217,4,41,.45)]">
         {/* Decorative elements to match screenshot background waves/glows */}
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
