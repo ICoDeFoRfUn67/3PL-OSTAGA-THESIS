@@ -182,131 +182,79 @@ export const EmployeeDashboard = () => {
       /* ===================================
          OVERVIEW
       =================================== */
-case 'overview':
+      case 'overview':
   return (
     <div className="space-y-6">
 
-      {/* PROFILE HERO */}
-      <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#8B0000] via-red-700 to-red-900 p-6 md:p-8 shadow-2xl">
+      {/* HERO CARD */}
+      <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-[#8B0000] via-red-700 to-red-900 p-8 shadow-2xl">
 
-        {/* Background Glow */}
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+        {/* Decorative glow */}
+        <div className="absolute -bottom-32 left-0 right-0 h-64 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute -top-32 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
 
-        <div className="relative z-10">
+        <div className="relative z-10 flex flex-col items-center text-center">
 
-          {/* DESKTOP */}
-          <div className="hidden md:flex items-center gap-8">
+          {/* PROFILE IMAGE */}
+          <div className="relative">
 
-            {/* PROFILE */}
-            <div className="relative">
-              <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
-                <img
-                  src={
-                    employee?.profile_image_url ||
-                    'https://via.placeholder.com/300'
-                  }
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <button
-                onClick={() => setEditOpen(true)}
-                className="absolute bottom-2 right-2 w-14 h-14 rounded-full bg-red-500 border-4 border-white flex items-center justify-center shadow-xl"
-              >
-                <Pencil size={20} />
-              </button>
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
+              <img
+                src={
+                  employee?.profile_image_url ||
+                  'https://via.placeholder.com/300'
+                }
+                alt=""
+                className="w-full h-full object-cover"
+              />
             </div>
 
-            {/* INFO */}
-            <div className="flex-1 text-white">
-
-              <h1 className="text-4xl font-bold">
-                {employee?.full_name}
-              </h1>
-
-              <p className="mt-2 text-xl text-white/90">
-                {employee?.position}
-              </p>
-
-              <div className="mt-6 space-y-3">
-
-                <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20">
-                  <MapPin size={18} />
-                  {employee?.hub_name || 'N/A'}
-                </div>
-
-                <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 ml-3">
-                  <Calendar size={18} />
-                  {employee?.hired_date
-                    ? new Date(
-                        employee.hired_date
-                      ).toLocaleDateString()
-                    : 'N/A'}
-                </div>
-
-              </div>
-            </div>
+            <button
+              onClick={() => setEditOpen(true)}
+              className="absolute bottom-1 right-1 w-12 h-12 md:w-14 md:h-14 rounded-full bg-red-500 border-4 border-white flex items-center justify-center shadow-xl"
+            >
+              <Pencil size={18} className="text-white" />
+            </button>
 
           </div>
 
-          {/* MOBILE */}
-          <div className="md:hidden flex flex-col items-center text-center">
+          {/* NAME */}
+          <h1 className="mt-6 text-3xl md:text-4xl font-bold text-white">
+            {employee?.full_name}
+          </h1>
 
-            <div className="relative">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
-                <img
-                  src={
-                    employee?.profile_image_url ||
-                    'https://via.placeholder.com/300'
-                  }
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              </div>
+          {/* POSITION */}
+          <p className="mt-2 text-white/90 text-lg">
+            {employee?.position}
+          </p>
 
-              <button
-                onClick={() => setEditOpen(true)}
-                className="absolute bottom-0 right-0 w-12 h-12 rounded-full bg-red-500 border-4 border-white flex items-center justify-center"
-              >
-                <Pencil size={18} />
-              </button>
-            </div>
-
-            <h1 className="mt-5 text-3xl font-bold text-white">
-              {employee?.full_name}
-            </h1>
-
-            <p className="mt-2 text-white/90">
-              {employee?.position}
-            </p>
-
-            <div className="mt-5 w-full space-y-3">
-
-              <div className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
-                <MapPin size={18} />
-                {employee?.hub_name}
-              </div>
-
-              <div className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
-                <Calendar size={18} />
-                {employee?.hired_date
-                  ? new Date(
-                      employee.hired_date
-                    ).toLocaleDateString()
-                  : 'N/A'}
-              </div>
-
-            </div>
-
+          {/* LOCATION */}
+          <div className="mt-6 w-full max-w-md px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
+            <MapPin size={18} />
+            <span>
+              {employee?.hub_name || 'N/A'}
+            </span>
           </div>
 
-          {/* EDIT CARD */}
+          {/* DATE */}
+          <div className="mt-3 w-full max-w-xs px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
+            <Calendar size={18} />
+
+            <span>
+              {employee?.hired_date
+                ? new Date(
+                    employee.hired_date
+                  ).toLocaleDateString()
+                : 'N/A'}
+            </span>
+          </div>
+
+          {/* EDIT PROFILE CARD */}
           <button
             onClick={() => setEditOpen(true)}
-            className="mt-8 w-full bg-white rounded-3xl p-5 flex items-center justify-between shadow-xl hover:scale-[1.01] transition-all"
+            className="mt-8 w-full bg-white rounded-3xl p-5 flex items-center justify-between shadow-2xl transition hover:scale-[1.01]"
           >
+
             <div className="flex items-center gap-4">
 
               <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
@@ -317,94 +265,100 @@ case 'overview':
               </div>
 
               <div className="text-left">
-                <p className="font-bold text-gray-900">
+
+                <h3 className="font-bold text-gray-900">
                   Edit Profile
-                </p>
+                </h3>
 
                 <p className="text-sm text-gray-500">
                   Update your personal information
                 </p>
+
               </div>
+
             </div>
 
-            <span className="text-gray-400 text-2xl">
+            <span className="text-gray-400 text-3xl">
               ›
             </span>
+
           </button>
 
         </div>
       </div>
 
-      {/* SECTION HEADER */}
+      {/* EMPLOYEE INFO TITLE */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+
+        <h2 className="text-2xl font-bold text-white">
           Employee Information
         </h2>
 
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-slate-400">
           View your employment details and status
         </p>
+
       </div>
 
       {/* INFO GRID */}
       <div className="grid grid-cols-2 gap-4">
 
-        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
           <Briefcase
-            className="text-red-500 mb-4"
             size={28}
+            className="text-red-400 mb-4"
           />
 
-          <p className="text-xs uppercase tracking-wider text-gray-400">
+          <p className="text-xs uppercase tracking-wider text-slate-400">
             Employment
           </p>
 
-          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+          <h3 className="mt-2 text-xl font-bold text-white">
             {employee?.employment_type || 'N/A'}
           </h3>
         </div>
 
-        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
           <Shield
-            className="text-red-500 mb-4"
             size={28}
+            className="text-red-400 mb-4"
           />
 
-          <p className="text-xs uppercase tracking-wider text-gray-400">
+          <p className="text-xs uppercase tracking-wider text-slate-400">
             Status
           </p>
 
-          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+          <h3 className="mt-2 text-xl font-bold text-white">
             {employee?.status || 'N/A'}
           </h3>
         </div>
 
-        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
           <User
-            className="text-red-500 mb-4"
             size={28}
+            className="text-red-400 mb-4"
           />
 
-          <p className="text-xs uppercase tracking-wider text-gray-400">
+          <p className="text-xs uppercase tracking-wider text-slate-400">
             Role
           </p>
 
-          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+          <h3 className="mt-2 text-xl font-bold text-white">
             {employee?.role || 'Employee'}
           </h3>
         </div>
 
-        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
           <FileText
-            className="text-red-500 mb-4"
             size={28}
+            className="text-red-400 mb-4"
           />
 
-          <p className="text-xs uppercase tracking-wider text-gray-400">
+          <p className="text-xs uppercase tracking-wider text-slate-400">
             Employee ID
           </p>
 
-          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+          <h3 className="mt-2 text-xl font-bold text-white">
             {employee?.employee_id || 'N/A'}
           </h3>
         </div>
@@ -737,7 +691,7 @@ case 'overview':
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#070B14] transition-colors">
+    <div className="min-h-screen bg-[#050C1B] transition-colors">
       {/* MOBILE OVERLAY */}
       {mobileOpen && (
         <div
