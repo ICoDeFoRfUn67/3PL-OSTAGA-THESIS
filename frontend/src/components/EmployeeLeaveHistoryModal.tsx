@@ -315,7 +315,7 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                     return (
                       <div 
                         key={idx} 
-                        className="group relative bg-white dark:bg-gray-800/50 rounded-2xl overflow-hidden aspect-square border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
+                        className="group relative bg-white dark:bg-gray-800/50 rounded-2xl overflow-hidden aspect-square border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 cursor-pointer"
                       >
                         {isImage ? (
                           <>
@@ -323,6 +323,7 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors duration-300 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                               <button 
                                 onClick={() => handlePreview(url)}
+                                aria-label="View image"
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-900 rounded-lg text-[10px] font-bold uppercase tracking-tight hover:bg-red-600 hover:text-white transition-all"
                               >
                                 <Eye size={12} /> View
@@ -330,7 +331,13 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                             </div>
                           </>
                         ) : (
-                          <div className={`w-full h-full flex flex-col items-center justify-center p-3 ${bgColor} bg-opacity-10 dark:bg-opacity-20`}>
+                          <div 
+                            className={`w-full h-full flex flex-col items-center justify-center p-3 ${bgColor} bg-opacity-10 dark:bg-opacity-20 cursor-pointer hover:bg-opacity-20 dark:hover:bg-opacity-30 transition-all`}
+                            onClick={() => handlePreview(url)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && handlePreview(url)}
+                          >
                             <div className={`w-12 h-12 rounded-full ${bgColor} flex items-center justify-center mb-2`}>
                               <Icon size={24} className="text-white" />
                             </div>
@@ -378,8 +385,7 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
 
             {/* Cancel Request Button - Mobile Only */}
             {selected.status === 'pending' && (
-              <button className="w-full mt-auto py-3 px-4 border-2 border-red-600 text-red-600 rounded-2xl font-bold text-sm uppercase tracking-wider hover:bg-red-600 hover:text-white transition-colors duration-300 flex items-center justify-center gap-2">
-                <X size={18} />
+              <button className="w-full mt-auto py-3 px-4 border-2 border-red-600 text-red-600 rounded-2xl font-bold text-sm uppercase tracking-wider hover:bg-red-600 hover:text-white transition-colors duration-300">
                 Cancel Request
               </button>
             )}
