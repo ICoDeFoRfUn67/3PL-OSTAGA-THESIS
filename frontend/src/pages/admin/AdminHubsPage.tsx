@@ -1205,37 +1205,27 @@ export const AdminHubsPage = () => {
                 </MapContainer>
               {weatherData && (
                 <div
-                  className="
-                    absolute
-                    top-4
-                    right-4
-                    z-[1000]
-                    backdrop-blur-xl
-                    bg-[#071a3d]/90
-                    border
-                    border-white/10
-                    rounded-2xl
-                    px-4
-                    py-3
-                    min-w-[180px]
-                    shadow-2xl
-                  "
+                  className={`absolute top-4 right-4 z-[1000] backdrop-blur-xl rounded-2xl px-3 py-2 min-w-[150px] shadow-2xl border ${
+                    isDarkMode
+                      ? 'bg-[#071a3d]/90 border-white/10 text-white'
+                      : 'bg-white/[0.95] border-gray-200 text-gray-900'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-xl">
                       {weatherData.icon}
                     </div>
-              
+
                     <div>
-                      <p className="text-[10px] text-white/60 uppercase">
+                      <p className={`${isDarkMode ? 'text-[10px] text-white/60' : 'text-[10px] text-gray-500'} uppercase`}>
                         Current Weather
                       </p>
-              
-                      <p className="text-lg font-bold text-white">
+
+                      <p className={`${isDarkMode ? 'text-lg font-bold text-white' : 'text-lg font-bold text-gray-900'}`}>
                         {weatherData.temp}°C
                       </p>
-              
-                      <p className="text-xs text-white/60">
+
+                      <p className={`${isDarkMode ? 'text-xs text-white/60' : 'text-xs text-gray-500'}`}>
                         {weatherData.label}
                       </p>
                     </div>
@@ -1244,65 +1234,56 @@ export const AdminHubsPage = () => {
               )}
 
               {showDirections && routeData && (
-                <div
-                  className="
-                    absolute
-                    bottom-4
-                    left-4
-                    right-4
-                    z-[1000]
-                    grid
-                    grid-cols-3
-                    gap-3
-                  "
-                >
-                  <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <Footprints size={18} className="text-emerald-400" />
-              
-                  <div>
-                    <p className="text-white text-sm font-semibold">
-                      Walking
-                    </p>
-              
-                    <p className="text-xs text-white/60">
-                      {formatDistance(routeData.walking.distanceM)} • {formatDuration(routeData.walking.durationSec)}
-                    </p>
+                <div className="absolute bottom-4 left-3 right-3 z-[1000] grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className={`backdrop-blur-xl rounded-2xl px-3 py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                    <div className="flex items-center gap-3">
+                      <Footprints size={16} className={isDarkMode ? 'text-emerald-400' : 'text-emerald-600'} />
+
+                      <div>
+                        <p className={`${isDarkMode ? 'text-white text-sm font-semibold' : 'text-gray-900 text-sm font-semibold'}`}>
+                          Walking
+                        </p>
+
+                        <p className={`${isDarkMode ? 'text-xs text-white/60' : 'text-xs text-gray-500'}`}>
+                          {formatDistance(routeData.walking.distanceM)} • {formatDuration(routeData.walking.durationSec)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`backdrop-blur-xl rounded-2xl px-3 py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                    <div className="flex items-center gap-3">
+                      <Bike size={16} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
+
+                      <div>
+                        <p className={`${isDarkMode ? 'text-white text-sm font-semibold' : 'text-gray-900 text-sm font-semibold'}`}>
+                          Cycling
+                        </p>
+
+                        <p className={`${isDarkMode ? 'text-xs text-white/60' : 'text-xs text-gray-500'}`}>
+                          {formatDistance(routeData.riding.distanceM)} • {formatDuration(routeData.riding.durationSec)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`backdrop-blur-xl rounded-2xl px-3 py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                    <div className="flex items-center gap-3">
+                      <Car size={16} className={isDarkMode ? 'text-orange-400' : 'text-orange-600'} />
+
+                      <div>
+                        <p className={`${isDarkMode ? 'text-white text-sm font-semibold' : 'text-gray-900 text-sm font-semibold'}`}>
+                          Driving
+                        </p>
+
+                        <p className={`${isDarkMode ? 'text-xs text-white/60' : 'text-xs text-gray-500'}`}>
+                          {formatDistance(routeData.car.distanceM)} • {formatDuration(routeData.car.durationSec)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <Bike size={18} className="text-blue-400" />
-              
-                  <div>
-                    <p className="text-white text-sm font-semibold">
-                      Cycling
-                    </p>
-              
-                    <p className="text-xs text-white/60">
-                      {formatDistance(routeData.riding.distanceM)} • {formatDuration(routeData.riding.durationSec)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-             <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-3">
-                <Car size={18} className="text-orange-400" />
-            
-                <div>
-                  <p className="text-white text-sm font-semibold">
-                    Driving
-                  </p>
-            
-                  <p className="text-xs text-white/60">
-                    {formatDistance(routeData.car.distanceM)} • {formatDuration(routeData.car.durationSec)}
-                  </p>
-                </div>
-              </div>
-            </div>
-            </div>
-            )}
+              )}
               </div>
 
             {/* RIGHT PANEL */}

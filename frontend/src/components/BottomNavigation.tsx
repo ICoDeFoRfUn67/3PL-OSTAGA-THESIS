@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/context/ThemeContext';
 
 import {
   LayoutDashboard,
@@ -27,6 +28,8 @@ export const BottomNavigation = ({
 }: BottomNavigationProps) => {
   const { user } = useAuth();
   const location = useLocation();
+
+  const { isDarkMode } = useTheme();
 
   const [expanded, setExpanded] = useState(false);
 
@@ -157,12 +160,7 @@ export const BottomNavigation = ({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
                 onClick={() => setExpanded(false)}
-                className="
-                  fixed
-                  inset-0
-                  bg-black/35
-                  backdrop-blur-[6px]
-                "
+                className={`fixed inset-0 ${isDarkMode ? 'bg-black/35' : 'bg-black/10'} backdrop-blur-[6px]`}
               />
             )}
           </AnimatePresence>
@@ -205,108 +203,32 @@ export const BottomNavigation = ({
                       damping: 24,
                       delay: index * 0.02,
                     }}
-                    className="
-                      absolute
-                      left-1/2
-                      bottom-[38px]
-                      z-40
-                    "
-                    style={{
-                      marginLeft: '-22px',
-                    }}
+                    className="absolute left-1/2 bottom-[38px] z-40"
+                    style={{ marginLeft: '-22px' }}
                   >
-                    <NavLink
-                      to={item.path}
-                      onClick={() => setExpanded(false)}
-                    >
+                    <NavLink to={item.path} onClick={() => setExpanded(false)}>
                       <motion.div
-                        whileTap={{
-                          scale: 0.94,
-                        }}
-                        whileHover={{
-                          y: -3,
-                        }}
-                        className="
-                          flex
-                          flex-col
-                          items-center
-                          gap-1.5
-                        "
+                        whileTap={{ scale: 0.94 }}
+                        whileHover={{ y: -3 }}
+                        className="flex flex-col items-center gap-1.5"
                       >
                         {/* FLOATING ICON */}
                         <div
-                          className={`
-                            relative
-
-                            w-[44px]
-                            h-[44px]
-
-                            sm:w-[48px]
-                            sm:h-[48px]
-
-                            rounded-full
-
-                            flex
-                            items-center
-                            justify-center
-
-                            border
-
-                            transition-all
-                            duration-300
-
-                            ${
-                              isActive
-                                ? `
-                                  bg-gradient-to-b
-                                  from-red-500
-                                  to-red-600
-
-                                  border-red-400
-
-                                  text-white
-
-                                  shadow-[0_8px_24px_rgba(239,68,68,0.35)]
-                                `
-                                : `
-                                  bg-[#081226]/92
-
-                                  border-white/15
-
-                                  text-white
-
-                                  hover:border-red-400
-                                  hover:text-red-400
-                                `
-                            }
-                          `}
+                          className={`relative w-[40px] h-[40px] sm:w-[44px] sm:h-[44px] md:w-[48px] md:h-[48px] rounded-full flex items-center justify-center border transition-all duration-300 ${
+                            isActive
+                              ? `bg-gradient-to-b from-red-500 to-red-600 border-red-400 text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)]`
+                              : isDarkMode
+                              ? `bg-[#081226]/92 border-white/15 text-white hover:border-red-400 hover:text-red-400`
+                              : `bg-white border-gray-200 text-gray-800 hover:border-red-400 hover:text-red-500`
+                          }`}
                         >
-                          <div
-                            className="
-                              absolute
-                              inset-[3px]
-                              rounded-full
-                              border
-                              border-white/5
-                            "
-                          />
+                          <div className="absolute inset-[3px] rounded-full border border-white/5" />
 
-                          <Icon
-                            size={18}
-                            strokeWidth={2.2}
-                            className="relative z-10"
-                          />
+                          <Icon size={18} strokeWidth={2.2} className="relative z-10" />
                         </div>
 
                         {/* LABEL */}
-                        <span
-                          className="
-                            text-[9px]
-                            font-semibold
-                            text-white
-                            leading-none
-                          "
-                        >
+                        <span className={`${isDarkMode ? 'text-white' : 'text-gray-700'} text-[9px] font-semibold leading-none`}>
                           {item.label}
                         </span>
                       </motion.div>
@@ -317,40 +239,9 @@ export const BottomNavigation = ({
           </AnimatePresence>
 
           {/* MAIN NAVIGATION */}
-          <div
-            className="
-              relative
-
-              h-[72px]
-              sm:h-[76px]
-
-              rounded-[26px]
-
-              overflow-visible
-
-              border
-              border-white/10
-
-              bg-[rgba(8,15,35,0.94)]
-
-              backdrop-blur-[22px]
-
-              shadow-[0_16px_40px_rgba(0,0,0,0.38)]
-            "
-          >
+          <div className={`relative h-[72px] sm:h-[76px] rounded-[26px] overflow-visible border ${isDarkMode ? 'border-white/10 bg-[rgba(8,15,35,0.94)] backdrop-blur-[22px] shadow-[0_16px_40px_rgba(0,0,0,0.38)]' : 'border-gray-200 bg-white/95 shadow-sm'}`}>
             {/* INNER LIGHT */}
-            <div
-              className="
-                absolute
-                inset-0
-
-                rounded-[26px]
-
-                bg-gradient-to-b
-                from-white/[0.03]
-                to-transparent
-              "
-            />
+            <div className={`absolute inset-0 rounded-[26px] ${isDarkMode ? 'bg-gradient-to-b from-white/[0.03] to-transparent' : 'bg-gradient-to-b from-black/[0.02] to-transparent'}`} />
 
             <div
               className="
@@ -389,45 +280,11 @@ export const BottomNavigation = ({
                         min-w-[54px]
                       "
                     >
-                      <motion.div
-                        whileTap={{
-                          scale: 0.92,
-                        }}
-                        whileHover={{
-                          y: -2,
-                        }}
-                        className={`
-                          transition-all
-                          duration-300
-
-                          ${
-                            isActive
-                              ? 'text-red-500'
-                              : 'text-gray-500'
-                          }
-                        `}
-                      >
-                        <Icon
-                          size={18}
-                          strokeWidth={2.2}
-                        />
+                      <motion.div whileTap={{ scale: 0.92 }} whileHover={{ y: -2 }} className={`transition-all duration-300 ${isActive ? 'text-red-500' : isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>
+                        <Icon size={18} strokeWidth={2.2} />
                       </motion.div>
 
-                      <span
-                        className={`
-                          text-[9px]
-                          font-semibold
-
-                          transition-all
-                          duration-300
-
-                          ${
-                            isActive
-                              ? 'text-red-500'
-                              : 'text-gray-500'
-                          }
-                        `}
-                      >
+                      <span className={`text-[9px] font-semibold transition-all duration-300 ${isActive ? 'text-red-500' : isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>
                         {item.label}
                       </span>
                     </NavLink>

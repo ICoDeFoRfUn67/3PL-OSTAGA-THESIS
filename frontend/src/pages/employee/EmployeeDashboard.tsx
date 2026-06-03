@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGetPayroll, useGetDocuments } from '@/hooks/useQueries';
 import { EmployeeSidebar } from '@/components/EmployeeSidebar';
-import { InfoCard, InfoItem } from '@/components/InfoCard';
+// removed unused InfoCard imports
 import DocumentsSection from "@/components/DocumentsSection";
 import { EmployeeEditModal } from '@/components/EmployeeEditModal';
 import { PayslipDetailModal } from '@/components/PayslipViewforemployee';
@@ -21,28 +21,18 @@ import {
   Briefcase,
   LogOut,
   Menu,
-  Pencil,
   Moon,
   Sun,
   MapPin,
   Calendar,
   Shield,
-  Mail,
-  Upload,
-  Download,
-  Trash2,
-  MoreVertical,
-  AlertCircle,
   Users,
   Phone,
   Activity,
   CreditCard,
   Heart,
   Home,
-  ArrowRight,
-  Eye,
-  Plane,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 
 import logo from '@/images/3pl1.png';
