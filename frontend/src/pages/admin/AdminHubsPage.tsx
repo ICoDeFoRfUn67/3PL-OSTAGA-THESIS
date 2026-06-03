@@ -956,7 +956,7 @@ export const AdminHubsPage = () => {
               0 0 15px rgba(255,77,79,.8);
           "
         ></div>
-        `
+        `,
         iconSize: [16, 16],
       }),
     []
@@ -1169,9 +1169,13 @@ export const AdminHubsPage = () => {
                   ref={mapRef}
                 >
                  <TileLayer
-                  attribution=""
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                />
+                    attribution=""
+                    url={
+                      isDarkMode
+                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                    }
+                  />
 
                   {userLocation && (
                     <Marker position={userLocation} icon={userIcon}>
@@ -1511,9 +1515,6 @@ export const AdminHubsPage = () => {
                           </>
                         )}
                       </button>
-
-                    
-                      )}
                     </div>
                   </div>
                 ) : (
