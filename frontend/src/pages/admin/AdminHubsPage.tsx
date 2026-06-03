@@ -943,7 +943,20 @@ export const AdminHubsPage = () => {
     () =>
       L.divIcon({
         className: '',
-        html: `<div style="width:16px;height:16px;background:#ef4444;border-radius:999px;border:3px solid white;box-shadow:0 4px 12px rgba(239,68,68,.4);"></div>`,
+       html: `
+        <div
+          style="
+            width:18px;
+            height:18px;
+            background:#ff4d4f;
+            border-radius:999px;
+            border:3px solid white;
+            box-shadow:
+              0 0 0 4px rgba(255,77,79,.15),
+              0 0 15px rgba(255,77,79,.8);
+          "
+        ></div>
+        `
         iconSize: [16, 16],
       }),
     []
@@ -1148,20 +1161,17 @@ export const AdminHubsPage = () => {
           {/* ========== MAP + SIDE PANEL ========== */}
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
             {/* MAP */}
-            <div ref={containerRef} className="xl:col-span-8 rounded-3xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220] shadow-lg h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
+            <div ref={containerRef} className="relative xl:col-span-8 rounded-3xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220] shadow-lg h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
                 <MapContainer
                   center={[14.5995, 120.9842]}
                   zoom={6}
                   style={{ height: '100%', width: '100%' }}
                   ref={mapRef}
                 >
-                  <TileLayer
-                    url={
-                      isDarkMode
-                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-                    }
-                  />
+                 <TileLayer
+                  attribution=""
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                />
 
                   {userLocation && (
                     <Marker position={userLocation} icon={userIcon}>
@@ -1189,6 +1199,106 @@ export const AdminHubsPage = () => {
                     />
                   )}
                 </MapContainer>
+              {weatherData && (
+                <div
+                  className="
+                    absolute
+                    top-4
+                    right-4
+                    z-[1000]
+                    backdrop-blur-xl
+                    bg-[#071a3d]/90
+                    border
+                    border-white/10
+                    rounded-2xl
+                    px-4
+                    py-3
+                    min-w-[180px]
+                    shadow-2xl
+                  "
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-xl">
+                      {weatherData.icon}
+                    </div>
+              
+                    <div>
+                      <p className="text-[10px] text-white/60 uppercase">
+                        Current Weather
+                      </p>
+              
+                      <p className="text-lg font-bold text-white">
+                        {weatherData.temp}°C
+                      </p>
+              
+                      <p className="text-xs text-white/60">
+                        {weatherData.label}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showDirections && routeData && (
+                <div
+                  className="
+                    absolute
+                    bottom-4
+                    left-4
+                    right-4
+                    z-[1000]
+                    grid
+                    grid-cols-3
+                    gap-3
+                  "
+                >
+                  <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Footprints size={18} className="text-emerald-400" />
+              
+                  <div>
+                    <p className="text-white text-sm font-semibold">
+                      Walking
+                    </p>
+              
+                    <p className="text-xs text-white/60">
+                      {formatDistance(routeData.walking.distanceM)} • {formatDuration(routeData.walking.durationSec)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Bike size={18} className="text-blue-400" />
+              
+                  <div>
+                    <p className="text-white text-sm font-semibold">
+                      Cycling
+                    </p>
+              
+                    <p className="text-xs text-white/60">
+                      {formatDistance(routeData.riding.distanceM)} • {formatDuration(routeData.riding.durationSec)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+             <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Car size={18} className="text-orange-400" />
+            
+                <div>
+                  <p className="text-white text-sm font-semibold">
+                    Driving
+                  </p>
+            
+                  <p className="text-xs text-white/60">
+                    {formatDistance(routeData.car.distanceM)} • {formatDuration(routeData.car.durationSec)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            </div>
+            )}
               </div>
 
             {/* RIGHT PANEL */}
@@ -1235,28 +1345,7 @@ export const AdminHubsPage = () => {
                         />
                       </div>
 
-                      {/* Weather */}
-                      {weatherData && (
-                        <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-xl bg-white dark:bg-white/[0.06] flex items-center justify-center text-2xl shadow-sm">
-                              {weatherData.icon}
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Current Weather
-                              </p>
-                              <p className="text-xl font-bold text-gray-900 dark:text-white">
-                                {weatherData.temp}°C
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {weatherData.label}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
+                  
                       {/* Stats grid */}
                       <div className="grid grid-cols-2 gap-3">
                         {/* Employment breakdown */}
@@ -1423,36 +1512,7 @@ export const AdminHubsPage = () => {
                         )}
                       </button>
 
-                      {/* Direction results */}
-                      {showDirections && routeData && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-2"
-                        >
-                          {[
-                            { label: 'Walking', icon: Footprints, data: routeData.walking, color: 'text-emerald-500' },
-                            { label: 'Cycling', icon: Bike, data: routeData.riding, color: 'text-blue-500' },
-                            { label: 'Driving', icon: Car, data: routeData.car, color: 'text-orange-500' },
-                          ].map(({ label, icon: Icon, data: rd, color }) => (
-                            <div
-                              key={label}
-                              className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] p-3 flex items-center gap-3"
-                            >
-                              <div className={`h-9 w-9 rounded-lg bg-white dark:bg-white/[0.06] flex items-center justify-center shadow-sm`}>
-                                <Icon size={16} className={color} />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                                  {label}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatDistance(rd.distanceM)} · {formatDuration(rd.durationSec)}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </motion.div>
+                    
                       )}
                     </div>
                   </div>
