@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useGetPayroll } from '@/hooks/useQueries';
+import { useGetPayroll, useGetDocuments } from '@/hooks/useQueries';
 import { EmployeeSidebar } from '@/components/EmployeeSidebar';
 import { InfoCard, InfoItem } from '@/components/InfoCard';
 import DocumentsSection from "@/components/DocumentsSection";
@@ -34,7 +34,15 @@ import {
   MoreVertical,
   AlertCircle,
   Users,
-  Phone
+  Phone,
+  Activity,
+  CreditCard,
+  Heart,
+  Home,
+  ArrowRight,
+  Eye,
+  Plane,
+  ChevronRight
 } from 'lucide-react';
 
 import logo from '@/images/3pl1.png';
@@ -148,6 +156,18 @@ export const EmployeeDashboard = () => {
     [payrollQuery.data]
   );
 
+  const documentsQuery = useGetDocuments({
+    employee_id: employee?.id,
+  });
+
+  const documentsList = useMemo(
+    () =>
+      normalizeApiResponse(
+        documentsQuery.data
+      ) as any[],
+    [documentsQuery.data]
+  );
+
   /* ===================================
      HELPERS
   =================================== */
@@ -190,157 +210,133 @@ export const EmployeeDashboard = () => {
          OVERVIEW
       =================================== */
       case 'overview':
-  return (
-    <div className="space-y-6">
+        return (
+          <div className="space-y-6">
+            {/* HERO CARD */}
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#4A0000] via-[#8B0000] to-[#3B0000] p-6 md:p-8 shadow-2xl border border-red-900/30">
+              {/* Glow rings */}
+              <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
 
-      {/* HERO CARD */}
-      <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-[#8B0000] via-red-700 to-red-900 p-8 shadow-2xl">
+              <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 md:gap-8">
+                {/* PROFILE IMAGE */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden border-[6px] border-white/10 shadow-2xl relative">
+                    <img
+                      src={employee?.profile_image_url || 'https://via.placeholder.com/300'}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setEditOpen(true)}
+                    className="absolute bottom-1 right-1 w-11 h-11 rounded-full bg-[#C41E3A] border-4 border-[#070B14] flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+                    title="Edit Profile"
+                    aria-label="Edit Profile"
+                  >
+                    <Pencil size={16} className="text-white" />
+                  </button>
+                </div>
 
-        {/* Decorative glow */}
-        <div className="absolute -bottom-32 left-0 right-0 h-64 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute -top-32 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+                {/* PROFILE DETAILS */}
+                <div className="flex-1 text-center sm:text-left space-y-4">
+                  <div className="space-y-1">
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+                      {employee?.full_name}
+                    </h1>
+                    <p className="text-slate-300 text-lg font-medium">{employee?.position}</p>
+                  </div>
 
-        <div className="relative z-10 flex flex-col items-center text-center">
+                  <div className="flex flex-col gap-2.5 max-w-sm sm:max-w-md">
+                    <div className="px-4 py-2 rounded-2xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-3 text-sm text-slate-300 font-semibold shadow-sm w-fit max-w-full">
+                      <MapPin size={16} className="text-red-400 flex-shrink-0" />
+                      <span className="truncate">{employee?.hub_name || 'N/A'}</span>
+                    </div>
 
-          {/* PROFILE IMAGE */}
-          <div className="relative">
+                    <div className="px-4 py-2 rounded-2xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-3 text-sm text-slate-300 font-semibold shadow-sm w-fit">
+                      <Calendar size={16} className="text-red-400 flex-shrink-0" />
+                      <span>
+                        {employee?.hired_date
+                          ? new Date(employee.hired_date).toLocaleDateString('en-US', {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
-              <img
-                src={
-                  employee?.profile_image_url ||
-                  'https://via.placeholder.com/300'
-                }
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              {/* BOTTOM EDIT PROFILE CARD (matching Image 2) */}
+              <div 
+                onClick={() => setEditOpen(true)}
+                className="relative z-10 mt-6 bg-white hover:bg-slate-50 transition-all rounded-[20px] p-4 flex items-center justify-between shadow-md cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                    <User size={22} />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-base font-bold text-slate-900 leading-tight">Edit Profile</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Update your personal information</p>
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
 
-            <button
-              onClick={() => setEditOpen(true)}
-              className="absolute bottom-1 right-1 w-12 h-12 md:w-14 md:h-14 rounded-full bg-red-500 border-4 border-white flex items-center justify-center shadow-xl"
-              title="Edit Profile"
-              aria-label="Edit Profile"
-            >
-              <Pencil size={18} className="text-white" />
-            </button>
+            {/* EMPLOYEE INFO TITLE */}
+            <div className="flex items-start gap-3 mt-8">
+              <div className="w-12 h-12 rounded-xl bg-red-950/40 text-red-500 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+                <FileText size={22} />
+              </div>
+              <div className="space-y-0.5">
+                <h2 className="text-xl md:text-2xl font-bold text-white">Employee Information</h2>
+                <p className="text-sm text-slate-400">View your employment details and status</p>
+              </div>
+            </div>
 
+            {/* INFO GRID */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 shadow-xl">
+                <div className="w-12 h-12 rounded-2xl bg-red-950/40 text-red-500 border border-red-500/20 flex items-center justify-center mb-4">
+                  <Briefcase size={22} />
+                </div>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Employment</p>
+                <h3 className="mt-2 text-xl font-bold text-white uppercase">{employee?.employment_type || 'N/A'}</h3>
+              </div>
+
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 shadow-xl">
+                <div className="w-12 h-12 rounded-2xl bg-red-950/40 text-red-500 border border-red-500/20 flex items-center justify-center mb-4">
+                  <Activity size={22} />
+                </div>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Status</p>
+                <h3 className={`mt-2 text-xl font-extrabold ${
+                  employee?.status?.toLowerCase() === 'resign' ? 'text-[#F59E0B]' : 'text-[#10B981]'
+                }`}>{employee?.status || 'N/A'}</h3>
+              </div>
+
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 shadow-xl">
+                <div className="w-12 h-12 rounded-2xl bg-red-950/40 text-red-500 border border-red-500/20 flex items-center justify-center mb-4">
+                  <User size={22} />
+                </div>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Role</p>
+                <h3 className="mt-2 text-xl font-bold text-white capitalize">{employee?.role || 'Employee'}</h3>
+              </div>
+
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 shadow-xl">
+                <div className="w-12 h-12 rounded-2xl bg-red-950/40 text-red-500 border border-red-500/20 flex items-center justify-center mb-4">
+                  <FileText size={22} />
+                </div>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Employee ID</p>
+                <h3 className="mt-2 text-xl font-bold text-white">{employee?.employee_id || 'N/A'}</h3>
+              </div>
+            </div>
           </div>
-
-          {/* NAME */}
-          <h1 className="mt-6 text-3xl md:text-4xl font-bold text-white">
-            {employee?.full_name}
-          </h1>
-
-          {/* POSITION */}
-          <p className="mt-2 text-white/90 text-lg">
-            {employee?.position}
-          </p>
-
-          {/* LOCATION */}
-          <div className="mt-6 w-full max-w-md px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
-            <MapPin size={18} />
-            <span>
-              {employee?.hub_name || 'N/A'}
-            </span>
-          </div>
-
-          {/* DATE */}
-          <div className="mt-3 w-full max-w-xs px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
-            <Calendar size={18} />
-
-            <span>
-              {employee?.hired_date
-                ? new Date(
-                    employee.hired_date
-                  ).toLocaleDateString()
-                : 'N/A'}
-            </span>
-          </div>
-
-        </div>
-      </div>
-
-      {/* EMPLOYEE INFO TITLE */}
-      <div>
-
-        <h2 className="text-2xl font-bold text-white">
-          Employee Information
-        </h2>
-
-        <p className="text-slate-400">
-          View your employment details and status
-        </p>
-
-      </div>
-
-      {/* INFO GRID */}
-      <div className="grid grid-cols-2 gap-4">
-
-        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
-          <Briefcase
-            size={28}
-            className="text-red-400 mb-4"
-          />
-
-          <p className="text-xs uppercase tracking-wider text-slate-400">
-            Employment
-          </p>
-
-          <h3 className="mt-2 text-xl font-bold text-white">
-            {employee?.employment_type || 'N/A'}
-          </h3>
-        </div>
-
-        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
-          <Shield
-            size={28}
-            className="text-red-400 mb-4"
-          />
-
-          <p className="text-xs uppercase tracking-wider text-slate-400">
-            Status
-          </p>
-
-          <h3 className="mt-2 text-xl font-bold text-white">
-            {employee?.status || 'N/A'}
-          </h3>
-        </div>
-
-        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
-          <User
-            size={28}
-            className="text-red-400 mb-4"
-          />
-
-          <p className="text-xs uppercase tracking-wider text-slate-400">
-            Role
-          </p>
-
-          <h3 className="mt-2 text-xl font-bold text-white">
-            {employee?.role || 'Employee'}
-          </h3>
-        </div>
-
-        <div className="rounded-3xl bg-[#0B1736] border border-[#1B315F] p-5 shadow-xl">
-          <FileText
-            size={28}
-            className="text-red-400 mb-4"
-          />
-
-          <p className="text-xs uppercase tracking-wider text-slate-400">
-            Employee ID
-          </p>
-
-          <h3 className="mt-2 text-xl font-bold text-white">
-            {employee?.employee_id || 'N/A'}
-          </h3>
-        </div>
-
-      </div>
-
-    </div>
-  );
+        );
 
       /* ===================================
          ATTENDANCE
@@ -429,60 +425,11 @@ export const EmployeeDashboard = () => {
 
       case 'documents':
         return (
-          <div className="space-y-6">
-            {/* Header Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1a1f3a] to-[#0f1728] border border-gray-700 p-8 shadow-2xl">
-              {/* Decorative elements */}
-              <div className="absolute -top-20 -right-20 w-40 h-40 bg-red-500/10 rounded-full blur-3xl" />
-              <div className="absolute -bottom-20 -right-40 w-60 h-60 bg-purple-500/5 rounded-full blur-3xl" />
-              <div className="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
-              
-              <div className="relative z-10 flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-2xl bg-red-600/20 flex items-center justify-center">
-                      <FileText size={28} className="text-red-500" />
-                    </div>
-                    <div>
-                      <h1 className="text-3xl md:text-4xl font-bold text-white">Your Documents</h1>
-                      <p className="text-gray-300 mt-1">Manage and view your employee documents</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Upload Section */}
-            <div className="rounded-3xl bg-[#0F1728] border-2 border-dashed border-gray-600 p-8 shadow-lg">
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600/20 to-red-900/20 flex items-center justify-center">
-                    <Upload size={32} className="text-red-500" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Upload Document</h3>
-                  <p className="text-gray-400 mb-4">Drag and drop your files here or click to browse</p>
-                  <p className="text-sm text-gray-500 mb-6">PDF • DOC • JPG • PNG <span className="text-red-500">(max 5MB)</span></p>
-                </div>
-                <button className="px-8 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold flex items-center justify-center gap-2 mx-auto transition-colors shadow-lg">
-                  <Upload size={20} />
-                  Choose File
-                </button>
-              </div>
-            </div>
-
-            {/* Secure Storage Info */}
-            <div className="rounded-2xl bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-700/30 p-6 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center flex-shrink-0 mt-1">
-                <Shield size={20} className="text-blue-400" />
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-1">Secure Storage</h4>
-                <p className="text-sm text-gray-400">Your documents are securely stored and only visible to authorized personnel.</p>
-              </div>
-            </div>
-          </div>
+          <DocumentsSection
+            documents={documentsList}
+            employeeId={employee?.id || 0}
+            onUpdate={() => documentsQuery.refetch()}
+          />
         );
 
       /* ===================================
@@ -492,149 +439,232 @@ export const EmployeeDashboard = () => {
       case 'information':
         return (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-gradient-to-r from-[#8B0000] to-red-700 p-6 md:p-8 text-white shadow-xl">
-              <h2 className="text-2xl md:text-3xl font-bold leading-tight text-white">
-                Employee Information
-              </h2>
-
-              <p className="mt-2 text-white/90 text-sm md:text-base leading-relaxed">
-                Personal details, emergency contact, and government information.
-              </p>
+            {/* Header Card */}
+            <div className="rounded-[24px] bg-gradient-to-br from-[#4A0000] via-[#8B0000] to-[#3B0000] p-6 md:p-8 text-white shadow-xl border border-red-900/30 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-950/60 border border-red-800/30 flex items-center justify-center flex-shrink-0">
+                <User size={24} className="text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
+                  Employee Information
+                </h2>
+                <p className="mt-1 text-slate-300 text-xs md:text-sm">
+                  Personal details, emergency contact, and government information.
+                </p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-              <InfoCard
-                title="Personal Information"
-                icon={<User size={18} />}
-              >
-                <InfoItem
-                  label="Full Name"
-                  value={
-                    employee?.full_name
-                  }
-                />
+            <div className="space-y-5">
+              {/* Employment Information Card */}
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 md:p-6 shadow-xl">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center">
+                      <Briefcase size={20} />
+                    </div>
+                    <h3 className="text-base font-bold text-white">Employment Information</h3>
+                  </div>
+                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                </div>
 
-                <InfoItem
-                  label="Gender"
-                  value={employee?.gender}
-                />
+                <div className="space-y-4">
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <User size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Position</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.position || 'N/A'}</span>
+                  </div>
 
-                <InfoItem
-                  label="Nationality"
-                  value={
-                    employee?.nationality
-                  }
-                />
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <MapPin size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Hub</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.hub_name || 'N/A'}</span>
+                  </div>
 
-                <InfoItem
-                  label="Marital Status"
-                  value={
-                    employee?.marital_status
-                  }
-                />
-              </InfoCard>
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Briefcase size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Employment Type</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.employment_type || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
 
-              <InfoCard
-                title="Contact Information"
-                icon={<Mail size={18} />}
-              >
-                <InfoItem
-                  label="Email"
-                  value={
-                    employee?.email_address
-                  }
-                />
+              {/* Government IDs Card */}
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 md:p-6 shadow-xl">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center">
+                      <Shield size={20} />
+                    </div>
+                    <h3 className="text-base font-bold text-white">Government IDs</h3>
+                  </div>
+                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                </div>
 
-                <InfoItem
-                  label="Phone"
-                  value={
-                    employee?.phone_number
-                  }
-                />
+                <div className="space-y-4">
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <CreditCard size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">TIN</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.tin || 'N/A'}</span>
+                  </div>
 
-                <InfoItem
-                  label="Address"
-                  value={
-                    employee?.current_address
-                  }
-                />
-              </InfoCard>
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Shield size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">SSS</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.sss || 'N/A'}</span>
+                  </div>
 
-              <InfoCard
-                title="Employment Information"
-                icon={
-                  <Briefcase size={18} />
-                }
-              >
-                <InfoItem
-                  label="Position"
-                  value={
-                    employee?.position
-                  }
-                />
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Heart size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">PhilHealth</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.philhealth || 'N/A'}</span>
+                  </div>
 
-                <InfoItem
-                  label="Hub"
-                  value={
-                    employee?.hub_name
-                  }
-                />
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Home size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Pag-IBIG</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.pagibig || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
 
-                <InfoItem
-                  label="Employment Type"
-                  value={
-                    employee?.employment_type
-                  }
-                />
-              </InfoCard>
+              {/* Emergency Contact Card */}
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 md:p-6 shadow-xl">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center">
+                      <User size={20} />
+                    </div>
+                    <h3 className="text-base font-bold text-white">Emergency Contact</h3>
+                  </div>
+                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                </div>
 
-              <InfoCard
-                title="Government IDs"
-                icon={<Shield size={18} />}
-              >
-                <InfoItem
-                  label="TIN"
-                  value={employee?.tin}
-                />
+                <div className="space-y-4">
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Users size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Contact Name</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.emergency_contact_name || 'N/A'}</span>
+                  </div>
 
-                <InfoItem
-                  label="SSS"
-                  value={employee?.sss}
-                />
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Users size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Relationship</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.emergency_contact_relationship || 'N/A'}</span>
+                  </div>
 
-                <InfoItem
-                  label="PhilHealth"
-                  value={
-                    employee?.philhealth
-                  }
-                />
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Phone size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Phone Number</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.emergency_contact_phone || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
 
-                <InfoItem
-                  label="Pag-IBIG"
-                  value={
-                    employee?.pagibig
-                  }
-                />
-              </InfoCard>
-              <InfoCard
-                title="Emergency Contact"
-                icon={<User size={18} />}
-              >
-                <InfoItem
-                  label="Contact Name"
-                  value={employee?.emergency_contact_name}
-                />
+              {/* Personal Information Card */}
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 md:p-6 shadow-xl">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center">
+                      <User size={20} />
+                    </div>
+                    <h3 className="text-base font-bold text-white">Personal Information</h3>
+                  </div>
+                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                </div>
 
-                <InfoItem
-                  label="Relationship"
-                  value={employee?.emergency_contact_relationship}
-                />
+                <div className="space-y-4">
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <User size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Full Name</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.full_name || 'N/A'}</span>
+                  </div>
 
-                <InfoItem
-                  label="Phone Number"
-                  value={employee?.emergency_contact_phone}
-                />
-              </InfoCard>
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <User size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Gender</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.gender || 'N/A'}</span>
+                  </div>
+
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <MapPin size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Nationality</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.nationality || 'N/A'}</span>
+                  </div>
+
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Users size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Marital Status</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.marital_status || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Details Card */}
+              <div className="rounded-3xl bg-[#090F1D] border border-slate-800/80 p-5 md:p-6 shadow-xl">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center">
+                      <Mail size={20} />
+                    </div>
+                    <h3 className="text-base font-bold text-white">Contact Details</h3>
+                  </div>
+                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Mail size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Email Address</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.email_address || 'N/A'}</span>
+                  </div>
+
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <Phone size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Phone Number</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.phone_number || 'N/A'}</span>
+                  </div>
+
+                  <div className="flex items-center border-b border-slate-850 pb-3 last:border-b-0 last:pb-0">
+                    <div className="w-9 h-9 rounded-xl border border-slate-800 flex items-center justify-center text-slate-400 bg-slate-900/40">
+                      <MapPin size={16} />
+                    </div>
+                    <span className="text-sm text-slate-400 font-medium ml-3">Current Address</span>
+                    <span className="text-sm font-bold text-white ml-auto">{employee?.current_address || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );

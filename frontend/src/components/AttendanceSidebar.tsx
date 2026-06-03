@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Loader2, History, Camera, Fingerprint, ChevronRight } from 'lucide-react';
+import { Clock, Loader2, History, Camera, Fingerprint, ChevronRight, Calendar, LogIn, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGetAttendance, useClockIn, useClockOut } from '@/hooks/useQueries';
 
@@ -9,7 +9,7 @@ interface AttendanceSidebarProps {
 }
 
 const formatAttendanceTime = (timeStr: string | undefined | null) => {
-  if (!timeStr) return '--:--';
+  if (!timeStr) return '-- : --';
   try {
     if (timeStr.includes(':') && !timeStr.includes('-') && !timeStr.includes('T')) {
       const parts = timeStr.split(':');
@@ -24,11 +24,11 @@ const formatAttendanceTime = (timeStr: string | undefined | null) => {
     }
     const date = new Date(timeStr);
     if (isNaN(date.getTime())) {
-      return '--:--';
+      return '-- : --';
     }
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).replace(' ', ' ');
   } catch (error) {
-    return '--:--';
+    return '-- : --';
   }
 };
 
@@ -53,7 +53,13 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
     return () => clearInterval(interval);
   }, []);
   
-  const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const formatTime = (date: Date) => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours} : ${minutes} : ${seconds}`;
+  };
+  
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   
   const handleClockIn = async () => {
@@ -101,59 +107,72 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
   
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Attendance Records</h1>
-        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">View and track your attendance</p>
+      {/* Header with Calendar Button */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Attendance Records</h1>
+          <p className="text-sm text-slate-400">View and track your attendance</p>
+        </div>
+        <button className="w-12 h-12 rounded-2xl bg-red-950/40 text-red-500 flex items-center justify-center border border-red-500/20 hover:bg-red-950/60 transition-colors">
+          <Calendar size={20} />
+        </button>
       </div>
 
       {/* Main Clock In/Out Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#8B0000] via-red-700 to-red-900 p-8 shadow-2xl">
-        {/* Decorative glow */}
-        <div className="absolute -bottom-32 left-0 right-0 h-64 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute -top-32 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+      <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#4A0000] via-[#8B0000] to-[#3B0000] p-8 shadow-2xl border border-red-900/30">
+        {/* Decorative elements to match screenshot background waves/glows */}
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+        
+        {/* Abstract lines simulation using linear gradient lines */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
 
         <div className="relative z-10 space-y-8">
           {/* Header */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <Clock size={24} className="text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold text-white">Clock In & Click Out</h2>
-                <p className="text-sm text-red-100">{formatDate(currentTime)}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-red-950/60 flex items-center justify-center border border-red-800/30">
+              <Clock size={22} className="text-red-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">Clock In & Click Out</h2>
+              <p className="text-xs text-red-300/80">{formatDate(currentTime)}</p>
             </div>
           </div>
 
           {/* Large Time Display */}
           <div className="text-center space-y-4">
-            <div className="text-6xl md:text-7xl font-black text-white font-mono tracking-tight">
+            <div className="text-5xl md:text-6xl font-black text-white font-mono tracking-widest drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">
               {formatTime(currentTime)}
             </div>
             
             {/* Status Badge */}
-            <div className="flex items-center justify-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${getStatusDotColor()} animate-pulse`} />
-              <span className="text-lg font-semibold text-red-100">{getStatusText()}</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/45 backdrop-blur-md rounded-full border border-white/5">
+              <div className={`w-2 h-2 rounded-full ${getStatusDotColor()} animate-pulse`} />
+              <span className="text-xs font-semibold text-slate-300">{getStatusText()}</span>
             </div>
           </div>
 
-          {/* Clock In/Out Times */}
+          {/* Clock In/Out Times (Matching layout from image) */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-              <p className="text-xs font-semibold text-red-100 uppercase tracking-wider mb-2">Clock In</p>
-              <p className="text-2xl font-black text-white">{formatAttendanceTime(todayAttendance?.clock_in_time) || '-- : --'}</p>
+            <div className="bg-black/25 backdrop-blur-sm rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 rounded-xl bg-green-500/15 text-green-500 flex items-center justify-center mb-2.5">
+                <LogIn size={18} />
+              </div>
+              <p className="text-xs text-slate-400 font-medium mb-1">Clock In</p>
+              <p className="text-xl font-bold text-white tracking-wide">{formatAttendanceTime(todayAttendance?.clock_in_time)}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-              <p className="text-xs font-semibold text-red-100 uppercase tracking-wider mb-2">Clock Out</p>
-              <p className="text-2xl font-black text-white">{formatAttendanceTime(todayAttendance?.clock_out_time) || '-- : --'}</p>
+            
+            <div className="bg-black/25 backdrop-blur-sm rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 text-red-400 flex items-center justify-center mb-2.5">
+                <LogOut size={18} />
+              </div>
+              <p className="text-xs text-slate-400 font-medium mb-1">Clock Out</p>
+              <p className="text-xl font-bold text-white tracking-wide">{formatAttendanceTime(todayAttendance?.clock_out_time)}</p>
             </div>
           </div>
 
           {/* Photo Section */}
-          <div className="space-y-3 border-t border-white/20 pt-6">
+          <div className="space-y-3 border-t border-white/10 pt-6">
             <input 
               type="file" 
               accept="image/*" 
@@ -162,41 +181,45 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
               id="attendance-photo" 
               ref={fileInputRef} 
             />
-            <label htmlFor="attendance-photo" className="flex items-center justify-between w-full p-4 bg-white/10 backdrop-blur-sm rounded-2xl border-2 border-dashed border-white/30 cursor-pointer hover:bg-white/15 transition-all group">
+            <label htmlFor="attendance-photo" className="flex items-center justify-between w-full p-4 bg-black/20 backdrop-blur-sm rounded-2xl border border-dashed border-white/15 cursor-pointer hover:bg-black/30 transition-all group">
               <div className="flex items-center gap-3">
-                <Camera size={20} className="text-red-100 group-hover:text-white transition-colors" />
-                <span className="text-sm font-semibold text-red-100 group-hover:text-white transition-colors">{file ? file.name : 'Take Photo'}</span>
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:bg-white/10 transition-all">
+                  <Camera size={18} />
+                </div>
+                <div className="text-left">
+                  <span className="block text-sm font-semibold text-white">{file ? file.name : 'Take Photo'}</span>
+                  <span className="block text-xs text-slate-400">Verify your attendance</span>
+                </div>
               </div>
-              <span className="text-red-100 group-hover:text-white transition-colors">
-                <ChevronRight size={20} />
+              <span className="text-slate-400 group-hover:text-white transition-colors">
+                <ChevronRight size={18} />
               </span>
             </label>
-            <p className="text-xs text-red-100 text-center">Verify your attendance</p>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {/* Main Clock In Button */}
         <button 
           onClick={handleClockIn} 
           disabled={!canClockIn || clockInMutation.isPending}
           className={`w-full py-4 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-3 text-lg ${
             canClockIn 
-              ? 'bg-[#8B0000] hover:bg-[#6B0000] shadow-lg hover:shadow-xl hover:scale-105 active:scale-95' 
-              : 'bg-gray-400 cursor-not-allowed opacity-60'
+              ? 'bg-gradient-to-r from-[#8B0000] to-[#C41E3A] hover:from-[#7A0000] hover:to-[#B31A33] shadow-lg shadow-red-950/20 active:scale-[0.98]' 
+              : 'bg-slate-800/40 border border-slate-700/50 text-slate-500 cursor-not-allowed'
           }`}
         >
           {clockInMutation.isPending ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 size={24} className="animate-spin" />
+              <Loader2 size={20} className="animate-spin" />
               Processing...
             </span>
           ) : (
             <>
-              <Fingerprint size={24} />
-              {hasClockedIn ? 'Already Clocked In' : 'Clock In'}
+              <Fingerprint size={20} className={canClockIn ? 'text-white' : 'text-slate-500'} />
+              Clock In
             </>
           )}
         </button>
@@ -207,31 +230,34 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
           disabled={!canClockOut || clockOutMutation.isPending}
           className={`w-full py-4 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-3 text-lg ${
             canClockOut 
-              ? 'bg-gray-600 hover:bg-gray-700 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95' 
-              : 'bg-gray-400 cursor-not-allowed opacity-60'
+              ? 'bg-gradient-to-r from-[#8B0000] to-[#C41E3A] hover:from-[#7A0000] hover:to-[#B31A33] shadow-lg shadow-red-950/20 active:scale-[0.98]' 
+              : 'bg-slate-800/40 border border-slate-700/50 text-slate-500 cursor-not-allowed'
           }`}
         >
           {clockOutMutation.isPending ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 size={24} className="animate-spin" />
+              <Loader2 size={20} className="animate-spin" />
               Processing...
             </span>
           ) : (
             <>
-              <Clock size={24} />
-              {hasClockedOut ? 'Already Clocked Out' : 'Clock Out'}
+              <Clock size={20} className={canClockOut ? 'text-white' : 'text-slate-500'} />
+              Clock Out
             </>
           )}
         </button>
       </div>
 
-      {/* View History Link */}
+      {/* View History Button */}
       <button 
         onClick={onViewHistory}
-        className="w-full py-4 rounded-2xl border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all flex items-center justify-center gap-2 font-semibold group"
+        className="w-full py-4 px-6 rounded-2xl bg-[#090F1D] border border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800/30 hover:border-slate-700 transition-all flex items-center justify-between font-semibold group"
       >
-        <History size={20} className="group-hover:scale-110 transition-transform" />
-        View Attendance History
+        <div className="flex items-center gap-2.5">
+          <History size={18} className="text-slate-400 group-hover:text-white transition-colors" />
+          <span>View Attendance History</span>
+        </div>
+        <ChevronRight size={18} className="text-slate-400 group-hover:text-white transition-colors" />
       </button>
     </div>
   );
