@@ -12,7 +12,6 @@ import { EmployeeLeaveHistoryModal } from '@/components/EmployeeLeaveHistoryModa
 import { Modal } from '@/components/Modal';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 import { authAPI } from '@/api/apiService';
-
 import {
   LayoutDashboard,
   Clock3,
@@ -183,113 +182,237 @@ export const EmployeeDashboard = () => {
       /* ===================================
          OVERVIEW
       =================================== */
+case 'overview':
+  return (
+    <div className="space-y-6">
 
-      case 'overview':
-        return (
-          <div className="space-y-6">
-            {/* HERO - PROFILE CARD */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#8B0000] via-red-700 to-red-900 p-8 md:p-10 text-white shadow-2xl">
-              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,white,transparent_40%)]" />
+      {/* PROFILE HERO */}
+      <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#8B0000] via-red-700 to-red-900 p-6 md:p-8 shadow-2xl">
 
-              <div className="relative flex flex-col items-center text-center space-y-6">
-                {/* PROFILE IMAGE */}
-                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl flex-shrink-0">
-                  <img
-                    src={
-                      employee?.profile_image_url ||
-                      'https://via.placeholder.com/300'
-                    }
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+        {/* Background Glow */}
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
 
-                {/* NAME & TITLE */}
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-white">
-                    {employee?.full_name}
-                  </h1>
+        <div className="relative z-10">
 
-                  <p className="mt-2 text-white/90 text-base md:text-lg font-medium">
-                    {employee?.position}
-                  </p>
-                </div>
+          {/* DESKTOP */}
+          <div className="hidden md:flex items-center gap-8">
 
-                {/* LOCATION */}
-                <div className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-sm md:text-base">
-                  <MapPin size={18} className="flex-shrink-0" />
-                  <span>{employee?.hub_name || 'N/A'}</span>
-                </div>
-
-                {/* DATE */}
-                <div className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-sm md:text-base">
-                  <Calendar size={18} className="flex-shrink-0" />
-                  <span>
-                    {employee?.hired_date
-                      ? new Date(
-                          employee.hired_date
-                        ).toLocaleDateString()
-                      : 'N/A'}
-                  </span>
-                </div>
-
-                {/* EDIT BUTTON */}
-                <button
-                  onClick={() =>
-                    setEditOpen(true)
+            {/* PROFILE */}
+            <div className="relative">
+              <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
+                <img
+                  src={
+                    employee?.profile_image_url ||
+                    'https://via.placeholder.com/300'
                   }
-                  className="w-full px-6 py-3 rounded-full bg-white text-[#8B0000] font-semibold shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <Pencil size={18} />
-                  Edit Profile
-                </button>
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <button
+                onClick={() => setEditOpen(true)}
+                className="absolute bottom-2 right-2 w-14 h-14 rounded-full bg-red-500 border-4 border-white flex items-center justify-center shadow-xl"
+              >
+                <Pencil size={20} />
+              </button>
+            </div>
+
+            {/* INFO */}
+            <div className="flex-1 text-white">
+
+              <h1 className="text-4xl font-bold">
+                {employee?.full_name}
+              </h1>
+
+              <p className="mt-2 text-xl text-white/90">
+                {employee?.position}
+              </p>
+
+              <div className="mt-6 space-y-3">
+
+                <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20">
+                  <MapPin size={18} />
+                  {employee?.hub_name || 'N/A'}
+                </div>
+
+                <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 ml-3">
+                  <Calendar size={18} />
+                  {employee?.hired_date
+                    ? new Date(
+                        employee.hired_date
+                      ).toLocaleDateString()
+                    : 'N/A'}
+                </div>
+
               </div>
             </div>
 
-            {/* STATS GRID */}
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                {
-                  label: 'Employment',
-                  value:
-                    employee?.employment_type ||
-                    'Full-time',
-                },
-                {
-                  label: 'Status',
-                  value:
-                    employee?.status ||
-                    'Active',
-                },
-                {
-                  label: 'Role',
-                  value:
-                    employee?.role ||
-                    'Employee',
-                },
-                {
-                  label: 'Employee ID',
-                  value:
-                    employee?.employee_id ||
-                    'N/A',
-                },
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className="rounded-2xl bg-gray-900 dark:bg-gray-950 border border-gray-800 dark:border-gray-800 p-5 md:p-6 shadow-lg h-full"
-                >
-                  <p className="text-xs md:text-sm text-gray-400 font-semibold uppercase tracking-wide">
-                    {item.label}
-                  </p>
-
-                  <h3 className="mt-3 font-bold text-lg md:text-xl text-white">
-                    {item.value}
-                  </h3>
-                </div>
-              ))}
-            </div>
           </div>
-        );
+
+          {/* MOBILE */}
+          <div className="md:hidden flex flex-col items-center text-center">
+
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
+                <img
+                  src={
+                    employee?.profile_image_url ||
+                    'https://via.placeholder.com/300'
+                  }
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <button
+                onClick={() => setEditOpen(true)}
+                className="absolute bottom-0 right-0 w-12 h-12 rounded-full bg-red-500 border-4 border-white flex items-center justify-center"
+              >
+                <Pencil size={18} />
+              </button>
+            </div>
+
+            <h1 className="mt-5 text-3xl font-bold text-white">
+              {employee?.full_name}
+            </h1>
+
+            <p className="mt-2 text-white/90">
+              {employee?.position}
+            </p>
+
+            <div className="mt-5 w-full space-y-3">
+
+              <div className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
+                <MapPin size={18} />
+                {employee?.hub_name}
+              </div>
+
+              <div className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center gap-3 text-white">
+                <Calendar size={18} />
+                {employee?.hired_date
+                  ? new Date(
+                      employee.hired_date
+                    ).toLocaleDateString()
+                  : 'N/A'}
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* EDIT CARD */}
+          <button
+            onClick={() => setEditOpen(true)}
+            className="mt-8 w-full bg-white rounded-3xl p-5 flex items-center justify-between shadow-xl hover:scale-[1.01] transition-all"
+          >
+            <div className="flex items-center gap-4">
+
+              <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
+                <User
+                  size={24}
+                  className="text-red-700"
+                />
+              </div>
+
+              <div className="text-left">
+                <p className="font-bold text-gray-900">
+                  Edit Profile
+                </p>
+
+                <p className="text-sm text-gray-500">
+                  Update your personal information
+                </p>
+              </div>
+            </div>
+
+            <span className="text-gray-400 text-2xl">
+              ›
+            </span>
+          </button>
+
+        </div>
+      </div>
+
+      {/* SECTION HEADER */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Employee Information
+        </h2>
+
+        <p className="text-gray-500 dark:text-gray-400">
+          View your employment details and status
+        </p>
+      </div>
+
+      {/* INFO GRID */}
+      <div className="grid grid-cols-2 gap-4">
+
+        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+          <Briefcase
+            className="text-red-500 mb-4"
+            size={28}
+          />
+
+          <p className="text-xs uppercase tracking-wider text-gray-400">
+            Employment
+          </p>
+
+          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+            {employee?.employment_type || 'N/A'}
+          </h3>
+        </div>
+
+        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+          <Shield
+            className="text-red-500 mb-4"
+            size={28}
+          />
+
+          <p className="text-xs uppercase tracking-wider text-gray-400">
+            Status
+          </p>
+
+          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+            {employee?.status || 'N/A'}
+          </h3>
+        </div>
+
+        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+          <User
+            className="text-red-500 mb-4"
+            size={28}
+          />
+
+          <p className="text-xs uppercase tracking-wider text-gray-400">
+            Role
+          </p>
+
+          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+            {employee?.role || 'Employee'}
+          </h3>
+        </div>
+
+        <div className="rounded-3xl bg-white dark:bg-[#0F172A] p-5 border border-gray-200 dark:border-gray-700">
+          <FileText
+            className="text-red-500 mb-4"
+            size={28}
+          />
+
+          <p className="text-xs uppercase tracking-wider text-gray-400">
+            Employee ID
+          </p>
+
+          <h3 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+            {employee?.employee_id || 'N/A'}
+          </h3>
+        </div>
+
+      </div>
+
+    </div>
+  );
 
       /* ===================================
          ATTENDANCE
