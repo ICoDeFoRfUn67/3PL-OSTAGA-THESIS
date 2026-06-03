@@ -829,14 +829,14 @@ export const EmployeeDashboard = () => {
         {/* MAIN */}
         <div className="flex-1 min-w-0">
           {/* HEADER */}
-          <header className="sticky top-0 z-30 h-20 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 px-4 md:px-8 flex items-center justify-between">
+          <header className="sticky top-0 z-30 h-20 bg-white/95 dark:bg-[#050C1B]/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-transparent px-4 md:px-8 flex items-center justify-between transition-colors">
             {/* LEFT */}
             <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={() =>
                   setMobileOpen(true)
                 }
-                className="lg:hidden w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors text-gray-900 dark:text-gray-100"
+                className="lg:hidden w-12 h-12 rounded-2xl flex items-center justify-center border transition-all text-slate-800 dark:text-slate-300 bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/5 hover:bg-slate-200 dark:hover:bg-black/35"
                 aria-label="Open navigation menu"
                 title="Open menu"
               >
@@ -851,23 +851,32 @@ export const EmployeeDashboard = () => {
             </div>
 
             {/* RIGHT */}
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2.5 md:gap-3.5">
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className="flex items-center w-14 h-8 rounded-full px-1 transition-colors bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
+                className={`relative w-14 h-8 rounded-full p-1 transition-colors flex items-center cursor-pointer border ${
+                  darkMode
+                    ? 'bg-slate-950/40 border-white/5'
+                    : 'bg-slate-200 border-slate-300'
+                }`}
+                aria-label="Toggle Theme"
               >
                 <div
-                  className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform flex items-center justify-center ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}
+                  className={`w-6 h-6 rounded-full bg-white dark:bg-[#0F172A] shadow-md transform transition-transform flex items-center justify-center border ${
+                    darkMode
+                      ? 'translate-x-6 border-white/5'
+                      : 'translate-x-0 border-slate-200'
+                  }`}
                 >
                   {darkMode ? (
-                    <Sun size={14} className="text-yellow-500" />
+                    <Sun size={14} className="text-yellow-500 animate-pulse" />
                   ) : (
-                    <Moon size={14} className="text-gray-700" />
+                    <Moon size={14} className="text-slate-650" />
                   )}
                 </div>
               </button>
 
-              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-slate-350 dark:border-amber-500/50 hover:border-slate-400 dark:hover:border-amber-500/80 transition-all shadow-sm">
                 <img
                   src={
                     employee?.profile_image_url ||

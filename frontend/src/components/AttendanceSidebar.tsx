@@ -112,157 +112,206 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
       {/* Header with Calendar Button */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold text-white">Attendance Records</h1>
-          <p className="text-sm text-slate-400">View and track your attendance</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Attendance Records
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            View and track your attendance
+          </p>
         </div>
-        <button className="w-12 h-12 rounded-2xl bg-red-950/40 text-red-500 flex items-center justify-center border border-red-500/20 hover:bg-red-950/60 transition-colors">
+        <button className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-[#4C0E16]/80 hover:bg-red-100 dark:hover:bg-[#4C0E16] border border-red-200 dark:border-[#70101B] text-red-600 dark:text-[#EF4444] flex items-center justify-center transition-all shadow-sm">
           <Calendar size={20} />
         </button>
       </div>
 
-      {/* Main Clock In/Out Card */}
-      <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-[#2E0008] via-[#7D0018] to-[#D90429] p-8 border border-red-400/10 shadow-[0_30px_100px_rgba(217,4,41,.45)]">
-        {/* Decorative elements to match screenshot background waves/glows */}
-        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#FFF5F5] via-[#FFF8F8] to-[#FFF0F2] dark:from-[#4c0711] dark:via-[#1a080d] dark:to-[#0c101a] p-6 md:p-8 shadow-xl dark:shadow-2xl border border-red-200/50 dark:border-red-900/30 transition-all">
+        {/* Glow rings & SVG waves to match screenshot decoration */}
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-red-500/5 dark:bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-600/5 dark:bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
         
-        {/* Abstract lines simulation using linear gradient lines */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
+        {/* Animated/Subtle Wave overlays representing image curved backdrop */}
+        <div className="absolute inset-0 opacity-20 dark:opacity-30 pointer-events-none overflow-hidden">
+          <svg className="absolute -bottom-10 -right-10 w-[120%] h-[120%] text-red-300 dark:text-red-500" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 0 350 C 150 350, 200 150, 400 200" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" opacity="0.3" />
+            <path d="M 0 370 C 120 370, 180 180, 400 230" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+            <path d="M 0 390 C 100 390, 150 210, 400 260" stroke="currentColor" strokeWidth="1.5" opacity="0.7" />
+            <path d="M 0 410 C 80 410, 120 240, 400 290" stroke="currentColor" strokeWidth="2" opacity="0.9" />
+          </svg>
+        </div>
 
         <div className="relative z-10 space-y-8">
           {/* Header */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-red-950/60 flex items-center justify-center border border-red-800/30">
-              <Clock size={22} className="text-red-400" />
+            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-[#4C0E16]/80 flex items-center justify-center border border-red-250 dark:border-[#70101B]/40 transition-colors">
+              <Clock size={22} className="text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white leading-tight">Clock In & Click Out</h2>
-              <p className="text-xs text-red-300/80">{formatDate(currentTime)}</p>
+              <h2 className="text-lg font-bold text-red-950 dark:text-white leading-tight">
+                Clock In & Click Out
+              </h2>
+              <p className="text-xs text-red-750/70 dark:text-red-300/80 mt-0.5">
+                {formatDate(currentTime)}
+              </p>
             </div>
           </div>
 
           {/* Large Time Display */}
           <div className="text-center space-y-4">
-            <div className="text-5xl md:text-6xl font-black text-white font-mono tracking-widest drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+            <div className="text-5xl md:text-6xl font-extrabold text-slate-900 dark:text-white tracking-widest drop-shadow-[0_2px_8px_rgba(239,68,68,0.1)] dark:drop-shadow-[0_0_20px_rgba(239,68,68,0.3)]">
               {formatTime(currentTime)}
             </div>
             
             {/* Status Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/45 backdrop-blur-md rounded-full border border-white/5">
-              <div className={`w-2 h-2 rounded-full ${getStatusDotColor()} animate-pulse`} />
-              <span className="text-xs font-semibold text-slate-300">{getStatusText()}</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/80 dark:bg-black/35 backdrop-blur-md rounded-full border border-red-100 dark:border-white/5 shadow-sm">
+              <div className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} animate-pulse`} />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                {getStatusText()}
+              </span>
             </div>
           </div>
 
-          {/* Clock In/Out Times (Matching layout from image) */}
+          {/* Clock In/Out Times Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-black/25 backdrop-blur-sm rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
-              <div className="w-10 h-10 rounded-xl bg-green-500/15 text-green-500 flex items-center justify-center mb-2.5">
+            <div className="bg-white/90 dark:bg-[#0B101D]/60 backdrop-blur-sm rounded-2xl p-4 border border-red-100/50 dark:border-white/5 flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-center mb-2.5">
                 <LogIn size={18} />
               </div>
-              <p className="text-xs text-slate-400 font-medium mb-1">Clock In</p>
-              <p className="text-xl font-bold text-white tracking-wide">{formatAttendanceTime(todayAttendance?.clock_in_time)}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                Clock In
+              </p>
+              <p className="text-xl font-bold text-slate-950 dark:text-white tracking-wide">
+                {formatAttendanceTime(todayAttendance?.clock_in_time)}
+              </p>
             </div>
             
-            <div className="bg-black/25 backdrop-blur-sm rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 text-red-400 flex items-center justify-center mb-2.5">
+            <div className="bg-white/90 dark:bg-[#0B101D]/60 backdrop-blur-sm rounded-2xl p-4 border border-red-100/50 dark:border-white/5 flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20 flex items-center justify-center mb-2.5">
                 <LogOut size={18} />
               </div>
-              <p className="text-xs text-slate-400 font-medium mb-1">Clock Out</p>
-              <p className="text-xl font-bold text-white tracking-wide">{formatAttendanceTime(todayAttendance?.clock_out_time)}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                Clock Out
+              </p>
+              <p className="text-xl font-bold text-slate-950 dark:text-white tracking-wide">
+                {formatAttendanceTime(todayAttendance?.clock_out_time)}
+              </p>
             </div>
           </div>
-
-          {/* Photo Section */}
-          <div className="space-y-3 border-t border-white/10 pt-6">
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={handleFileChange} 
-              className="hidden" 
-              id="attendance-photo" 
-              ref={fileInputRef} 
-            />
-            <label htmlFor="attendance-photo" className="flex items-center justify-between w-full p-4 bg-black/20 backdrop-blur-sm rounded-2xl border border-dashed border-white/15 cursor-pointer hover:bg-black/30 transition-all group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:bg-white/10 transition-all">
-                  <Camera size={18} />
-                </div>
-                <div className="text-left">
-                  <span className="block text-sm font-semibold text-white">{file ? file.name : 'Take Photo'}</span>
-                  <span className="block text-xs text-slate-400">Verify your attendance</span>
-                </div>
-              </div>
-              <span className="text-slate-400 group-hover:text-white transition-colors">
-                <ChevronRight size={18} />
-              </span>
-            </label>
-          </div>
         </div>
+      </div>
+
+      {/* Take Photo Section - OUTSIDE Crimson Card to match reference screenshot */}
+      <div className="space-y-3">
+        <input 
+          type="file" 
+          accept="image/*" 
+          onChange={handleFileChange} 
+          className="hidden" 
+          id="attendance-photo" 
+          ref={fileInputRef} 
+        />
+        <label htmlFor="attendance-photo" className="flex items-center justify-between w-full p-4 bg-white dark:bg-[#0B101D]/40 backdrop-blur-sm rounded-2xl border border-dashed border-slate-300 dark:border-white/10 cursor-pointer hover:bg-slate-50 dark:hover:bg-[#0B101D]/60 hover:border-slate-400 dark:hover:border-white/20 transition-all group shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/50 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-all">
+              <Camera size={18} />
+            </div>
+            <div className="text-left">
+              <span className="block text-sm font-bold text-slate-900 dark:text-white">
+                {file ? file.name : 'Take Photo'}
+              </span>
+              <span className="block text-xs text-slate-500 dark:text-slate-400">
+                Verify your attendance
+              </span>
+            </div>
+          </div>
+          <span className="text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+            <ChevronRight size={18} />
+          </span>
+        </label>
       </div>
 
       {/* Action Buttons */}
       <div className="space-y-4">
         {/* Main Clock In Button */}
-        <button 
-          onClick={handleClockIn} 
-          disabled={!canClockIn || clockInMutation.isPending}
-          className={`w-full py-4 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-3 text-lg ${
-            canClockIn 
-              ? 'bg-gradient-to-r from-[#8B0000] to-[#C41E3A] hover:from-[#7A0000] hover:to-[#B31A33] shadow-lg shadow-red-950/20 active:scale-[0.98]' 
-              : 'bg-slate-800/40 border border-slate-700/50 text-slate-500 cursor-not-allowed'
-          }`}
-        >
-          {clockInMutation.isPending ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 size={20} className="animate-spin" />
-              Processing...
+        {canClockIn ? (
+          <button 
+            onClick={handleClockIn} 
+            disabled={clockInMutation.isPending}
+            className="w-full p-2.5 pr-6 rounded-2xl font-bold transition-all flex items-center justify-between text-base bg-gradient-to-r from-[#C41E3A] to-[#E53E3E] dark:from-[#A3091B] dark:to-[#700612] border border-red-200/50 dark:border-[#7A0F1D]/40 text-white shadow-[0_4px_16px_rgba(196,30,58,0.2)] dark:shadow-[0_4px_20px_rgba(163,9,27,0.25)] active:scale-[0.98] hover:brightness-110"
+          >
+            <div className="w-11 h-11 rounded-xl bg-white/20 dark:bg-black/25 border border-white/10 dark:border-white/5 flex items-center justify-center text-white mr-3">
+              {clockInMutation.isPending ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <Fingerprint size={20} />
+              )}
+            </div>
+            <span className="flex-1 text-center font-bold tracking-wide">
+              {clockInMutation.isPending ? 'Processing...' : 'Clock In'}
             </span>
-          ) : (
-            <>
-              <Fingerprint size={20} className={canClockIn ? 'text-white' : 'text-slate-500'} />
+          </button>
+        ) : (
+          <button 
+            disabled
+            className="w-full p-2.5 pr-6 rounded-2xl font-bold transition-all flex items-center justify-between text-base text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-[#181F2C] border border-slate-200 dark:border-white/5 cursor-not-allowed"
+          >
+            <div className="w-11 h-11 rounded-xl bg-slate-200/50 dark:bg-black/10 border border-slate-350 dark:border-white/5 flex items-center justify-center text-slate-400 dark:text-slate-600 mr-3">
+              <Fingerprint size={20} />
+            </div>
+            <span className="flex-1 text-center font-bold tracking-wide">
               Clock In
-            </>
-          )}
-        </button>
+            </span>
+          </button>
+        )}
 
         {/* Clock Out Button */}
-        <button 
-          onClick={handleClockOut} 
-          disabled={!canClockOut || clockOutMutation.isPending}
-          className={`w-full py-4 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-3 text-lg ${
-            canClockOut 
-              ? 'bg-gradient-to-r from-[#8B0000] to-[#C41E3A] hover:from-[#7A0000] hover:to-[#B31A33] shadow-lg shadow-red-950/20 active:scale-[0.98]' 
-              : 'bg-slate-800/40 border border-slate-700/50 text-slate-500 cursor-not-allowed'
-          }`}
-        >
-          {clockOutMutation.isPending ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 size={20} className="animate-spin" />
-              Processing...
+        {canClockOut ? (
+          <button 
+            onClick={handleClockOut} 
+            disabled={clockOutMutation.isPending}
+            className="w-full p-2.5 pr-6 rounded-2xl font-bold transition-all flex items-center justify-between text-base bg-gradient-to-r from-[#C41E3A] to-[#E53E3E] dark:from-[#A3091B] dark:to-[#700612] border border-red-200/50 dark:border-[#7A0F1D]/40 text-white shadow-[0_4px_16px_rgba(196,30,58,0.2)] dark:shadow-[0_4px_20px_rgba(163,9,27,0.25)] active:scale-[0.98] hover:brightness-110"
+          >
+            <div className="w-11 h-11 rounded-xl bg-white/20 dark:bg-black/25 border border-white/10 dark:border-white/5 flex items-center justify-center text-white mr-3">
+              {clockOutMutation.isPending ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <Clock size={20} />
+              )}
+            </div>
+            <span className="flex-1 text-center font-bold tracking-wide">
+              {clockOutMutation.isPending ? 'Processing...' : 'Clock Out'}
             </span>
-          ) : (
-            <>
-              <Clock size={20} className={canClockOut ? 'text-white' : 'text-slate-500'} />
+          </button>
+        ) : (
+          <button 
+            disabled
+            className="w-full p-2.5 pr-6 rounded-2xl font-bold transition-all flex items-center justify-between text-base text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-[#181F2C] border border-slate-200 dark:border-white/5 cursor-not-allowed"
+          >
+            <div className="w-11 h-11 rounded-xl bg-slate-200/50 dark:bg-black/10 border border-slate-350 dark:border-white/5 flex items-center justify-center text-slate-400 dark:text-slate-600 mr-3">
+              <Clock size={20} />
+            </div>
+            <span className="flex-1 text-center font-bold tracking-wide">
               Clock Out
-            </>
-          )}
-        </button>
+            </span>
+          </button>
+        )}
       </div>
 
       {/* View History Button */}
       <button 
         onClick={onViewHistory}
-        className="w-full py-4 px-6 rounded-2xl bg-[#090F1D] border border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800/30 hover:border-slate-700 transition-all flex items-center justify-between font-semibold group"
+        className="w-full p-2.5 pr-5 rounded-2xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800/30 hover:border-slate-300 dark:hover:border-slate-750 transition-all flex items-center justify-between font-bold group shadow-sm"
       >
-        <div className="flex items-center gap-2.5">
-          <History size={18} className="text-slate-400 group-hover:text-white transition-colors" />
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-all">
+            <History size={18} />
+          </div>
           <span>View Attendance History</span>
         </div>
-        <ChevronRight size={18} className="text-slate-400 group-hover:text-white transition-colors" />
+        <ChevronRight size={18} className="text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
       </button>
     </div>
   );
 };
 
 export default AttendanceSidebar;
+
