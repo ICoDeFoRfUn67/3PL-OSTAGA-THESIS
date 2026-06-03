@@ -943,7 +943,20 @@ export const AdminHubsPage = () => {
     () =>
       L.divIcon({
         className: '',
-        html: `<div style="width:16px;height:16px;background:#ef4444;border-radius:999px;border:3px solid white;box-shadow:0 4px 12px rgba(239,68,68,.4);"></div>`,
+       html: `
+        <div
+          style="
+            width:18px;
+            height:18px;
+            background:#ff4d4f;
+            border-radius:999px;
+            border:3px solid white;
+            box-shadow:
+              0 0 0 4px rgba(255,77,79,.15),
+              0 0 15px rgba(255,77,79,.8);
+          "
+        ></div>
+        `,
         iconSize: [16, 16],
       }),
     []
@@ -1109,7 +1122,7 @@ export const AdminHubsPage = () => {
         <AdminMobileProfile />
         
         <div className="p-3 sm:p-5 lg:p-8 space-y-5 max-w-[1400px] mx-auto lg:px-10">
-            <div className="hidden md:flex items-start justify-between gap-4 mb-2">
+          <div className="hidden md:flex items-start justify-between gap-4 mb-2">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
                 Hub Management
@@ -1122,7 +1135,7 @@ export const AdminHubsPage = () => {
             {/* DESKTOP ADD HUB */}
             <button
               onClick={() => setShowAddModal(true)}
-              className="hidden sm:flex h-9 px-4 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-semibold items-center gap-2"
+              className="hidden sm:flex h-10 px-5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-semibold items-center gap-2"
             >
               <Plus size={16} />
               Add Hub
@@ -1148,15 +1161,15 @@ export const AdminHubsPage = () => {
           {/* ========== MAP + SIDE PANEL ========== */}
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
             {/* MAP */}
-            <div ref={containerRef} className="xl:col-span-8 relative rounded-3xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220] shadow-lg h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
+            <div ref={containerRef} className="relative xl:col-span-8 rounded-3xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220] shadow-lg h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
                 <MapContainer
                   center={[14.5995, 120.9842]}
                   zoom={6}
                   style={{ height: '100%', width: '100%' }}
-                  attributionControl={false}
                   ref={mapRef}
                 >
-                  <TileLayer
+                 <TileLayer
+                    attribution=""
                     url={
                       isDarkMode
                         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -1190,50 +1203,110 @@ export const AdminHubsPage = () => {
                     />
                   )}
                 </MapContainer>
-
-                {/* Floating info panel inside the map for desktop */}
-                {hubState.selectedHub && (
-                  <div className="hidden xl:block absolute top-6 right-6 z-50 w-[360px] max-w-[92%]">
-                    <div className="rounded-2xl bg-white dark:bg-[#071022] border border-gray-200 dark:border-white/[0.06] overflow-hidden h-full flex flex-col shadow-xl">
-                      <div className="p-5 border-b border-gray-100 dark:border-white/[0.06] flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{hubState.selectedHub.name}</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{hubState.selectedHub.city}</p>
-                        </div>
-                        <div className="ml-3">
-                          <button onClick={handleCloseHub} aria-label="Close hub panel" title="Close" className="h-9 w-9 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.04] flex items-center justify-center text-gray-400">
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="p-5 flex-1 overflow-y-auto space-y-3">
-                        {hubState.selectedHub.address && (
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{hubState.selectedHub.address}</p>
-                        )}
-
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Users size={16} className="text-gray-400" />
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{getHubEmployeeCount(hubState.selectedHub.id)} {getHubEmployeeCount(hubState.selectedHub.id) === 1 ? 'employee' : 'employees'}</span>
-                          </div>
-                          <div className="px-3 py-1 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 text-[10px] font-bold text-gray-500">Map</div>
-                        </div>
-
-                        <div className="pt-3">
-                          <div className="flex gap-2">
-                            <button onClick={handleGetDirections} className="flex-1 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Get Directions</button>
-                            <button onClick={() => setShowAddModal(true)} className="flex-1 h-9 rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06] text-sm">Add Hub</button>
-                          </div>
-                        </div>
-                      </div>
+              {weatherData && (
+                <div
+                  className="
+                    absolute
+                    top-4
+                    right-4
+                    z-[1000]
+                    backdrop-blur-xl
+                    bg-[#071a3d]/90
+                    border
+                    border-white/10
+                    rounded-2xl
+                    px-4
+                    py-3
+                    min-w-[180px]
+                    shadow-2xl
+                  "
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-xl">
+                      {weatherData.icon}
+                    </div>
+              
+                    <div>
+                      <p className="text-[10px] text-white/60 uppercase">
+                        Current Weather
+                      </p>
+              
+                      <p className="text-lg font-bold text-white">
+                        {weatherData.temp}°C
+                      </p>
+              
+                      <p className="text-xs text-white/60">
+                        {weatherData.label}
+                      </p>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
+
+              {showDirections && routeData && (
+                <div
+                  className="
+                    absolute
+                    bottom-4
+                    left-4
+                    right-4
+                    z-[1000]
+                    grid
+                    grid-cols-3
+                    gap-3
+                  "
+                >
+                  <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Footprints size={18} className="text-emerald-400" />
+              
+                  <div>
+                    <p className="text-white text-sm font-semibold">
+                      Walking
+                    </p>
+              
+                    <p className="text-xs text-white/60">
+                      {formatDistance(routeData.walking.distanceM)} • {formatDuration(routeData.walking.durationSec)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Bike size={18} className="text-blue-400" />
+              
+                  <div>
+                    <p className="text-white text-sm font-semibold">
+                      Cycling
+                    </p>
+              
+                    <p className="text-xs text-white/60">
+                      {formatDistance(routeData.riding.distanceM)} • {formatDuration(routeData.riding.durationSec)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+             <div className="backdrop-blur-xl bg-[#071a3d]/90 border border-white/10 rounded-2xl px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Car size={18} className="text-orange-400" />
+            
+                <div>
+                  <p className="text-white text-sm font-semibold">
+                    Driving
+                  </p>
+            
+                  <p className="text-xs text-white/60">
+                    {formatDistance(routeData.car.distanceM)} • {formatDuration(routeData.car.durationSec)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            </div>
+            )}
               </div>
 
             {/* RIGHT PANEL */}
-            <div className="xl:col-span-4 h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)] xl:hidden">
+            <div className="xl:col-span-4 h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[calc(100vh-220px)]">
               <div className="rounded-2xl bg-white dark:bg-[#071022] border border-gray-200 dark:border-white/[0.06] overflow-hidden h-full flex flex-col">
                 {hubState.selectedHub ? (
                   <div className="flex flex-col h-full">
@@ -1250,7 +1323,6 @@ export const AdminHubsPage = () => {
                       <button
                         onClick={handleCloseHub}
                         title="Close"
-                        aria-label="Close hub panel"
                         className="h-8 w-8 shrink-0 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-400 dark:text-gray-500 transition-colors"
                       >
                         <X size={18} />
@@ -1277,28 +1349,7 @@ export const AdminHubsPage = () => {
                         />
                       </div>
 
-                      {/* Weather */}
-                      {weatherData && (
-                        <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-xl bg-white dark:bg-white/[0.06] flex items-center justify-center text-2xl shadow-sm">
-                              {weatherData.icon}
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Current Weather
-                              </p>
-                              <p className="text-xl font-bold text-gray-900 dark:text-white">
-                                {weatherData.temp}°C
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {weatherData.label}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
+                  
                       {/* Stats grid */}
                       <div className="grid grid-cols-2 gap-3">
                         {/* Employment breakdown */}
@@ -1429,7 +1480,6 @@ export const AdminHubsPage = () => {
                             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                             title="Previous page"
-                            aria-label="Previous page"
                             className="h-8 w-8 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-400 dark:text-gray-500 disabled:opacity-30 transition-colors"
                           >
                             <ChevronLeft size={16} />
@@ -1443,7 +1493,6 @@ export const AdminHubsPage = () => {
                             }
                             disabled={currentPage === totalPages || totalPages === 0}
                             title="Next page"
-                            aria-label="Next page"
                             className="h-8 w-8 rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-400 dark:text-gray-500 disabled:opacity-30 transition-colors"
                           >
                             <ChevronRight size={16} />
@@ -1466,38 +1515,6 @@ export const AdminHubsPage = () => {
                           </>
                         )}
                       </button>
-
-                      {/* Direction results */}
-                      {showDirections && routeData && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-2"
-                        >
-                          {[
-                            { label: 'Walking', icon: Footprints, data: routeData.walking, color: 'text-emerald-500' },
-                            { label: 'Cycling', icon: Bike, data: routeData.riding, color: 'text-blue-500' },
-                            { label: 'Driving', icon: Car, data: routeData.car, color: 'text-orange-500' },
-                          ].map(({ label, icon: Icon, data: rd, color }) => (
-                            <div
-                              key={label}
-                              className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] p-3 flex items-center gap-3"
-                            >
-                              <div className={`h-9 w-9 rounded-lg bg-white dark:bg-white/[0.06] flex items-center justify-center shadow-sm`}>
-                                <Icon size={16} className={color} />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                                  {label}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatDistance(rd.distanceM)} · {formatDuration(rd.durationSec)}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </motion.div>
-                      )}
                     </div>
                   </div>
                 ) : (

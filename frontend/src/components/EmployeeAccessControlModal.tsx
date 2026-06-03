@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { HRPermission } from '@/types';
 import { Modal } from './Modal';
 import { useToast } from '@/hooks/useToast';
-import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/api/apiService';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 import { Lock, Unlock, Shield, Key, Eye, EyeOff, ShieldCheck, Trash2, FileText, UserPlus } from 'lucide-react';
@@ -22,7 +21,6 @@ export const EmployeeAccessControlModal = ({
   onUpdate,
 }: EmployeeAccessControlModalProps) => {
   const toast = useToast();
-  const { isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [accountLocked, setAccountLocked] = useState(!employee?.can_login);
   
@@ -48,9 +46,6 @@ export const EmployeeAccessControlModal = ({
 
   // Is the employee being managed an HR role?
   const isHR = employee?.role?.toLowerCase() === 'hr';
-
-  // Can manage HR permissions only if current user is Admin
-  const canManageHRPermissions = isAdmin && isHR;
 
   // Load HR permissions when modal opens
   useEffect(() => {
@@ -83,13 +78,46 @@ export const EmployeeAccessControlModal = ({
     }
   };
 
-  const togglePermission = (key: PermKey) => {
-    // Just toggle the local state - no auto-save
-    // Changes will be saved when "Apply" button is clicked
-    setHrPermissions((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const togglePermission = async (key: PermKey) => {
+    const updatedValue = !hrPermissions[key];
+    const updatedPermissions = {
+      ...hrPermissions,
+      [key]: updatedValue,
+    };
+    
+    // Snappy optimistic UI update
+    setHrPermissions(updatedPermissions);
+
+    try {
+      setIsLoading(true);
+      const existingResponse = await apiClient.get(`hr-permissions/?hr_employee=${employee.id}`);
+      const permsList = normalizeApiResponse(existingResponse.data);
+      
+      if (permsList.length > 0) {
+        const permId = permsList[0].id;
+        await apiClient.patch(`hr-permissions/${permId}/`, {
+          ...updatedPermissions,
+        });
+      } else {
+        await apiClient.post('hr-permissions/', {
+          hr_employee: employee.id,
+          ...updatedPermissions,
+        });
+      }
+      toast.success('HR Administrative power updated');
+      onUpdate?.();
+    } catch (error: any) {
+      // Revert local state on error
+      setHrPermissions((prev) => ({
+        ...prev,
+        [key]: !updatedValue,
+      }));
+      toast.error(
+        error?.response?.data?.error || error?.response?.data?.message || 'Failed to save permissions'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleAccountLock = async (newLockedState: boolean) => {
@@ -131,11 +159,11 @@ export const EmployeeAccessControlModal = ({
         });
       }
       
-      toast.success('HR Administrative Powers applied successfully');
+      toast.success('HR Permissions saved successfully');
       onUpdate?.();
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.error || error?.response?.data?.message || 'Failed to save HR permissions'
+        error?.response?.data?.message || 'Failed to save permissions'
       );
     } finally {
       setIsLoading(false);
@@ -239,8 +267,8 @@ export const EmployeeAccessControlModal = ({
             </div>
           </section>
 
-          {/* HR Permissions Section - Only show if current user is Admin and employee is HR */}
-          {canManageHRPermissions && (
+          {/* HR Permissions Section - Only show if employee is HR */}
+          {isHR && (
             <section className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
                 <Shield size={16} className="text-red-600" />
