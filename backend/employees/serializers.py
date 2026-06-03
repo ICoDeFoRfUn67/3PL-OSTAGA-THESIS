@@ -159,6 +159,14 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'hired_date': {'required': False},
             'can_login': {'required': False}
         }
+    
+    def validate(self, data):
+        """Automatically disable login for Blacklist and Resign employees"""
+        status = data.get('status')
+        if status in ['Blacklist', 'Resign']:
+            data['can_login'] = False
+        return data
+    
     def get_full_name(self, obj):
         return f"{obj.firstname} {obj.middle_initial} {obj.lastname}".strip()
 

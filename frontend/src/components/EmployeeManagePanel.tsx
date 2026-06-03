@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Button, Badge, LoadingSpinner, EmptyState } from './common';
@@ -21,6 +21,7 @@ const getStatusBadgeVariant = (status: string) => {
 interface EmployeeManagePanelProps {
   hubId?: number;
   searchTerm?: string;
+  statusFilter?: string;
 }
 
 interface Employee {
@@ -50,10 +51,17 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
 
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, employeeId: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   let employees = normalizeApiResponse(data);
 
-  // apply search filter if provided
+  // Apply status filter if provided
+  if (props.statusFilter && props.statusFilter !== 'All') {
+    employees = employees.filter((emp: Employee) => emp.status === props.statusFilter);
+  }
+
+  // Apply search filter if provided
   if (props.searchTerm && props.searchTerm.trim() !== '') {
     const q = props.searchTerm.trim().toLowerCase();
     employees = employees.filter((emp: Employee) => (
@@ -62,6 +70,25 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
       (emp.position || '').toLowerCase().includes(q)
     ));
   }
+
+  // Automatically disable login for Blacklist and Resign employees
+  employees = employees.map((emp: Employee) => {
+    if ((emp.status === 'Blacklist' || emp.status === 'Resign') && emp.can_login) {
+      return { ...emp, can_login: false };
+    }
+    return emp;
+  });
+
+  // Reset to page 1 when search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [props.searchTerm, props.statusFilter]);
+
+  // Pagination calculation
+  const totalPages = Math.ceil(employees.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEmployees = employees.slice(startIndex, endIndex);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -170,7 +197,7 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {employees.map((emp: Employee) => (
+                    {paginatedEmployees.map((emp: Employee) => (
                       <tr key={emp.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-3">
                               <input
@@ -237,7 +264,7 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
                   />
                   <label htmlFor="mobile-select-all" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Select All</label>
                 </div>
-                {employees.map((emp: Employee) => (
+                {paginatedEmployees.map((emp: Employee) => (
                   <div key={emp.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-3">
                     <div className="flex items-start gap-3">
                       <div className="pt-1">
@@ -291,6 +318,40 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
                   </div>
                 ))}
               </div>
+
+              {/* PAGINATION CONTROLS */}
+              {employees.length > itemsPerPage && (
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Showing {startIndex + 1} to {Math.min(endIndex, employees.length)} of {employees.length} employees
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="text-xs py-1.5 h-auto px-3"
+                    >
+                      ← Previous
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="text-xs py-1.5 h-auto px-3"
+                    >
+                      Next →
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <EmptyState title="No employees found" />

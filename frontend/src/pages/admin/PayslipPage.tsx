@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Card, Badge, LoadingSpinner, EmptyState } from '@/components/common';
 import { Sidebar } from '@/components/Sidebar';
 import { PayslipDetailModal } from '@/components/PayslipDetailModal';
@@ -40,8 +40,21 @@ export const PayslipPage = () => {
   const [hubFilter, setHubFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedPayslip, setSelectedPayslip] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Debounce search input for better performance
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(value);
+    }, 300);
+  }, []);
 
   const handleStartDateChange = (val: string) => {
     setStartDate(val);
@@ -67,12 +80,30 @@ export const PayslipPage = () => {
     }
   };
 
-  // Fetch data
-  const { data: payrollData, isLoading: payrollLoading } = useGetPayroll();
+  // Fetch data with query parameters for backend filtering
+  // This is much faster than fetching all records and filtering on frontend
+  const payrollParams = useMemo(() => {
+    const params: Record<string, any> = {
+      period_start__gte: startDate,
+      period_end__lte: endDate,
+    };
+    if (statusFilter !== 'All') {
+      params.status = statusFilter;
+    }
+    if (hubFilter !== 'All') {
+      params.hub__name = hubFilter;
+    }
+    if (debouncedSearchTerm) {
+      params.fullname__icontains = debouncedSearchTerm;
+    }
+    return params;
+  }, [startDate, endDate, statusFilter, hubFilter, debouncedSearchTerm]);
+
+  const { data: payrollData, isLoading: payrollLoading } = useGetPayroll(payrollParams);
   const { data: hubsData, isLoading: hubsLoading } = useGetHubs();
+  // Only fetch employees if we have payroll data (for display purposes)
   const { data: employeesData, isLoading: employeesLoading } = useGetEmployees();
   
-
 
   const payroll = normalizeApiResponse(payrollData);
 
@@ -99,12 +130,17 @@ export const PayslipPage = () => {
     };
   }, [payroll, employees]);
 
-  // Get unique years from payroll data
+  // Get unique years from payroll data - only from current filtered set
   const years = useMemo(() => {
-    const uniqueYears = new Set(
-      payroll.map((p: any) => new Date(p.period_end || p.created_at).getFullYear().toString())
-    );
-    // Always include current and previous year
+    const uniqueYears = new Set<string>();
+    
+    // Add years from current payroll data
+    payroll.forEach((p: any) => {
+      const year = new Date(p.period_end || p.created_at).getFullYear().toString();
+      uniqueYears.add(year);
+    });
+    
+    // Always include current and previous year as fallback options
     const currentYear = new Date().getFullYear();
     uniqueYears.add(currentYear.toString());
     uniqueYears.add((currentYear - 1).toString());
@@ -112,39 +148,21 @@ export const PayslipPage = () => {
     return ['All', ...Array.from(uniqueYears).sort().reverse()];
   }, [payroll]);
 
-  // Group payroll by hub
+  // Group payroll by hub - minimal client-side filtering since backend handles most of it
   const payrollByHub = useMemo(() => {
     const grouped: { [key: string]: any[] } = {};
 
+    // Since backend already filtered, we only do minimal client-side grouping
     payroll.forEach((record: any) => {
-      const hubName = record.hub || 'Unknown Hub';
+      const hubName = record.hub || record.hub_name || 'Unknown Hub';
       if (!grouped[hubName]) {
         grouped[hubName] = [];
       }
-
-      // Filter based on search and filters
-      const matchesSearch =
-        !searchTerm ||
-        record.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.jtp_code?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesHub = hubFilter === 'All' || record.hub === hubFilter || record.hub_name === hubFilter;
-      const matchesStatus =
-        statusFilter === 'All' || record.status === statusFilter;
-      const matchesYear =
-        year === 'All' || new Date(record.period_end || record.created_at).getFullYear().toString() === year;
-      
-      const matchesDate = 
-        (!startDate || new Date(record.period_start) >= new Date(startDate)) &&
-        (!endDate || new Date(record.period_end) <= new Date(endDate));
-
-      if (matchesSearch && matchesHub && matchesStatus && matchesYear && matchesDate) {
-        grouped[hubName].push(record);
-      }
+      grouped[hubName].push(record);
     });
 
     return grouped;
-  }, [payroll, searchTerm, hubFilter, statusFilter, year, startDate, endDate]);
+  }, [payroll]);
 
   const handleDownload = (hubName: string) => {
     const hubData = payrollByHub[hubName];
@@ -344,11 +362,11 @@ export const PayslipPage = () => {
           <div className="flex flex-col lg:flex-row gap-3 items-end">
             <div className="flex-1 w-full">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-              <input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="input-field w-full" />
+              <input type="date" title="Select payroll start date" placeholder="Start date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="input-field w-full" />
             </div>
             <div className="flex-1 w-full">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">End Date (auto)</label>
-              <input type="date" value={endDate} readOnly className="input-field w-full bg-gray-100 dark:bg-gray-800" />
+              <input type="date" title="End date automatically calculated" placeholder="End date" value={endDate} readOnly className="input-field w-full bg-gray-100 dark:bg-gray-800" />
             </div>
             <div className="flex-1 w-full">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Year</label>
@@ -378,7 +396,7 @@ export const PayslipPage = () => {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Search Name</label>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                <input type="text" placeholder="Search user here..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input-field !pl-10 w-full" />
+                <input type="text" placeholder="Search user here..." value={searchTerm} onChange={(e) => handleSearchChange(e.target.value)} className="input-field !pl-10 w-full" />
               </div>
             </div>
           </div>

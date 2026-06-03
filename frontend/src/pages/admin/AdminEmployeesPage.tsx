@@ -29,6 +29,7 @@ export const AdminEmployeesPage = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [searchEmployeesTerm, setSearchEmployeesTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
 
   const handleLogout = () => {
     logout();
@@ -76,20 +77,19 @@ export const AdminEmployeesPage = () => {
         {/* (moved below desktop header so it sits above the employee table) */}
 
         {/* DESKTOP HEADER */}
-        <div className="hidden md:flex items-center justify-between w-full gap-4">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2">
+        <div className="hidden md:block">
+          <div className="mb-4">
+            <h1 className="text-3xl font-bold mb-1">
               Employee Management
             </h1>
-
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               Manage employees and their information
             </p>
           </div>
 
-          {/* Search container */}
-          <div className="flex items-center gap-3 w-full max-w-md">
-            <div className="relative w-full">
+          {/* Search and Filter container */}
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
@@ -101,11 +101,27 @@ export const AdminEmployeesPage = () => {
               />
             </div>
 
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              title="Filter by employee status"
+              aria-label="Filter by status"
+              className="h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-800 dark:text-gray-100 outline-none transition-colors duration-150 focus:ring-2 focus:ring-red-300/30"
+            >
+              <option value="All">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Resign">Resign</option>
+              <option value="AWOL">AWOL</option>
+              <option value="Blacklist">Blacklist</option>
+            </select>
+
             {canEditEmployeeInfo && (
               <button
                 onClick={() => setShowAdd(true)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                className="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition-colors"
               >
+                <Plus className="w-4 h-4 mr-1.5" />
                 Add Employee
               </button>
             )}
@@ -120,7 +136,7 @@ export const AdminEmployeesPage = () => {
         )}
 
         {/* EMPLOYEE PANEL */}
-        <EmployeeManagePanel searchTerm={searchEmployeesTerm} />
+        <EmployeeManagePanel searchTerm={searchEmployeesTerm} statusFilter={statusFilter} />
 
         {/* MOBILE FLOATING ADD BUTTON */}
         {canEditEmployeeInfo && (

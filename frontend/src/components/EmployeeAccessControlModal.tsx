@@ -78,46 +78,12 @@ export const EmployeeAccessControlModal = ({
     }
   };
 
-  const togglePermission = async (key: PermKey) => {
-    const updatedValue = !hrPermissions[key];
-    const updatedPermissions = {
-      ...hrPermissions,
-      [key]: updatedValue,
-    };
-    
-    // Snappy optimistic UI update
-    setHrPermissions(updatedPermissions);
-
-    try {
-      setIsLoading(true);
-      const existingResponse = await apiClient.get(`hr-permissions/?hr_employee=${employee.id}`);
-      const permsList = normalizeApiResponse(existingResponse.data);
-      
-      if (permsList.length > 0) {
-        const permId = permsList[0].id;
-        await apiClient.patch(`hr-permissions/${permId}/`, {
-          ...updatedPermissions,
-        });
-      } else {
-        await apiClient.post('hr-permissions/', {
-          hr_employee: employee.id,
-          ...updatedPermissions,
-        });
-      }
-      toast.success('HR Administrative power updated');
-      onUpdate?.();
-    } catch (error: any) {
-      // Revert local state on error
-      setHrPermissions((prev) => ({
-        ...prev,
-        [key]: !updatedValue,
-      }));
-      toast.error(
-        error?.response?.data?.error || error?.response?.data?.message || 'Failed to save permissions'
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const togglePermission = (key: PermKey) => {
+    // Only update local state - don't save until "Apply Administrative Changes" is clicked
+    setHrPermissions((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
   const toggleAccountLock = async (newLockedState: boolean) => {
@@ -258,6 +224,7 @@ export const EmployeeAccessControlModal = ({
                 </div>
               </div>
               <button
+                title={accountLocked ? 'Unlock account to allow login' : 'Lock account to prevent login'}
                 onClick={() => toggleAccountLock(!accountLocked)}
                 disabled={isLoading}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${accountLocked ? 'bg-gray-200 dark:bg-gray-700' : 'bg-red-600'}`}
@@ -297,8 +264,9 @@ export const EmployeeAccessControlModal = ({
                         </div>
                       </div>
                       <button
+                        title={`Toggle ${perm.label}`}
                         onClick={() => togglePermission(perm.key as PermKey)}
-                        disabled={isLoading}
+                        disabled={isLoading || loadingPermissions}
                         className={`relative inline-flex h-5 w-10 items-center rounded-full transition-all duration-300 ${hrPermissions[perm.key as PermKey] ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-700'}`}
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${hrPermissions[perm.key as PermKey] ? 'translate-x-5' : 'translate-x-1'}`} />
@@ -350,7 +318,7 @@ export const EmployeeAccessControlModal = ({
                       className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl text-xs font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-600 transition-all"
                       placeholder="At least 8 characters"
                     />
-                    <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <button title={showPass ? 'Hide password' : 'Show password'} onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
@@ -365,7 +333,7 @@ export const EmployeeAccessControlModal = ({
                       className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl text-xs font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-red-600 transition-all"
                       placeholder="Re-type password"
                     />
-                    <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <button title={showConfirm ? 'Hide password' : 'Show password'} onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                       {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
