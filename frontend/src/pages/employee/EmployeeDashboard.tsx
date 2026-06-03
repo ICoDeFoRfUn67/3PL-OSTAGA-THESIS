@@ -27,7 +27,14 @@ import {
   MapPin,
   Calendar,
   Shield,
-  Mail
+  Mail,
+  Upload,
+  Download,
+  Trash2,
+  MoreVertical,
+  AlertCircle,
+  Users,
+  Phone
 } from 'lucide-react';
 
 import logo from '@/images/3pl1.png';
@@ -422,24 +429,58 @@ export const EmployeeDashboard = () => {
 
       case 'documents':
         return (
-          <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 dark:from-gray-800/50 to-transparent">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Your Documents
-              </h2>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">Manage and view your employee documents</p>
+          <div className="space-y-6">
+            {/* Header Card */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1a1f3a] to-[#0f1728] border border-gray-700 p-8 shadow-2xl">
+              {/* Decorative elements */}
+              <div className="absolute -top-20 -right-20 w-40 h-40 bg-red-500/10 rounded-full blur-3xl" />
+              <div className="absolute -bottom-20 -right-40 w-60 h-60 bg-purple-500/5 rounded-full blur-3xl" />
+              <div className="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
+              
+              <div className="relative z-10 flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-14 h-14 rounded-2xl bg-red-600/20 flex items-center justify-center">
+                      <FileText size={28} className="text-red-500" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl md:text-4xl font-bold text-white">Your Documents</h1>
+                      <p className="text-gray-300 mt-1">Manage and view your employee documents</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="p-4 md:p-6">
-              <DocumentsSection
-                documents={
-                  employee?.documents || []
-                }
-                employeeId={
-                  employee?.id || 0
-                }
-                onUpdate={refreshSessionEmployee}
-              />
+            {/* Upload Section */}
+            <div className="rounded-3xl bg-[#0F1728] border-2 border-dashed border-gray-600 p-8 shadow-lg">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600/20 to-red-900/20 flex items-center justify-center">
+                    <Upload size={32} className="text-red-500" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Upload Document</h3>
+                  <p className="text-gray-400 mb-4">Drag and drop your files here or click to browse</p>
+                  <p className="text-sm text-gray-500 mb-6">PDF • DOC • JPG • PNG <span className="text-red-500">(max 5MB)</span></p>
+                </div>
+                <button className="px-8 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold flex items-center justify-center gap-2 mx-auto transition-colors shadow-lg">
+                  <Upload size={20} />
+                  Choose File
+                </button>
+              </div>
+            </div>
+
+            {/* Secure Storage Info */}
+            <div className="rounded-2xl bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-700/30 p-6 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center flex-shrink-0 mt-1">
+                <Shield size={20} className="text-blue-400" />
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-1">Secure Storage</h4>
+                <p className="text-sm text-gray-400">Your documents are securely stored and only visible to authorized personnel.</p>
+              </div>
             </div>
           </div>
         );
@@ -451,149 +492,129 @@ export const EmployeeDashboard = () => {
       case 'information':
         return (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-gradient-to-r from-[#8B0000] to-red-700 p-6 md:p-8 text-white shadow-xl">
-              <h2 className="text-2xl md:text-3xl font-bold leading-tight text-white">
-                Employee Information
-              </h2>
-
-              <p className="mt-2 text-white/90 text-sm md:text-base leading-relaxed">
-                Personal details, emergency contact, and government information.
-              </p>
+            {/* Header Card */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#8B0000] via-red-700 to-red-900 p-8 shadow-2xl">
+              <div className="absolute -bottom-20 left-0 right-0 h-64 bg-white/5 rounded-full blur-3xl" />
+              <div className="absolute -top-20 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+              
+              <div className="relative z-10 flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 backdrop-blur">
+                  <User size={28} className="text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-white">Employee Information</h1>
+                  <p className="text-red-100 mt-2">Personal details, emergency contact, and government information.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-              <InfoCard
-                title="Personal Information"
-                icon={<User size={18} />}
-              >
-                <InfoItem
-                  label="Full Name"
-                  value={
-                    employee?.full_name
-                  }
-                />
+            {/* Employment Information Card */}
+            <div className="rounded-2xl bg-[#0F1728] border border-gray-700 overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gradient-to-r from-gray-800/30 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-red-600/20 flex items-center justify-center">
+                    <Briefcase size={20} className="text-red-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Employment Information</h3>
+                </div>
+                <button className="text-gray-500 hover:text-gray-300 transition-colors" title="More options">
+                  <MoreVertical size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between py-3 border-b border-gray-700/50">
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <User size={18} />
+                    <span>Position</span>
+                  </div>
+                  <span className="text-white font-semibold">{employee?.position || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-gray-700/50">
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <MapPin size={18} />
+                    <span>Hub</span>
+                  </div>
+                  <span className="text-white font-semibold">{employee?.hub_name || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <Calendar size={18} />
+                    <span>Employment Type</span>
+                  </div>
+                  <span className="text-white font-semibold">{employee?.employment_type || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
 
-                <InfoItem
-                  label="Gender"
-                  value={employee?.gender}
-                />
+            {/* Government IDs Card */}
+            <div className="rounded-2xl bg-[#0F1728] border border-gray-700 overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gradient-to-r from-gray-800/30 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center">
+                    <Shield size={20} className="text-blue-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Government IDs</h3>
+                </div>
+                <button className="text-gray-500 hover:text-gray-300 transition-colors" title="More options">
+                  <MoreVertical size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between py-3 border-b border-gray-700/50">
+                  <span className="text-gray-400">TIN</span>
+                  <span className="text-white font-semibold font-mono">{employee?.tin || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-gray-700/50">
+                  <span className="text-gray-400">SSS</span>
+                  <span className="text-white font-semibold font-mono">{employee?.sss || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-gray-700/50">
+                  <span className="text-gray-400">PhilHealth</span>
+                  <span className="text-white font-semibold font-mono">{employee?.philhealth || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-gray-400">Pag-IBIG</span>
+                  <span className="text-white font-semibold font-mono">{employee?.pagibig || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
 
-                <InfoItem
-                  label="Nationality"
-                  value={
-                    employee?.nationality
-                  }
-                />
-
-                <InfoItem
-                  label="Marital Status"
-                  value={
-                    employee?.marital_status
-                  }
-                />
-              </InfoCard>
-
-              <InfoCard
-                title="Contact Information"
-                icon={<Mail size={18} />}
-              >
-                <InfoItem
-                  label="Email"
-                  value={
-                    employee?.email_address
-                  }
-                />
-
-                <InfoItem
-                  label="Phone"
-                  value={
-                    employee?.phone_number
-                  }
-                />
-
-                <InfoItem
-                  label="Address"
-                  value={
-                    employee?.current_address
-                  }
-                />
-              </InfoCard>
-
-              <InfoCard
-                title="Employment Information"
-                icon={
-                  <Briefcase size={18} />
-                }
-              >
-                <InfoItem
-                  label="Position"
-                  value={
-                    employee?.position
-                  }
-                />
-
-                <InfoItem
-                  label="Hub"
-                  value={
-                    employee?.hub_name
-                  }
-                />
-
-                <InfoItem
-                  label="Employment Type"
-                  value={
-                    employee?.employment_type
-                  }
-                />
-              </InfoCard>
-
-              <InfoCard
-                title="Government IDs"
-                icon={<Shield size={18} />}
-              >
-                <InfoItem
-                  label="TIN"
-                  value={employee?.tin}
-                />
-
-                <InfoItem
-                  label="SSS"
-                  value={employee?.sss}
-                />
-
-                <InfoItem
-                  label="PhilHealth"
-                  value={
-                    employee?.philhealth
-                  }
-                />
-
-                <InfoItem
-                  label="Pag-IBIG"
-                  value={
-                    employee?.pagibig
-                  }
-                />
-              </InfoCard>
-              <InfoCard
-                title="Emergency Contact"
-                icon={<User size={18} />}
-              >
-                <InfoItem
-                  label="Contact Name"
-                  value={employee?.emergency_contact_name}
-                />
-
-                <InfoItem
-                  label="Relationship"
-                  value={employee?.emergency_contact_relationship}
-                />
-
-                <InfoItem
-                  label="Phone Number"
-                  value={employee?.emergency_contact_phone}
-                />
-              </InfoCard>
+            {/* Emergency Contact Card */}
+            <div className="rounded-2xl bg-[#0F1728] border border-gray-700 overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gradient-to-r from-gray-800/30 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-yellow-600/20 flex items-center justify-center">
+                    <AlertCircle size={20} className="text-yellow-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Emergency Contact</h3>
+                </div>
+                <button className="text-gray-500 hover:text-gray-300 transition-colors" title="More options">
+                  <MoreVertical size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between py-3 border-b border-gray-700/50">
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <User size={18} />
+                    <span>Contact Name</span>
+                  </div>
+                  <span className="text-white font-semibold">{employee?.emergency_contact_name || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-gray-700/50">
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <Users size={18} />
+                    <span>Relationship</span>
+                  </div>
+                  <span className="text-white font-semibold">{employee?.emergency_contact_relationship || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <Phone size={18} />
+                    <span>Phone Number</span>
+                  </div>
+                  <span className="text-white font-semibold">{employee?.emergency_contact_phone || 'N/A'}</span>
+                </div>
+              </div>
             </div>
           </div>
         );
