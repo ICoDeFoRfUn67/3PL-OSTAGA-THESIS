@@ -147,7 +147,7 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
             </div>
             <div>
               <h2 className="text-lg font-bold text-red-950 dark:text-white leading-tight">
-                Clock In & Click Out
+                Clock In & Clock Out
               </h2>
               <p className="text-xs text-red-750/70 dark:text-red-300/80 mt-0.5">
                 {formatDate(currentTime)}
@@ -157,7 +157,7 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
 
           {/* Large Time Display */}
           <div className="text-center space-y-4">
-            <div className="text-5xl md:text-6xl font-extrabold text-slate-900 dark:text-white tracking-widest drop-shadow-[0_2px_8px_rgba(239,68,68,0.1)] dark:drop-shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+            <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-widest drop-shadow-[0_2px_8px_rgba(239,68,68,0.1)] dark:drop-shadow-[0_0_20px_rgba(239,68,68,0.3)]">
               {formatTime(currentTime)}
             </div>
             
