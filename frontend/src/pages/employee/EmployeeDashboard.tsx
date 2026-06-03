@@ -420,12 +420,12 @@ export const EmployeeDashboard = () => {
       case 'information':
         return (
           <div className="space-y-6">
-            <div className="rounded-3xl bg-gradient-to-r from-[#8B0000] to-red-700 p-6 md:p-8 text-white shadow-xl">
-              <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+            <div className="rounded-2xl bg-gradient-to-r from-[#8B0000] to-red-700 p-6 md:p-8 text-white shadow-xl">
+              <h2 className="text-2xl md:text-3xl font-bold leading-tight text-white">
                 Employee Information
               </h2>
 
-              <p className="mt-2 text-white/85 text-sm md:text-base leading-relaxed">
+              <p className="mt-2 text-white/90 text-sm md:text-base leading-relaxed">
                 Personal details, emergency contact, and government information.
               </p>
             </div>
@@ -575,7 +575,7 @@ export const EmployeeDashboard = () => {
       case 'leave':
         return (
           <div className="space-y-6">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4F7BFF] to-[#315BFF] p-6 md:p-10 text-white shadow-2xl">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4F7BFF] to-[#315BFF] p-6 md:p-10 text-white shadow-2xl">
               <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
 
               <div className="relative z-10 max-w-2xl">
@@ -583,11 +583,11 @@ export const EmployeeDashboard = () => {
                   <Briefcase size={32} />
                 </div>
 
-                <h2 className="mt-6 text-2xl md:text-3xl font-bold leading-tight">
+                <h2 className="mt-6 text-2xl md:text-3xl font-bold leading-tight text-white">
                   Leave Request
                 </h2>
 
-                <p className="mt-4 text-sm md:text-base text-white/85 leading-relaxed">
+                <p className="mt-4 text-sm md:text-base text-white/90 leading-relaxed">
                   Submit your leave request and monitor approval status through the portal.
                 </p>
 
