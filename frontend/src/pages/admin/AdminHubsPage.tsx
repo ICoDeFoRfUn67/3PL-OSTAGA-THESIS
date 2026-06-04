@@ -1234,8 +1234,8 @@ export const AdminHubsPage = () => {
               )}
 
               {showDirections && routeData && (
-                <div className="absolute bottom-32 md:bottom-4 left-2 md:left-3 right-2 md:right-3 z-[1000] flex items-end justify-center gap-2 md:grid md:grid-cols-3 md:gap-3 overflow-x-auto px-3">
-                  <div className={`flex-shrink-0 w-32 sm:w-40 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                <div className="absolute bottom-2 md:bottom-4 left-2 right-2 z-[1000] flex items-end justify-center gap-2 md:grid md:grid-cols-3 md:gap-3 overflow-x-auto px-2">
+                  <div className={`flex-shrink-0 w-28 sm:w-36 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
                     <div className="flex items-center gap-2 md:gap-3">
                       <Footprints className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
 
@@ -1251,7 +1251,7 @@ export const AdminHubsPage = () => {
                     </div>
                   </div>
 
-                  <div className={`flex-shrink-0 w-32 sm:w-40 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                  <div className={`flex-shrink-0 w-28 sm:w-36 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
                     <div className="flex items-center gap-2 md:gap-3">
                       <Bike className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
 
@@ -1267,7 +1267,7 @@ export const AdminHubsPage = () => {
                     </div>
                   </div>
 
-                  <div className={`flex-shrink-0 w-32 sm:w-40 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                  <div className={`flex-shrink-0 w-28 sm:w-36 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
                     <div className="flex items-center gap-2 md:gap-3">
                       <Car className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`} />
 
