@@ -222,22 +222,22 @@ export const EmployeeDashboard = () => {
                 </div>
 
                 {/* PROFILE DETAILS */}
-                <div className="flex-1 text-center sm:text-left space-y-4">
-                  <div className="space-y-1">
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+                <div className="flex-1 text-center sm:text-left space-y-3">
+                  <div className="space-y-0.5">
+                    <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight leading-tight">
                       {employee?.full_name}
                     </h1>
-                    <p className="text-slate-300 text-lg font-medium">{employee?.position}</p>
+                    <p className="text-slate-300 text-sm font-medium">{employee?.position}</p>
                   </div>
 
-                  <div className="flex flex-col gap-2.5 max-w-sm sm:max-w-md">
-                    <div className="px-4 py-2 rounded-2xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-3 text-sm text-slate-300 font-semibold shadow-sm w-fit max-w-full">
-                      <MapPin size={16} className="text-red-400 flex-shrink-0" />
+                  <div className="flex flex-col gap-2 max-w-sm sm:max-w-md">
+                    <div className="px-3 py-1.5 rounded-xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-2 text-xs text-slate-300 font-semibold shadow-sm w-fit max-w-full">
+                      <MapPin size={13} className="text-red-400 flex-shrink-0" />
                       <span className="truncate">{employee?.hub_name || 'N/A'}</span>
                     </div>
 
-                    <div className="px-4 py-2 rounded-2xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-3 text-sm text-slate-300 font-semibold shadow-sm w-fit">
-                      <Calendar size={16} className="text-red-400 flex-shrink-0" />
+                    <div className="px-3 py-1.5 rounded-xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-2 text-xs text-slate-300 font-semibold shadow-sm w-fit">
+                      <Calendar size={13} className="text-red-400 flex-shrink-0" />
                       <span>
                         {employee?.hired_date
                           ? new Date(employee.hired_date).toLocaleDateString('en-US', {
@@ -252,21 +252,21 @@ export const EmployeeDashboard = () => {
                 </div>
               </div>
 
-              {/* BOTTOM EDIT PROFILE CARD (matching Image 2) */}
+              {/* BOTTOM EDIT PROFILE CARD */}
               <div 
                 onClick={() => setEditOpen(true)}
-                className="relative z-10 mt-6 bg-white hover:bg-slate-50 transition-all rounded-[20px] p-4 flex items-center justify-between shadow-md cursor-pointer group"
+                className="relative z-10 mt-4 bg-white hover:bg-slate-50 transition-all rounded-2xl p-3 flex items-center justify-between shadow-md cursor-pointer group"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
-                    <User size={22} />
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                    <User size={17} />
                   </div>
                   <div className="text-left">
-                    <h3 className="text-base font-bold text-slate-900 leading-tight">Edit Profile</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Update your personal information</p>
+                    <h3 className="text-sm font-bold text-slate-900 leading-tight">Edit Profile</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Update your personal information</p>
                   </div>
                 </div>
-                <ChevronRight size={20} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
+                <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
 
@@ -281,47 +281,47 @@ export const EmployeeDashboard = () => {
               </div>
             </div>
 
-            {/* INFO GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-4 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-4 rounded-3xl shadow-sm dark:shadow-xl transition-all">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
-                  <Briefcase size={22} />
+            {/* INFO GRID - Always 2 cols x 2 rows */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-3 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-3.5 rounded-2xl shadow-sm dark:shadow-xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <Briefcase size={18} />
                 </div>
                 <div className="min-w-0 text-left">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Employment</p>
-                  <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white uppercase truncate">{employee?.employment_type || 'N/A'}</h3>
+                  <p className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Employment</p>
+                  <h3 className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white uppercase truncate">{employee?.employment_type || 'N/A'}</h3>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-4 rounded-3xl shadow-sm dark:shadow-xl transition-all">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
-                  <Activity size={22} />
+              <div className="flex items-center gap-3 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-3.5 rounded-2xl shadow-sm dark:shadow-xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <Activity size={18} />
                 </div>
                 <div className="min-w-0 text-left">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Status</p>
-                  <h3 className={`mt-1 text-lg font-extrabold truncate ${
+                  <p className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Status</p>
+                  <h3 className={`mt-0.5 text-sm font-extrabold truncate ${
                     employee?.status?.toLowerCase() === 'resign' ? 'text-amber-600 dark:text-[#F59E0B]' : 'text-emerald-600 dark:text-[#10B981]'
                   }`}>{employee?.status || 'N/A'}</h3>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-4 rounded-3xl shadow-sm dark:shadow-xl transition-all">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-650 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
-                  <User size={22} />
+              <div className="flex items-center gap-3 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-3.5 rounded-2xl shadow-sm dark:shadow-xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-650 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <User size={18} />
                 </div>
                 <div className="min-w-0 text-left">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Role</p>
-                  <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white capitalize truncate">{employee?.role || 'Employee'}</h3>
+                  <p className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Role</p>
+                  <h3 className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white capitalize truncate">{employee?.role || 'Employee'}</h3>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-4 rounded-3xl shadow-sm dark:shadow-xl transition-all">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-650 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
-                  <FileText size={22} />
+              <div className="flex items-center gap-3 bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-3.5 rounded-2xl shadow-sm dark:shadow-xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-650 dark:text-red-500 border border-red-150 dark:border-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <FileText size={18} />
                 </div>
                 <div className="min-w-0 text-left">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Employee ID</p>
-                  <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white truncate">{employee?.employee_id || 'N/A'}</h3>
+                  <p className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Employee ID</p>
+                  <h3 className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white truncate">{employee?.employee_id || 'N/A'}</h3>
                 </div>
               </div>
             </div>
@@ -447,211 +447,196 @@ export const EmployeeDashboard = () => {
             <div className="space-y-5">
               {/* Employment Information Card */}
               <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/60">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
-                      <Briefcase size={20} />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Employment Information</h3>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
+                    <Briefcase size={20} />
                   </div>
-                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Employment Information</h3>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <User size={16} />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <User size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Position</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.position || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Position</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.position || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <MapPin size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <MapPin size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Hub</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.hub_name || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Hub</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white text-right max-w-[55%]">{employee?.hub_name || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Briefcase size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Briefcase size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Employment Type</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.employment_type || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Employment Type</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.employment_type || 'N/A'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Government IDs Card */}
               <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/60">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
-                      <Shield size={20} />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Government IDs</h3>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
+                    <Shield size={20} />
                   </div>
-                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Government IDs</h3>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <CreditCard size={16} />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <CreditCard size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">TIN</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.tin || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">TIN</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.tin || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Shield size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Shield size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">SSS</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.sss || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">SSS</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.sss || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Heart size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Heart size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">PhilHealth</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.philhealth || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">PhilHealth</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.philhealth || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Home size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Home size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Pag-IBIG</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.pagibig || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Pag-IBIG</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.pagibig || 'N/A'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Emergency Contact Card */}
               <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/60">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
-                      <User size={20} />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Emergency Contact</h3>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
+                    <User size={20} />
                   </div>
-                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Emergency Contact</h3>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Users size={16} />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Users size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Contact Name</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.emergency_contact_name || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Contact Name</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.emergency_contact_name || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Users size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Users size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Relationship</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.emergency_contact_relationship || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Relationship</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.emergency_contact_relationship || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Phone size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Phone size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Phone Number</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.emergency_contact_phone || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Phone Number</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.emergency_contact_phone || 'N/A'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Personal Information Card */}
               <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/60">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
-                      <User size={20} />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Personal Information</h3>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
+                    <User size={20} />
                   </div>
-                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Personal Information</h3>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <User size={16} />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <User size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Full Name</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.full_name || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Full Name</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.full_name || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <User size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <User size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Gender</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.gender || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Gender</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.gender || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <MapPin size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <MapPin size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Nationality</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.nationality || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Nationality</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.nationality || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Users size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Users size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Marital Status</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.marital_status || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Marital Status</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.marital_status || 'N/A'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Contact Details Card */}
               <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/60">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
-                      <User size={20} />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Contact Details</h3>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
+                    <User size={20} />
                   </div>
-                  <div className="text-[#C41E3A] font-bold text-lg cursor-pointer">•••</div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Contact Details</h3>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <User size={16} />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <User size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Email Address</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto truncate max-w-[200px] sm:max-w-xs">{employee?.email_address || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Email</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-[55%]">{employee?.email_address || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <Phone size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <Phone size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Phone Number</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.phone_number || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Phone</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.phone_number || 'N/A'}</span>
                   </div>
 
-                  <div className="flex items-center border-b border-slate-100 dark:border-slate-800/50 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">
-                      <MapPin size={16} />
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
+                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
+                      <MapPin size={14} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold ml-3">Current Address</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white ml-auto">{employee?.current_address || 'N/A'}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Address</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-[55%]">{employee?.current_address || 'N/A'}</span>
                   </div>
                 </div>
               </div>

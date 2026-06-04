@@ -103,30 +103,29 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
             </div>
           ) : items.length === 0 ? (
             <div className="text-center p-12">
-              <Calendar size={40} className="mx-auto text-slate-350 dark:text-slate-650 mb-2" />
+              <Calendar size={40} className="mx-auto text-slate-350 dark:text-slate-650 mb-3 opacity-40" />
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">No leave requests found</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <div className="p-3 space-y-2">
               {items.map((r) => (
                 <button
                   key={r.id}
                   onClick={() => setSelected(r)}
-                  className={`w-full p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#0d1527]/30 flex items-center justify-between group ${
-                    selected?.id === r.id ? 'bg-slate-100/50 dark:bg-slate-900/30 border-l-4 border-red-650 shadow-sm' : 'border-l-4 border-transparent'
+                  className={`w-full p-3.5 text-left rounded-2xl transition-all group ${
+                    selected?.id === r.id
+                      ? 'bg-white dark:bg-[#0d1527] shadow-md border border-slate-200 dark:border-slate-700'
+                      : 'hover:bg-white dark:hover:bg-[#0d1527]/60 border border-transparent'
                   }`}
                 >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-tight">{r.leave_type}</span>
-                      <Badge variant={getStatusVariant(r.status)} size="sm" className="text-[10px] uppercase px-2 py-0.5 font-bold">{r.status}</Badge>
-                    </div>
-                    <p className="font-bold text-sm text-slate-900 dark:text-white">
-                      {new Date(r.start_date).toLocaleDateString()} - {new Date(r.end_date).toLocaleDateString()}
-                    </p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium italic">{new Date(r.created_at).toLocaleString()}</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-tight">{r.leave_type}</span>
+                    <Badge variant={getStatusVariant(r.status)} size="sm" className="text-[10px] uppercase px-2 py-0.5 font-bold">{r.status}</Badge>
                   </div>
-                  <ChevronRight size={18} className={`text-slate-400 dark:text-slate-500 transition-transform flex-shrink-0 ${selected?.id === r.id ? 'translate-x-1 text-red-600' : 'group-hover:translate-x-0.5'}`} />
+                  <p className="font-semibold text-sm text-slate-900 dark:text-white">
+                    {new Date(r.start_date).toLocaleDateString()} – {new Date(r.end_date).toLocaleDateString()}
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium">{new Date(r.created_at).toLocaleString()}</p>
                 </button>
               ))}
             </div>
@@ -142,28 +141,42 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
               </div>
             ) : items.length === 0 ? (
               <div className="text-center p-12 h-full flex flex-col items-center justify-center">
-                <Calendar size={40} className="mx-auto text-slate-350 dark:text-slate-650 mb-2" />
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">No leave requests found</p>
+                <Calendar size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-3" />
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No leave requests yet</p>
+                <p className="text-xs text-slate-400 dark:text-slate-600 mt-1">Your submitted leave requests will appear here</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              <div className="p-4 space-y-3">
                 {items.map((r) => (
                   <button
                     key={r.id}
                     onClick={() => setSelected(r)}
-                    className="w-full p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-[#0d1527]/30 flex items-center justify-between group"
+                    className="w-full text-left transition-all"
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-tight">{r.leave_type}</span>
-                        <Badge variant={getStatusVariant(r.status)} size="sm" className="text-[10px] uppercase px-2 py-0.5 font-bold">{r.status}</Badge>
+                    <div className="bg-slate-50 dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 hover:border-red-300 dark:hover:border-red-800/60 transition-all group">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            r.status === 'approved' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                            r.status === 'rejected' ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400' :
+                            'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          }`}>
+                            <Plane size={18} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">{r.leave_type}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{new Date(r.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <Badge variant={getStatusVariant(r.status)} size="sm" className="text-[10px] uppercase px-2.5 py-1 font-bold flex-shrink-0">{r.status}</Badge>
                       </div>
-                      <p className="font-bold text-sm text-slate-900 dark:text-white">
-                        {new Date(r.start_date).toLocaleDateString()} - {new Date(r.end_date).toLocaleDateString()}
-                      </p>
-                      <p className="text-[10px] text-slate-550 dark:text-slate-400 mt-1 font-medium italic">{new Date(r.created_at).toLocaleString()}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                          {new Date(r.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(r.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                        <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
                     </div>
-                    <ChevronRight size={18} className="text-slate-400 dark:text-slate-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                   </button>
                 ))}
               </div>
@@ -221,19 +234,21 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
             </div>
 
             {/* Request Timeline */}
-            <div className="mb-6 space-y-3 text-left">
-              <div className="flex items-center gap-2">
-                <Clock size={16} className="text-red-500" />
-                <h4 className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Request Timeline</h4>
+            <div className="mb-5 space-y-2.5 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                  <Clock size={14} className="text-red-500" />
+                </div>
+                <h4 className="text-xs font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Request Timeline</h4>
               </div>
               
-              <div className="bg-slate-50 dark:bg-[#0d1527]/35 border border-slate-200 dark:border-slate-800/60 rounded-3xl p-5 md:p-6 space-y-6 relative pl-8">
+              <div className="bg-slate-50 dark:bg-[#0d1527]/35 border border-slate-200 dark:border-slate-800/60 rounded-3xl p-5 space-y-4 relative pl-10">
                 {/* Vertical Line */}
-                <div className="absolute left-[31px] top-8 bottom-8 w-[2px] bg-slate-200 dark:bg-slate-800" />
+                <div className="absolute left-[35px] top-7 bottom-7 w-[2px] bg-gradient-to-b from-red-400 to-slate-200 dark:to-slate-800 rounded-full" />
 
                 {/* Timeline Item 1 */}
                 <div className="relative">
-                  <div className="absolute -left-6 w-3 h-3 bg-red-500 rounded-full border border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)] mt-1.5" />
+                  <div className="absolute -left-7 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#0d1527] shadow-[0_0_8px_rgba(239,68,68,0.5)] mt-1" />
                   <div className="space-y-0.5 text-left">
                     <p className="text-sm font-bold text-slate-800 dark:text-white">Requested</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -244,12 +259,12 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
 
                 {/* Timeline Item 2 */}
                 <div className="relative">
-                  <div className={`absolute -left-6 w-3 h-3 rounded-full border mt-1.5 ${
-                    selected.status === 'pending' ? 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-650' : 'bg-red-500 border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                  <div className={`absolute -left-7 w-3 h-3 rounded-full border-2 border-white dark:border-[#0d1527] mt-1 ${
+                    selected.status === 'pending' ? 'bg-slate-300 dark:bg-slate-600' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
                   }`} />
                   <div className="space-y-0.5 text-left">
                     <p className="text-sm font-bold text-slate-800 dark:text-white">
-                      {selected.status === 'pending' ? 'Pending Approval' : 'Approved'}
+                      {selected.status === 'pending' ? 'Pending Approval' : selected.status === 'rejected' ? 'Rejected' : 'Approved'}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                       {selected.status === 'pending' ? 'Waiting for manager review' : `Reviewed on ${new Date(selected.reviewed_at).toLocaleDateString()}`}
@@ -260,40 +275,43 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
             </div>
 
             {/* Leave Dates */}
-            <div className="mb-6 space-y-3 text-left">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-red-500" />
-                <h4 className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Leave Dates</h4>
+            <div className="mb-5 space-y-2.5 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                  <Calendar size={14} className="text-red-500" />
+                </div>
+                <h4 className="text-xs font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Leave Dates</h4>
               </div>
               
-              <div className="bg-slate-50 dark:bg-[#0d1527]/30 border border-slate-200 dark:border-slate-800/60 rounded-3xl p-5 md:p-6 grid grid-cols-2 gap-4 relative">
-                {/* Vertical Divider */}
-                <div className="absolute top-4 bottom-4 left-1/2 w-[1px] bg-slate-200 dark:bg-slate-800/80" />
-
-                <div className="text-center sm:text-left">
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold mb-1 uppercase tracking-wider">Start Date</p>
-                  <p className="text-base font-bold text-slate-800 dark:text-white">
-                    {new Date(selected.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
-                </div>
-                <div className="text-center sm:text-left pl-4">
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold mb-1 uppercase tracking-wider">End Date</p>
-                  <p className="text-base font-bold text-slate-800 dark:text-white">
-                    {new Date(selected.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
+              <div className="bg-slate-50 dark:bg-[#0d1527]/30 border border-slate-200 dark:border-slate-800/60 rounded-3xl overflow-hidden">
+                <div className="grid grid-cols-2">
+                  <div className="p-4 text-center border-r border-slate-200 dark:border-slate-800/80">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mb-1.5 uppercase tracking-wider">Start Date</p>
+                    <p className="text-base font-bold text-slate-800 dark:text-white">
+                      {new Date(selected.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="p-4 text-center">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mb-1.5 uppercase tracking-wider">End Date</p>
+                    <p className="text-base font-bold text-slate-800 dark:text-white">
+                      {new Date(selected.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Reason for Leave */}
-            <div className="mb-6 space-y-3 text-left">
-              <div className="flex items-center gap-2">
-                <MessageSquare size={16} className="text-red-500" />
-                <h4 className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Reason for Leave</h4>
+            <div className="mb-5 space-y-2.5 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                  <MessageSquare size={14} className="text-red-500" />
+                </div>
+                <h4 className="text-xs font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Reason for Leave</h4>
               </div>
               
-              <div className="bg-slate-50 dark:bg-[#0d1527]/30 border border-slate-200 dark:border-slate-800/60 rounded-3xl p-5 md:p-6 text-left">
-                <p className="text-sm text-slate-700 dark:text-slate-200 italic font-semibold">
+              <div className="bg-slate-50 dark:bg-[#0d1527]/30 border border-slate-200 dark:border-slate-800/60 rounded-3xl p-4 text-left">
+                <p className="text-sm text-slate-700 dark:text-slate-200 italic font-semibold leading-relaxed">
                   &ldquo;{selected.reason || 'No reason provided'}&rdquo;
                 </p>
               </div>
