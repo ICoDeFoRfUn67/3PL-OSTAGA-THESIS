@@ -224,24 +224,24 @@ export const EmployeeDashboard = () => {
                 {/* PROFILE DETAILS */}
                 <div className="flex-1 text-center sm:text-left space-y-3">
                   <div className="space-y-0.5">
-                    <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight leading-tight">
+                    <h1 className="text-lg md:text-xl font-bold text-white tracking-tight leading-tight">
                       {employee?.full_name}
                     </h1>
-                    <p className="text-slate-300 text-sm font-medium">{employee?.position}</p>
+                    <p className="text-slate-300 text-xs font-semibold">{employee?.position}</p>
                   </div>
 
-                  <div className="flex flex-col gap-2 max-w-sm sm:max-w-md">
-                    <div className="px-3 py-1.5 rounded-xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-2 text-xs text-slate-300 font-semibold shadow-sm w-fit max-w-full">
-                      <MapPin size={13} className="text-red-400 flex-shrink-0" />
+                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                    <div className="px-2.5 py-1 rounded-lg bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-1.5 text-[10px] text-slate-300 font-bold shadow-sm w-fit max-w-full">
+                      <MapPin size={11} className="text-red-400 flex-shrink-0" />
                       <span className="truncate">{employee?.hub_name || 'N/A'}</span>
                     </div>
 
-                    <div className="px-3 py-1.5 rounded-xl bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-2 text-xs text-slate-300 font-semibold shadow-sm w-fit">
-                      <Calendar size={13} className="text-red-400 flex-shrink-0" />
+                    <div className="px-2.5 py-1 rounded-lg bg-black/35 backdrop-blur-md border border-white/5 flex items-center gap-1.5 text-[10px] text-slate-300 font-bold shadow-sm w-fit">
+                      <Calendar size={11} className="text-red-400 flex-shrink-0" />
                       <span>
                         {employee?.hired_date
                           ? new Date(employee.hired_date).toLocaleDateString('en-US', {
-                              month: 'long',
+                              month: 'short',
                               day: 'numeric',
                               year: 'numeric',
                             })
@@ -249,24 +249,15 @@ export const EmployeeDashboard = () => {
                       </span>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* BOTTOM EDIT PROFILE CARD */}
-              <div 
-                onClick={() => setEditOpen(true)}
-                className="relative z-10 mt-4 bg-white hover:bg-slate-50 transition-all rounded-2xl p-3 flex items-center justify-between shadow-md cursor-pointer group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
-                    <User size={17} />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-sm font-bold text-slate-900 leading-tight">Edit Profile</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Update your personal information</p>
-                  </div>
+                  <button
+                    onClick={() => setEditOpen(true)}
+                    className="mt-1 px-4 py-1.5 bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 w-fit mx-auto sm:mx-0 shadow-sm"
+                  >
+                    <User size={13} className="opacity-80" />
+                    Edit Profile
+                  </button>
                 </div>
-                <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
 
