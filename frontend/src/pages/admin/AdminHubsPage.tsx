@@ -1234,49 +1234,49 @@ export const AdminHubsPage = () => {
               )}
 
               {showDirections && routeData && (
-                <div className="absolute bottom-28 md:bottom-4 left-2 md:left-3 right-2 md:right-3 z-[1000] grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
-                  <div className={`backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                <div className="absolute bottom-32 md:bottom-4 left-2 md:left-3 right-2 md:right-3 z-[1000] flex items-end justify-center gap-2 md:grid md:grid-cols-3 md:gap-3 overflow-x-auto px-3">
+                  <div className={`flex-shrink-0 w-32 sm:w-40 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
                     <div className="flex items-center gap-2 md:gap-3">
-                      <Footprints size={14} className={`md:w-4 md:h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                      <Footprints className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
 
                       <div>
-                        <p className={`${isDarkMode ? 'text-white text-xs md:text-sm font-semibold' : 'text-gray-900 text-xs md:text-sm font-semibold'}`}>
+                        <p className={`${isDarkMode ? 'text-white text-[11px] md:text-sm font-semibold' : 'text-gray-900 text-[11px] md:text-sm font-semibold'}`}>
                           Walking
                         </p>
 
-                        <p className={`${isDarkMode ? 'text-[11px] md:text-xs text-white/60' : 'text-[11px] md:text-xs text-gray-500'}`}>
+                        <p className={`${isDarkMode ? 'text-[10px] md:text-xs text-white/60' : 'text-[10px] md:text-xs text-gray-500'}`}>
                           {formatDistance(routeData.walking.distanceM)} • {formatDuration(routeData.walking.durationSec)}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className={`backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                  <div className={`flex-shrink-0 w-32 sm:w-40 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
                     <div className="flex items-center gap-2 md:gap-3">
-                      <Bike size={14} className={`md:w-4 md:h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                      <Bike className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
 
                       <div>
-                        <p className={`${isDarkMode ? 'text-white text-xs md:text-sm font-semibold' : 'text-gray-900 text-xs md:text-sm font-semibold'}`}>
+                        <p className={`${isDarkMode ? 'text-white text-[11px] md:text-sm font-semibold' : 'text-gray-900 text-[11px] md:text-sm font-semibold'}`}>
                           Cycling
                         </p>
 
-                        <p className={`${isDarkMode ? 'text-[11px] md:text-xs text-white/60' : 'text-[11px] md:text-xs text-gray-500'}`}>
+                        <p className={`${isDarkMode ? 'text-[10px] md:text-xs text-white/60' : 'text-[10px] md:text-xs text-gray-500'}`}>
                           {formatDistance(routeData.riding.distanceM)} • {formatDuration(routeData.riding.durationSec)}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className={`backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
+                  <div className={`flex-shrink-0 w-32 sm:w-40 md:w-auto backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
                     <div className="flex items-center gap-2 md:gap-3">
-                      <Car size={14} className={`md:w-4 md:h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`} />
+                      <Car className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`} />
 
                       <div>
-                        <p className={`${isDarkMode ? 'text-white text-xs md:text-sm font-semibold' : 'text-gray-900 text-xs md:text-sm font-semibold'}`}>
+                        <p className={`${isDarkMode ? 'text-white text-[11px] md:text-sm font-semibold' : 'text-gray-900 text-[11px] md:text-sm font-semibold'}`}>
                           Driving
                         </p>
 
-                        <p className={`${isDarkMode ? 'text-[11px] md:text-xs text-white/60' : 'text-[11px] md:text-xs text-gray-500'}`}>
+                        <p className={`${isDarkMode ? 'text-[10px] md:text-xs text-white/60' : 'text-[10px] md:text-xs text-gray-500'}`}>
                           {formatDistance(routeData.car.distanceM)} • {formatDuration(routeData.car.durationSec)}
                         </p>
                       </div>
