@@ -1234,7 +1234,7 @@ export const AdminHubsPage = () => {
               )}
 
               {showDirections && routeData && (
-                <div className="absolute bottom-24 md:bottom-4 left-2 md:left-3 right-2 md:right-3 z-[1000] grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                <div className="absolute bottom-28 md:bottom-4 left-2 md:left-3 right-2 md:right-3 z-[1000] grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
                   <div className={`backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 border ${isDarkMode ? 'bg-[#071a3d]/90 border-white/10 text-white' : 'bg-white/[0.95] border-gray-200 text-gray-900'}`}>
                     <div className="flex items-center gap-2 md:gap-3">
                       <Footprints size={14} className={`md:w-4 md:h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
@@ -1596,11 +1596,11 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
         className="
           md:hidden
           fixed
-          bottom-24
+          bottom-28
           right-4
           z-50
-          w-14
-          h-14
+          w-12
+          h-12
           rounded-full
           bg-gradient-to-br
           from-red-500
@@ -1613,7 +1613,7 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
         "
         aria-label="Add Hub"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-5 h-5" />
       </button>
 
       {/* ========== MODALS ========== */}

@@ -293,13 +293,22 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
                                     </div>
                                   )}
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                    <button 
+                                    <button
+                                      type="button"
                                       onClick={() => setPreviewFile({ url, type: isImage ? 'image' : isPDF ? 'pdf' : 'other' })}
+                                      aria-label={`Preview ${nameMatch}`}
+                                      title={`Preview ${nameMatch}`}
                                       className="p-1.5 bg-white text-black rounded-full hover:scale-110 transition-transform"
                                     >
                                       <Eye size={14} />
                                     </button>
-                                    <a href={url} download className="p-1.5 bg-white text-black rounded-full hover:scale-110 transition-transform">
+                                    <a
+                                      href={url}
+                                      download
+                                      aria-label={`Download ${nameMatch}`}
+                                      title={`Download ${nameMatch}`}
+                                      className="p-1.5 bg-white text-black rounded-full hover:scale-110 transition-transform"
+                                    >
                                       <Download size={14} />
                                     </a>
                                   </div>
@@ -382,11 +391,11 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
           className="
             md:hidden
             fixed
-            bottom-24
+            bottom-28
             right-4
             z-50
-            w-14
-            h-14
+            w-12
+            h-12
             rounded-full
             bg-red-600
             hover:bg-red-700
@@ -402,7 +411,7 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
           {clearAllMutation.isPending ? (
             <LoadingSpinner size="sm" />
           ) : (
-            <Trash2 className="w-6 h-6" />
+            <Trash2 className="w-5 h-5" />
           )}
         </button>
       )}

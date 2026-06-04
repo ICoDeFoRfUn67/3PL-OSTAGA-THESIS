@@ -146,11 +146,11 @@ export const AdminEmployeesPage = () => {
             className="
                 md:hidden
                     fixed
-                    bottom-24
+                    bottom-28
               right-4
               z-50
-              w-14
-              h-14
+              w-12
+              h-12
               rounded-full
               bg-blue-600
               hover:bg-blue-700
@@ -161,7 +161,7 @@ export const AdminEmployeesPage = () => {
               justify-center
             "
           >
-            <Plus className="w-6 h-6" />
+            <Plus className="w-5 h-5" />
           </button>
         )}
       </div>

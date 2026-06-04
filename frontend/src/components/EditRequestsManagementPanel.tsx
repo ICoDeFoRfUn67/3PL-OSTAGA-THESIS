@@ -358,11 +358,11 @@ export const EditRequestsPanel = () => {
           className="
             md:hidden
             fixed
-            bottom-24
+            bottom-28
             right-4
             z-50
-            w-14
-            h-14
+            w-12
+            h-12
             rounded-full
             bg-red-600
             hover:bg-red-700
@@ -377,7 +377,7 @@ export const EditRequestsPanel = () => {
           {clearAllMutation.isPending ? (
             <LoadingSpinner size="sm" />
           ) : (
-            <Trash2 size={24} />
+            <Trash2 size={20} />
           )}
         </button>
       )}

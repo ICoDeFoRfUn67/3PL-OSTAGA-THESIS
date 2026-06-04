@@ -153,7 +153,7 @@ function AdminMobileProfile() {
         </div>
 
         {/* HEADER CARD */}
-        <div className={`relative overflow-visible rounded-b-[30px] rounded-t-none border-x-0 border-t-0 border-b ${isDarkMode ? 'border-white/10 bg-gradient-to-r from-[#040B18] via-[#050505] to-[#180707] backdrop-blur-xl' : 'border-gray-200 bg-white/90'}`}>
+        <div className={`relative overflow-visible rounded-b-[30px] rounded-t-none border-x-0 border-t-0 border-b ${isDarkMode ? 'border-white/10 bg-gradient-to-r from-[#040B18] via-[#050505] to-[#180707] backdrop-blur-xl shadow-none' : 'border-gray-200 bg-white/90 shadow-none'}`}>
 
           {/* DECORATIVE RED LINES */}
           <div className="absolute inset-0 overflow-hidden rounded-b-[30px] rounded-t-none">
