@@ -139,7 +139,7 @@ export const HubsMapWithDirections: React.FC<HubsMapWithDirectionsProps> = ({
               click: () => handleHubMarkerClick(hub),
             }}
           >
-            <Popup>
+            <Popup className="hidden md:block">
               <div className="font-semibold">{hub.name}</div>
               <div className="text-xs text-gray-600">{hub.address}</div>
             </Popup>
