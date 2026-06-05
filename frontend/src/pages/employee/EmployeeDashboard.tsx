@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGetPayroll, useGetDocuments } from '@/hooks/useQueries';
@@ -9,9 +9,8 @@ import { EmployeeEditModal } from '@/components/EmployeeEditModal';
 import { PayslipDetailModal } from '@/components/PayslipViewforemployee';
 import { EmployeeLeaveRequestForm } from '@/components/EmployeeLeaveRequestForm';
 import { EmployeeLeaveHistoryModal } from '@/components/EmployeeLeaveHistoryModal';
-import { Modal } from '@/components/Modal';
+
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
-import { authAPI } from '@/api/apiService';
 import {
   LayoutDashboard,
   Clock3,
@@ -32,7 +31,7 @@ import {
   CreditCard,
   Heart,
   Home,
-  ChevronRight,
+  ArrowLeft,
 } from 'lucide-react';
 
 import logo from '@/images/3pl1.png';
@@ -41,6 +40,7 @@ type Section =
   | 'overview'
   | 'attendance'
   | 'payroll'
+  | 'payslip_detail'
   | 'documents'
   | 'information'
   | 'leave';
@@ -81,7 +81,7 @@ const navigation = [
 export const EmployeeDashboard = () => {
   const navigate = useNavigate();
 
-  const { employee, logout, setEmployee, setUser } =
+  const { employee, logout } =
     useAuth();
 
   const [activeSection, setActiveSection] =
@@ -93,12 +93,7 @@ export const EmployeeDashboard = () => {
   const [editOpen, setEditOpen] =
     useState(false);
 
-  const [leaveFormOpen, setLeaveFormOpen] =
-    useState(false);
   const [leaveHistoryOpen, setLeaveHistoryOpen] = useState(false);
-
-  const [payslipOpen, setPayslipOpen] =
-    useState(false);
 
   const [selectedPayslip, setSelectedPayslip] =
     useState<any>(null);
@@ -162,21 +157,7 @@ export const EmployeeDashboard = () => {
      HELPERS
   =================================== */
 
-  const refreshSessionEmployee = useCallback(async () => {
-    try {
-      const data = await authAPI.getCurrentUser();
-      if (data.user) {
-        setUser(data.user);
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-      }
-      if (data.employee) {
-        setEmployee(data.employee);
-        localStorage.setItem('currentEmployee', JSON.stringify(data.employee));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [setEmployee, setUser]);
+
 
   const formatCurrency = (
     amount: number
@@ -382,7 +363,7 @@ export const EmployeeDashboard = () => {
                           payroll
                         );
 
-                        setPayslipOpen(true);
+                        setActiveSection('payslip_detail');
                       }}
                       className="mt-5 w-full rounded-2xl bg-[#4F7BFF] hover:bg-[#3d66ff] text-white py-3 font-semibold transition-colors"
                     >
@@ -410,6 +391,31 @@ export const EmployeeDashboard = () => {
             documents={documentsList}
             employeeId={employee?.id || 0}
             onUpdate={() => documentsQuery.refetch()}
+          />
+        );
+
+      case 'leave':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setActiveSection('overview')}
+                className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#090F1D] hover:bg-gray-100 dark:hover:bg-gray-800/60 text-slate-800 dark:text-slate-350 transition-colors flex items-center justify-center"
+                title="Back to Overview"
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">Leave Request</h2>
+            </div>
+            <EmployeeLeaveRequestForm showHeader={false} onCancel={() => setActiveSection('overview')} />
+          </div>
+        );
+
+      case 'payslip_detail':
+        return (
+          <PayslipDetailModal
+            payslip={selectedPayslip}
+            onBack={() => setActiveSection('payroll')}
           />
         );
 
@@ -634,51 +640,7 @@ export const EmployeeDashboard = () => {
             </div>
           </div>
         );
-              
 
-      /* ===================================
-         LEAVE
-      =================================== */
-
-      case 'leave':
-        return (
-          <div className="space-y-6">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4F7BFF] to-[#315BFF] p-6 md:p-10 text-white shadow-2xl">
-              <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-
-              <div className="relative z-10 max-w-2xl">
-                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-                  <Briefcase size={32} />
-                </div>
-
-                <h2 className="mt-6 text-2xl md:text-3xl font-bold leading-tight text-white">
-                  Leave Request
-                </h2>
-
-                <p className="mt-4 text-sm md:text-base text-white/90 leading-relaxed">
-                  Submit your leave request and monitor approval status through the portal.
-                </p>
-
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() =>
-                      setLeaveFormOpen(true)
-                    }
-                    className="px-6 md:px-8 py-3 rounded-2xl bg-white text-[#315BFF] font-bold shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex-1 sm:flex-initial"
-                  >
-                    Submit Leave
-                  </button>
-                  <button
-                    onClick={() => setLeaveHistoryOpen(true)}
-                    className="px-6 md:px-8 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20 transition-all flex-1 sm:flex-initial"
-                  >
-                    View History
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
 
       default:
         return null;
@@ -874,26 +836,7 @@ export const EmployeeDashboard = () => {
         }
       />
 
-      {/* PAYSLIP */}
-      <PayslipDetailModal
-        isOpen={payslipOpen}
-        onClose={() =>
-          setPayslipOpen(false)
-        }
-        payslip={selectedPayslip}
-      />
 
-      {/* LEAVE MODAL */}
-      <Modal
-        isOpen={leaveFormOpen}
-        onClose={() => setLeaveFormOpen(false)}
-        title="Leave Request"
-        size="xl"
-      >
-        <div className="p-4 sm:p-6">
-          <EmployeeLeaveRequestForm showHeader={false} />
-        </div>
-      </Modal>
 
       {/* LEAVE HISTORY */}
       <EmployeeLeaveHistoryModal isOpen={leaveHistoryOpen} onClose={() => setLeaveHistoryOpen(false)} />

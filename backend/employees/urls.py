@@ -34,4 +34,5 @@ urlpatterns = [
     path('payroll/compute/', views.PayrollSummaryView.as_view(), name='payroll_compute'),
     # Permanent image serving from DB
     path('saved-images/<int:pk>/', ServeSavedImageView.as_view(), name='serve-saved-image'),
+    path('saved-images/<int:pk>/<str:filename>', ServeSavedImageView.as_view(), name='serve-saved-image-with-filename'),
 ]

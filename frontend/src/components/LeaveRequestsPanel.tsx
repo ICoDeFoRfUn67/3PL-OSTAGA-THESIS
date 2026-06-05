@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, Button, Badge, LoadingSpinner } from '@/components/common';
 import { useToast } from '@/hooks/useToast';
-import { CheckCircle, XCircle, Clock, Trash2, Eye, Download, X } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Trash2, Eye, Download, X, FileText } from 'lucide-react';
 import { useClearAllLeaveRequests } from '@/hooks/useQueries';
 import { Sidebar } from '@/components/Sidebar';
 import AdminMobileProfile from '@/components/AdminMobileProfile';
@@ -283,37 +283,62 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
                             const isPDF = /\.(pdf)$/i.test(url);
                             const nameMatch = url.split('/').pop() || `file-${idx}`;
                             return (
-                              <div key={url} className="border border-gray-100 dark:border-gray-800 rounded-xl p-2 bg-gray-50 dark:bg-gray-900/50 flex flex-col items-stretch group relative overflow-hidden">
-                                <div className="flex-1 mb-2 flex items-center justify-center overflow-hidden relative aspect-video rounded-lg bg-gray-200 dark:bg-gray-800">
+                              <div 
+                                key={url} 
+                                onClick={() => {
+                                  if (isImage) {
+                                    setPreviewFile({ url, type: 'image' });
+                                  } else if (isPDF) {
+                                    setPreviewFile({ url, type: 'pdf' });
+                                  } else {
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = nameMatch;
+                                    link.click();
+                                  }
+                                }}
+                                className="cursor-pointer border border-gray-200 dark:border-gray-800 rounded-xl p-3 bg-white dark:bg-gray-800/40 flex flex-col hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-md transition-all duration-200 group relative overflow-hidden"
+                              >
+                                <div className="flex-1 mb-2.5 flex items-center justify-center overflow-hidden relative aspect-video rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-150 dark:border-gray-800">
                                   {isImage ? (
-                                    <img src={url} alt={`attachment-${idx}`} className="w-full h-full object-cover" />
+                                    <img src={url} alt={`attachment-${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                   ) : (
-                                    <div className="flex flex-col items-center gap-1">
-                                      <span className="text-[10px] font-black uppercase tracking-widest">{isPDF ? 'PDF' : 'FILE'}</span>
+                                    <div className="flex flex-col items-center gap-1.5">
+                                      <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-red-100 dark:bg-red-950/40 text-red-750 dark:text-red-400">
+                                        {isPDF ? 'PDF' : nameMatch.split('.').pop()?.toUpperCase() || 'FILE'}
+                                      </span>
+                                      <FileText size={20} className="text-gray-400 dark:text-gray-500" />
                                     </div>
                                   )}
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => setPreviewFile({ url, type: isImage ? 'image' : isPDF ? 'pdf' : 'other' })}
-                                      aria-label={`Preview ${nameMatch}`}
-                                      title={`Preview ${nameMatch}`}
-                                      className="p-1.5 bg-white text-black rounded-full hover:scale-110 transition-transform"
-                                    >
-                                      <Eye size={14} />
-                                    </button>
-                                    <a
-                                      href={url}
-                                      download
-                                      aria-label={`Download ${nameMatch}`}
-                                      title={`Download ${nameMatch}`}
-                                      className="p-1.5 bg-white text-black rounded-full hover:scale-110 transition-transform"
-                                    >
-                                      <Download size={14} />
-                                    </a>
+                                  
+                                  {/* Hover Overlay */}
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="px-2.5 py-1.5 bg-white/95 dark:bg-gray-900/95 text-xs font-bold text-gray-800 dark:text-white rounded-lg shadow-md flex items-center gap-1.5 scale-95 group-hover:scale-100 transition-all duration-200">
+                                      {isImage ? (
+                                        <>
+                                          <Eye size={12} />
+                                          View Image
+                                        </>
+                                      ) : isPDF ? (
+                                        <>
+                                          <Eye size={12} />
+                                          View PDF
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Download size={12} />
+                                          Download
+                                        </>
+                                      )}
+                                    </span>
                                   </div>
                                 </div>
-                                <div className="text-[9px] truncate font-medium opacity-60 px-1">{nameMatch}</div>
+                                <div className="text-[11px] truncate font-semibold text-gray-700 dark:text-gray-300 px-1 mb-0.5" title={nameMatch}>
+                                  {nameMatch}
+                                </div>
+                                <div className="text-[9px] text-gray-400 dark:text-gray-500 px-1 font-medium">
+                                  {isImage ? 'Image File' : isPDF ? 'PDF Document' : `${nameMatch.split('.').pop()?.toUpperCase() || 'Binary'} File`}
+                                </div>
                               </div>
                             );
                           })}

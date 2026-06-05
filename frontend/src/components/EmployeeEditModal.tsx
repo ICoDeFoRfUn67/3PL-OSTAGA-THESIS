@@ -189,7 +189,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
         return <input type="date" value={value ? value.split('T')[0] : ''} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass} />;
       case 'textarea':
         return <textarea value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={`${baseInputClass} min-h-[80px] resize-y`} />;
-      case 'select':
+      case 'select': {
         let options = field.options || [];
         if (field.name === 'hub') {
           options = hubsList.map((h: any) => ({ value: String(h.id), label: h.name }));
@@ -200,6 +200,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
             {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         );
+      }
       case 'boolean':
         return (
           <label className="relative inline-flex items-center cursor-pointer">

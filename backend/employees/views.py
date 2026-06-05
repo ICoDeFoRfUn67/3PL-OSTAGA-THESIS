@@ -1870,7 +1870,7 @@ class ServeSavedImageView(APIView):
     """Serve images directly from the database (binary data)"""
     permission_classes = [AllowAny] # Or IsAuthenticated if preferred
 
-    def get(self, request, pk):
+    def get(self, request, pk, filename=None):
         try:
             saved_image = SavedImage.objects.get(pk=pk, is_active=True)
             if not saved_image.image_data:
@@ -2615,7 +2615,7 @@ class ServeSavedImageView(APIView):
     # or UUIDs if necessary.
     permission_classes = [AllowAny]
 
-    def get(self, request, pk):
+    def get(self, request, pk, filename=None):
         try:
             # Try to get the record
             saved = SavedImage.objects.filter(pk=pk).first()

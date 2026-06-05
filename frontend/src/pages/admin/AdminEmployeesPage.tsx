@@ -1,40 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { EmployeeManagePanel } from '@/components/EmployeeManagePanel';
 import { AddEmployee } from '@/pages/admin/AddEmployee';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { useTheme, ThemeToggle } from '@/context/ThemeContext';
-
-import {
-  ChevronDown,
-  LogOut,
-  Sun,
-  Moon,
-  Plus,
-  User,
-  Search,
-} from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 
 import AdminMobileProfile from '@/components/AdminMobileProfile';
 import OnlinePresence from '@/components/OnlinePresence';
 
 export const AdminEmployeesPage = () => {
-  const { user, canEditEmployeeInfo, logout, canViewEmployees } = useAuth();
-  const navigate = useNavigate();
-  const { isDarkMode } = useTheme();
+  const { canEditEmployeeInfo, canViewEmployees } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [searchEmployeesTerm, setSearchEmployeesTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   if (showAdd) {
     return (

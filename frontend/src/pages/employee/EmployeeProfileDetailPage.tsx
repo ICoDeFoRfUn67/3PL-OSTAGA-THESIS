@@ -8,7 +8,6 @@ import { EditInfoRequestModal } from '@/components/EditInfoRequestModal';
 import { ChangePasswordModal } from '../../components/ChangePasswordModal';
 import apiClient from '@/api/apiService';
 import Sidebar from '@/components/Sidebar';
-import { ThemeToggle } from '@/context/ThemeContext';
 import { useGetHubs } from '@/hooks/useQueries';
 
 interface EmployeeData {

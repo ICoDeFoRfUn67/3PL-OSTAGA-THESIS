@@ -2,11 +2,10 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, Badge, LoadingSpinner, EmptyState } from '@/components/common';
 import { useGetEmployees, useGetHubs, useGetAttendance, useGetSecurityAlerts, useGetActivityLogs } from '@/hooks/useQueries';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { Search, Eye, X, User, Phone, Briefcase, Shield, Clock, Landmark } from 'lucide-react';
+import { Search, X, User, Phone, Briefcase, Shield, Clock, Landmark } from 'lucide-react';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import HubsEmployeeChart from '@/components/HubsEmployeeChart';
@@ -146,23 +145,6 @@ export const AdminDashboard = () => {
   const [selectedMapHub, setSelectedMapHub] = useState<any>(null);
 
 
-  // Create beautiful custom SVG markers for Leaflet (remove ugly black shadows)
-  const hubIcon = L.divIcon({
-    className: 'custom-hub-marker',
-    html: `
-      <div class="relative flex items-center justify-center" style="width: 32px; height: 32px;">
-        <div class="absolute w-8 h-8 bg-red-500/30 rounded-full animate-ping"></div>
-        <div class="relative w-7 h-7 bg-red-600 rounded-full border-2 border-white shadow-md flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-        </div>
-      </div>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16]
-  });
-
-
   // Fetch data
   const employeesQuery = useGetEmployees({ hub_id: hubFilter });
   const hubsQuery = useGetHubs();
@@ -259,7 +241,6 @@ export const AdminDashboard = () => {
       {/* --- MOBILE UI --- */}
       <div className="block md:hidden">
         <MobileAdminDashboardView 
-           employee={employee}
            employees={employees}
            hubs={hubs}
            allEmployees={allEmployees}
@@ -640,6 +621,23 @@ export const AdminDashboard = () => {
       </div>
     </div>
   )}
+  {/* Insight Box */}
+  {hubEmployeeData.length > 0 && (
+    <div className="mt-4 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 flex items-center gap-3">
+      <div className="w-8 h-8 rounded-md bg-gray-200 dark:bg-gray-800 flex items-center justify-center shrink-0 border border-gray-300 dark:border-gray-700">
+        <div className="flex gap-0.5 items-end h-3.5">
+          <div className="w-1 h-2 bg-gray-400 dark:bg-gray-500 rounded-sm"></div>
+          <div className="w-1 h-3.5 bg-gray-600 dark:bg-gray-300 rounded-sm"></div>
+          <div className="w-1 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-sm"></div>
+        </div>
+      </div>
+      <p className="text-xs text-gray-600 dark:text-gray-400">
+        <span className="text-gray-905 dark:text-white font-medium">
+          {hubEmployeeData.reduce((prev: any, current: any) => (prev.Active > current.Active) ? prev : current).name} Hub
+        </span> has the highest number of active employees.
+      </p>
+    </div>
+  )}
 </Card>
         
 
@@ -663,21 +661,6 @@ export const AdminDashboard = () => {
             )}
           </div>
 
-          {/* Insight Box */}
-          {hubEmployeeData.length > 0 && (
-            <div className="mt-4 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-gray-200 dark:bg-gray-800 flex items-center justify-center shrink-0 border border-gray-300 dark:border-gray-700">
-                <div className="flex gap-0.5 items-end h-3.5">
-                  <div className="w-1 h-2 bg-gray-400 dark:bg-gray-500 rounded-sm"></div>
-                  <div className="w-1 h-3.5 bg-gray-600 dark:bg-gray-300 rounded-sm"></div>
-                  <div className="w-1 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-sm"></div>
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                <span className="text-gray-900 dark:text-white font-medium">{hubEmployeeData.reduce((prev: any, current: any) => (prev.Active > current.Active) ? prev : current).name} Hub</span> has the highest number of active employees.
-              </p>
-            </div>
-          )}
         </Card>
       </div>
 

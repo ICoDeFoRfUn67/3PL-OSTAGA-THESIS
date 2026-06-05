@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal } from './Modal';
 import { useToast } from '@/hooks/useToast';
-import { Download } from 'lucide-react';
+import { Download, ArrowLeft } from 'lucide-react';
 
 type PayslipStatus = 'draft' | 'approved' | 'pending' | string;
 
@@ -82,10 +81,9 @@ type Payslip = {
   net_pay?: number | string;
 };
 
-interface PayslipDetailModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface PayslipDetailViewProps {
   payslip: Payslip | null;
+  onBack?: () => void;
 }
 
 const toNumber = (value: unknown): number => {
@@ -123,10 +121,9 @@ const formatPayslipPeriod = (startStr?: string, endStr?: string) => {
 };
 
 export const PayslipDetailModal = ({
-  isOpen,
-  onClose,
   payslip,
-}: PayslipDetailModalProps) => {
+  onBack,
+}: PayslipDetailViewProps) => {
   const { success, error } = useToast();
   const [localPayslip, setLocalPayslip] = useState<Payslip | null>(payslip);
 
@@ -247,18 +244,28 @@ export const PayslipDetailModal = ({
   if (!payslip && !localPayslip) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="3xl">
-      <div className="max-h-[85vh] overflow-y-auto bg-gray-50 dark:bg-slate-950 rounded-2xl">
+    <div className="bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 rounded-3xl overflow-hidden shadow-xl">
+      <div className="bg-gray-50 dark:bg-slate-950">
         {/* HEADER AREA */}
-        <div className="bg-gradient-to-r from-red-800 via-red-900 to-red-950 p-6 text-white relative shadow-lg rounded-t-2xl">
+        <div className="bg-gradient-to-r from-red-800 via-red-900 to-red-950 p-6 text-white relative shadow-lg">
           <div className="flex justify-between items-center mb-6">
-            <div />
+            {onBack ? (
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-all border border-white/10"
+                title="Back to Payroll"
+              >
+                <ArrowLeft size={14} />
+                Back
+              </button>
+            ) : <div />}
             <button
               onClick={handleDownload}
-              className="hover:bg-white/10 p-2 rounded-full transition-all"
+              className="hover:bg-white/10 p-2 rounded-full transition-all flex items-center gap-1.5 border border-white/10"
               aria-label="Download payslip"
             >
-              <Download size={22} />
+              <Download size={18} />
+              <span className="text-xs font-bold pr-1">Download CSV</span>
             </button>
           </div>
 
@@ -501,16 +508,7 @@ export const PayslipDetailModal = ({
           </div>
         </div>
 
-        {/* FOOTER ACTIONS */}
-        <div className="p-6 border-t border-gray-200 dark:border-slate-800 bg-gray-100/50 dark:bg-slate-900/50 rounded-b-2xl flex justify-end">
-          <button
-            onClick={onClose}
-            className="bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-semibold py-2.5 px-6 rounded-xl transition-all text-sm"
-          >
-            Close
-          </button>
-        </div>
       </div>
-    </Modal>
+    </div>
   );
 };

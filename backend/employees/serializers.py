@@ -732,7 +732,8 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             saved_images = SavedImage.objects.filter(leave_attachment__leave_request=obj, image_type='leave_attachment')
             if saved_images.exists():
                 for si in saved_images:
-                    items.append(absolute_media_url(request, f"/api/saved-images/{si.id}/"))
+                    filename = si.original_filename or f"file-{si.id}.jpg"
+                    items.append(absolute_media_url(request, f"/api/saved-images/{si.id}/{filename}"))
                 return items
             
             # Fallback to filesystem URLs

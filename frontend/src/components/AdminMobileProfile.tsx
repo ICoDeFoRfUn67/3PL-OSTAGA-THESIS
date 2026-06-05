@@ -68,7 +68,7 @@ function AdminMobileProfile() {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const getPageMeta = (pathname: string) => {
-    let cleanPath = pathname.replace(/\/$/, '') || '/';
+    const cleanPath = pathname.replace(/\/$/, '') || '/';
     // Normalize HR paths to Admin paths for key lookup
     const key = cleanPath.replace(/^\/hr/, '/admin');
 
@@ -103,7 +103,7 @@ function AdminMobileProfile() {
     };
   };
 
-  const { title: pageTitle, subtitle: pageSubtitle, Icon: IconComp } = getPageMeta(location.pathname);
+  const { title: pageTitle, subtitle: pageSubtitle } = getPageMeta(location.pathname);
 
   useEffect(() => {
     function handleClickOutside(
