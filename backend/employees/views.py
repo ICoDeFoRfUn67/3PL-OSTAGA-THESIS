@@ -85,7 +85,6 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'create':
-            print("POST data:", self.request.data)  # DEBUG
             return EmployeeCreateSerializer
         return EmployeeSerializer
     
@@ -188,7 +187,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        queryset = Employee.objects.all()
+        queryset = Employee.objects.all().select_related('hub', 'user')
         hub_id = self.request.query_params.get('hub_id')
         if hub_id:
             try:
@@ -699,7 +698,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = Attendance.objects.all().order_by('-date')
+        queryset = Attendance.objects.all().select_related('employee', 'employee__hub').order_by('-date')
         hub_id = self.request.query_params.get('hub_id')
         employee_id = self.request.query_params.get('employee_id')
         date = self.request.query_params.get('date')
@@ -1122,17 +1121,6 @@ class EditRequestViewSet(viewsets.ModelViewSet):
         return queryset
     
     def create(self, request, *args, **kwargs):
-        # DEBUG: log incoming request info for troubleshooting XHR failures
-        try:
-            print("--- EditRequest.create() debug ---")
-            print("Method:", request.method)
-            print("Content-Type:", request.META.get('CONTENT_TYPE'))
-            print("FILES keys:", list(request.FILES.keys()))
-            for k, f in request.FILES.items():
-                print(f"File {k}: name={f.name}, size={getattr(f, 'size', 'unknown')}, content_type={getattr(f, 'content_type', 'unknown')}")
-        except Exception as e:
-            print("Debug log failed:", str(e))
-
         # Accept multipart/form-data: requested_data may be a JSON string
         requested_data = request.data.get('requested_data', '{}')
         try:
@@ -1431,181 +1419,168 @@ class PayrollViewSet(viewsets.ModelViewSet):
 
         employees = list(employees_qs)
         payroll_by_employee_id = {p.employee_id: p for p in queryset}
-
-        # If status is filtered, we still want to show employees with 0 net pay.
-        # We'll bypass filtering for missing employees by setting them to 'draft'.
         missing_employees = [e for e in employees if e.id not in payroll_by_employee_id]
 
-        # Create lightweight in-memory objects compatible with PayrollSerializer
-        # so serializer can read fields like employee, period_start, period_end, net_pay, status.
-        from datetime import date
+        # Determine date range for placeholders
+        from datetime import date as _date
         from decimal import Decimal
+        try:
+            if period_start and period_end:
+                start_date = _date.fromisoformat(period_start)
+                end_date = _date.fromisoformat(period_end)
+            elif period_start:
+                start_date = _date.fromisoformat(period_start)
+                end_date = start_date
+            elif period_end:
+                end_date = _date.fromisoformat(period_end)
+                start_date = end_date
+            else:
+                start_date = _date.today()
+                end_date = _date.today()
+        except Exception:
+            start_date = _date.today()
+            end_date = _date.today()
 
-        class _PayrollPlaceholder:
-            def __init__(self, employee, start_date, end_date):
-                self.id = None
-                self.employee = employee
-                self.employee_id = employee.id
-                self.period_start = start_date
-                self.period_end = end_date
-                self.total_hours = Decimal('0')
-                self.overtime_hours = Decimal('0')
-                self.lates = 0
-                self.absences = 0
-                # Earnings
-                self.standard_pay = Decimal('0')
-                self.basic_salary = Decimal('0')
-                self.overtime_pay = Decimal('0')
-                self.night_differential = Decimal('0')
-                self.ndot = Decimal('0')
-                self.rest_day = Decimal('0')
-                self.rest_day_ot = Decimal('0')
-                self.rest_day_nd = Decimal('0')
-                self.rest_day_ndot = Decimal('0')
-                self.special_holiday = Decimal('0')
-                self.special_holiday_ot = Decimal('0')
-                self.special_holiday_nd = Decimal('0')
-                self.special_holiday_ndot = Decimal('0')
-                self.legal_holiday = Decimal('0')
-                self.legal_holiday_ot = Decimal('0')
-                self.legal_holiday_nd = Decimal('0')
-                self.legal_holiday_ndot = Decimal('0')
-                self.legal_holiday_rd = Decimal('0')
-                self.legal_holiday_rdot = Decimal('0')
-                self.legal_holiday_rdnd = Decimal('0')
-                self.legal_holiday_rdndot = Decimal('0')
-                self.incentives = Decimal('0')
-                self.adjustment = Decimal('0')
-                self.gas = Decimal('0')
-                self.load = Decimal('0')
-                self.other_allowance = Decimal('0')
-                self.rewards_adjustments = Decimal('0')
-                self.kpi = Decimal('0')
-                self.allowances = Decimal('0')
-                # Deductions
-                self.late = Decimal('0')
-                self.id_deduction = Decimal('0')
-                self.uniform = Decimal('0')
-                self.insurance = Decimal('0')
-                self.surety_bond = Decimal('0')
-                self.convenience_fee = Decimal('0')
-                self.general_deduction = Decimal('0')
-                self.deduction_details = {}
-                self.sss_deduction = Decimal('0')
-                self.philhealth_deduction = Decimal('0')
-                self.pagibig_deduction = Decimal('0')
-                self.net_pay = Decimal('0')
-                self.status = 'draft'
-                self.payslip_image = None
-                self.created_at = timezone.now()
-                self.updated_at = timezone.now()
+        # --- PERFORMANCE OPTIMIZATION ---
+        # Instead of running 1 Attendance query + 1 LeaveRequest query per missing employee (N+1),
+        # batch-load ALL attendance and leave records for all missing employees in just 2 queries.
+        placeholders = []
+        if missing_employees:
+            missing_ids = [e.id for e in missing_employees]
+            cumulative_start = _date(end_date.year, end_date.month, 1)
 
-                # Compute attendance-based summary for this employee and period
+            # Single batch query for all attendance records
+            all_attendance = Attendance.objects.filter(
+                employee_id__in=missing_ids,
+                date__gte=cumulative_start,
+                date__lte=end_date,
+            ).values_list('employee_id', 'clock_in_time', 'clock_out_time', 'date')
+
+            # Group attendance by employee_id
+            from collections import defaultdict
+            from datetime import timedelta
+            att_by_emp = defaultdict(list)
+            for emp_id, ci, co, d in all_attendance:
+                att_by_emp[emp_id].append((ci, co, d))
+
+            # Single batch query for all approved leave requests
+            all_leaves = LeaveRequest.objects.filter(
+                employee_id__in=missing_ids,
+                status='approved',
+            ).values_list('employee_id', 'start_date', 'end_date')
+
+            leave_by_emp = defaultdict(list)
+            for emp_id, ls, le in all_leaves:
+                leave_by_emp[emp_id].append((ls, le))
+
+            def count_weekdays(s, e):
+                days = 0
+                cur = s
+                while cur <= e:
+                    if cur.weekday() < 5:
+                        days += 1
+                    cur += timedelta(days=1)
+                return days
+
+            working_days = count_weekdays(cumulative_start, end_date)
+
+            LATE_HOUR = 10
+            STANDARD_DAY_HOURS = 8
+
+            for emp in missing_employees:
+                ph = type('_PayrollPlaceholder', (), {})()
+                ph.id = None
+                ph.employee = emp
+                ph.employee_id = emp.id
+                ph.period_start = start_date
+                ph.period_end = end_date
+                ph.standard_pay = Decimal('0')
+                ph.basic_salary = Decimal('0')
+                ph.overtime_pay = Decimal('0')
+                ph.night_differential = Decimal('0')
+                ph.ndot = Decimal('0')
+                ph.rest_day = Decimal('0')
+                ph.rest_day_ot = Decimal('0')
+                ph.rest_day_nd = Decimal('0')
+                ph.rest_day_ndot = Decimal('0')
+                ph.special_holiday = Decimal('0')
+                ph.special_holiday_ot = Decimal('0')
+                ph.special_holiday_nd = Decimal('0')
+                ph.special_holiday_ndot = Decimal('0')
+                ph.legal_holiday = Decimal('0')
+                ph.legal_holiday_ot = Decimal('0')
+                ph.legal_holiday_nd = Decimal('0')
+                ph.legal_holiday_ndot = Decimal('0')
+                ph.legal_holiday_rd = Decimal('0')
+                ph.legal_holiday_rdot = Decimal('0')
+                ph.legal_holiday_rdnd = Decimal('0')
+                ph.legal_holiday_rdndot = Decimal('0')
+                ph.incentives = Decimal('0')
+                ph.adjustment = Decimal('0')
+                ph.gas = Decimal('0')
+                ph.load = Decimal('0')
+                ph.other_allowance = Decimal('0')
+                ph.rewards_adjustments = Decimal('0')
+                ph.kpi = Decimal('0')
+                ph.allowances = Decimal('0')
+                ph.late = Decimal('0')
+                ph.id_deduction = Decimal('0')
+                ph.uniform = Decimal('0')
+                ph.insurance = Decimal('0')
+                ph.surety_bond = Decimal('0')
+                ph.convenience_fee = Decimal('0')
+                ph.general_deduction = Decimal('0')
+                ph.deduction_details = {}
+                ph.sss_deduction = Decimal('0')
+                ph.philhealth_deduction = Decimal('0')
+                ph.pagibig_deduction = Decimal('0')
+                ph.net_pay = Decimal('0')
+                ph.status = 'draft'
+                ph.payslip_image = None
+                ph.created_at = timezone.now()
+                ph.updated_at = timezone.now()
+
+                # Compute attendance stats from pre-loaded data (no extra DB queries)
                 try:
-                    from datetime import timedelta, date
-                    cumulative_start = date(end_date.year, end_date.month, 1)
-                    qs = Attendance.objects.filter(employee=employee, date__gte=cumulative_start, date__lte=end_date)
-
                     total_seconds = 0.0
                     overtime_seconds = 0.0
                     late_count = 0
                     present_days = set()
-
-                    LATE_HOUR = 10  # consistent with AttendanceViewSet.summary
-                    STANDARD_DAY_HOURS = 8
-
-                    for a in qs:
-                        if a.clock_in_time and a.clock_out_time:
-                            diff = (a.clock_out_time - a.clock_in_time).total_seconds()
+                    for ci, co, d in att_by_emp.get(emp.id, []):
+                        if ci and co:
+                            diff = (co - ci).total_seconds()
                             if diff > 0:
                                 total_seconds += diff
                                 hours = diff / 3600.0
                                 if hours > STANDARD_DAY_HOURS:
                                     overtime_seconds += (hours - STANDARD_DAY_HOURS) * 3600.0
-                        # Count lates
-                        if a.clock_in_time and getattr(a.clock_in_time, 'hour', None) is not None:
-                            if a.clock_in_time.hour >= LATE_HOUR:
+                        if ci and getattr(ci, 'hour', None) is not None:
+                            if ci.hour >= LATE_HOUR:
                                 late_count += 1
-                        if a.clock_in_time:
-                            present_days.add(a.date)
+                        if ci:
+                            present_days.add(d)
 
-                    total_hours_float = total_seconds / 3600.0
-                    overtime_hours_float = overtime_seconds / 3600.0
+                    ph.total_hours = Decimal(str(round(total_seconds / 3600.0, 2)))
+                    ph.overtime_hours = Decimal(str(round(overtime_seconds / 3600.0, 2)))
+                    ph.lates = late_count
 
-                    self.total_hours = Decimal(str(round(total_hours_float, 2)))
-                    self.overtime_hours = Decimal(str(round(overtime_hours_float, 2)))
-                    self.lates = late_count
-
-                    # More accurate absences: count working weekdays excluding approved leave days
-                    from datetime import timedelta
-
-                    def count_weekdays(start, end):
-                        days = 0
-                        cur = start
-                        while cur <= end:
-                            if cur.weekday() < 5:  # Mon-Fri
-                                days += 1
-                            cur += timedelta(days=1)
-                        return days
-
-                    working_days = count_weekdays(cumulative_start, end_date)
-
-                    # Count approved leave days overlapping this period for this employee
-                    approved_leaves = LeaveRequest.objects.filter(employee=employee, status='approved')
                     leave_days = 0
-                    for lr in approved_leaves:
-                        # leave may span multiple days; compute overlap with period
-                        ls = lr.start_date
-                        le = lr.end_date
-                        # Find intersection
+                    for ls, le in leave_by_emp.get(emp.id, []):
                         overlap_start = max(ls, cumulative_start)
                         overlap_end = min(le, end_date)
                         if overlap_start <= overlap_end:
                             leave_days += count_weekdays(overlap_start, overlap_end)
 
-                    present_count = len(present_days)
-                    absences_count = max(0, working_days - present_count - leave_days)
-                    self.absences = absences_count
-
-                    # Compute government deductions based on hub rates and basic_salary
-                    try:
-                        sss_d, phil_d, pagibig_d = compute_gov_deductions(employee, self.basic_salary)
-                        self.sss_deduction = sss_d
-                        self.philhealth_deduction = phil_d
-                        self.pagibig_deduction = pagibig_d
-                    except Exception:
-                        # leave defaults (already zero)
-                        pass
+                    ph.absences = max(0, working_days - len(present_days) - leave_days)
                 except Exception:
-                    # If anything fails, keep zeros
-                    pass
+                    ph.total_hours = Decimal('0')
+                    ph.overtime_hours = Decimal('0')
+                    ph.lates = 0
+                    ph.absences = 0
 
+                placeholders.append(ph)
 
-        # Determine date range for placeholders
-        try:
-            if period_start and period_end:
-                start_date = date.fromisoformat(period_start)
-                end_date = date.fromisoformat(period_end)
-            elif period_start:
-                start_date = date.fromisoformat(period_start)
-                end_date = start_date
-            elif period_end:
-                end_date = date.fromisoformat(period_end)
-                start_date = end_date
-            else:
-                start_date = date.today()
-                end_date = date.today()
-        except Exception:
-            start_date = date.today()
-            end_date = date.today()
-
-        placeholders = [_PayrollPlaceholder(e, start_date, end_date) for e in missing_employees]
-
-        # If status_filter is applied (Approved/Present/etc.), placeholders should still show.
-        # To keep behavior simple for UI, only suppress placeholders when status_filter is 'All'.
-        # (UI requirement: if they don't have record, show zero on their record in netpay.)
         results = list(queryset) + placeholders
-
         return results
 
     def perform_create(self, serializer):

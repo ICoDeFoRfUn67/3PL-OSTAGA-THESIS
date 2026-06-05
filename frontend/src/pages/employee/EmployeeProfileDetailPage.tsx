@@ -212,7 +212,7 @@ export const EmployeeProfileDetailPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#070B14]">
+    <div className="min-h-screen bg-gray-100 dark:bg-[#0F1729]">
       {showAdminSidebar && (
         <Sidebar
           open={sidebarOpen}
@@ -220,10 +220,46 @@ export const EmployeeProfileDetailPage = () => {
         />
       )}
       <div className={`p-4 md:p-6 lg:p-8 space-y-6 ${showAdminSidebar ? 'lg:ml-64' : ''}`}>
+        {/* Top bar: Back + Action buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button variant="secondary" onClick={() => navigate(-1)} className="text-sm">
             <ArrowLeft size={18} className="mr-2" /> Back
           </Button>
+
+          {!isLoading && !hasError && (
+            <div className="flex flex-wrap gap-2">
+              {isOwnProfile && (
+                <Button variant="secondary" onClick={() => setShowChangePasswordModal(true)} className="text-xs md:text-sm">
+                  <Key size={16} className="mr-2" /> Password
+                </Button>
+              )}
+              
+              {isOwnProfile && !isEditing && !isHRorAdmin && (
+                <Button variant="secondary" onClick={() => setShowEditRequestModal(true)} className="text-xs md:text-sm">
+                  <Send size={16} className="mr-2" /> Request Changes
+                </Button>
+              )}
+              
+              {canEdit && (
+                <>
+                  {!isEditing ? (
+                    <Button variant="primary" onClick={() => setIsEditing(true)} className="text-xs md:text-sm">
+                      <Edit2 size={16} className="mr-2" /> Edit
+                    </Button>
+                  ) : (
+                    <>
+                      <Button variant="primary" onClick={handleSave} className="text-xs md:text-sm">
+                        <Save size={16} className="mr-2" /> Save
+                      </Button>
+                      <Button variant="secondary" onClick={() => setIsEditing(false)} className="text-xs md:text-sm">
+                        <X size={16} className="mr-2" /> Cancel
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {isLoading && (
@@ -244,52 +280,9 @@ export const EmployeeProfileDetailPage = () => {
         )}
 
         {!isLoading && !hasError && (
-          <>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-              <div className="flex-1">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-1">
-                  {formData.full_name || 'Employee Profile'}
-                </h1>
-                <p className="text-xs md:text-sm font-black uppercase tracking-wider text-red-600 dark:text-red-500">{formData.position}</p>
-              </div>
-              
-              <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                {isOwnProfile && (
-                  <Button variant="secondary" onClick={() => setShowChangePasswordModal(true)} className="text-xs md:text-sm flex-1 md:flex-initial">
-                    <Key size={16} className="mr-2" /> Password
-                  </Button>
-                )}
-                
-                {isOwnProfile && !isEditing && !isHRorAdmin && (
-                  <Button variant="secondary" onClick={() => setShowEditRequestModal(true)} className="text-xs md:text-sm flex-1 md:flex-initial">
-                    <Send size={16} className="mr-2" /> Request Changes
-                  </Button>
-                )}
-                
-                {/* Save Changes / Edit button restricted to authorized roles */}
-                {canEdit && (
-                  <>
-                    {!isEditing ? (
-                      <Button variant="primary" onClick={() => setIsEditing(true)} className="text-xs md:text-sm flex-1 md:flex-initial">
-                        <Edit2 size={16} className="mr-2" /> Edit
-                      </Button>
-                    ) : (
-                      <>
-                        <Button variant="primary" onClick={handleSave} className="text-xs md:text-sm flex-1 md:flex-initial">
-                          <Save size={16} className="mr-2" /> Save
-                        </Button>
-                        <Button variant="secondary" onClick={() => setIsEditing(false)} className="text-xs md:text-sm flex-1 md:flex-initial">
-                          <X size={16} className="mr-2" /> Cancel
-                        </Button>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 space-y-6">
+              {/* Left column — sticky profile card */}
+              <div className="lg:col-span-1 space-y-6 lg:self-start lg:sticky lg:top-8">
                 <Card className="overflow-hidden border-none shadow-md dark:shadow-lg dark:shadow-black/50">
                   <div className="relative group aspect-square bg-gray-100 dark:bg-gray-800">
                     {formData.profile_image_url ? (
@@ -413,7 +406,6 @@ export const EmployeeProfileDetailPage = () => {
                 </Card>
               </div>
             </div>
-          </>
         )}
       </div>
 

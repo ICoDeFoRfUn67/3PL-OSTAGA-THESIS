@@ -161,7 +161,7 @@ export const useGetPayroll = (params?: Record<string, any>) => {
   return useQuery({
     queryKey: [QUERY_KEYS.PAYROLL, params],
     queryFn: () => payrollAPI.getPayroll(params),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes – payroll data changes infrequently
   });
 };
 
@@ -284,8 +284,8 @@ export const useGetActivityLogs = (params?: Record<string, any>) => {
   return useQuery({
     queryKey: [QUERY_KEYS.ACTIVITY_LOGS, params],
     queryFn: () => activityLogAPI.getActivityLogs(params),
-    staleTime: 1 * 60 * 1000,
-    refetchInterval: 5 * 1000, // Refetch every 5 seconds for real-time updates
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000, // Reduced from 5s → 30s to prevent server overload
   });
 };
 
@@ -304,8 +304,8 @@ export const useGetSecurityAlerts = (params?: Record<string, any>) => {
   return useQuery({
     queryKey: [QUERY_KEYS.SECURITY_ALERTS, params],
     queryFn: () => securityAlertAPI.getSecurityAlerts(params),
-    staleTime: 1 * 60 * 1000,
-    refetchInterval: 5 * 1000, // Refetch every 5 seconds for real-time updates
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000, // Reduced from 5s → 30s to prevent server overload
   });
 };
 
