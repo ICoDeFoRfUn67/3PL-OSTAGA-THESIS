@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { HRPermission } from '@/types';
 import { Modal } from './Modal';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/api/apiService';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 import { Lock, Unlock, Shield, Key, Eye, EyeOff, ShieldCheck, Trash2, FileText, UserPlus } from 'lucide-react';
@@ -20,6 +21,9 @@ export const EmployeeAccessControlModal = ({
   employee,
   onUpdate,
 }: EmployeeAccessControlModalProps) => {
+  const { user: currentUser } = useAuth();
+  const isCurrentUserAdmin = currentUser?.role?.toLowerCase() === 'admin';
+
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [accountLocked, setAccountLocked] = useState(!employee?.can_login);
@@ -206,7 +210,7 @@ export const EmployeeAccessControlModal = ({
           </div>
         </div>
 
-        <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div className="p-8 max-md:p-5 space-y-8 max-h-[60vh] max-md:max-h-[42vh] overflow-y-auto custom-scrollbar">
           {/* Account Lock/Unlock */}
           <section className="space-y-4">
             <div className="flex items-center gap-3">
@@ -223,14 +227,20 @@ export const EmployeeAccessControlModal = ({
                   <p className="text-[10px] text-gray-500 font-medium uppercase tracking-tight">{accountLocked ? 'No login capabilities' : 'Full system availability'}</p>
                 </div>
               </div>
-              <button
-                title={accountLocked ? 'Unlock account to allow login' : 'Lock account to prevent login'}
-                onClick={() => toggleAccountLock(!accountLocked)}
-                disabled={isLoading}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${accountLocked ? 'bg-gray-200 dark:bg-gray-700' : 'bg-red-600'}`}
-              >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${accountLocked ? 'translate-x-1' : 'translate-x-6'}`} />
-              </button>
+              {isCurrentUserAdmin ? (
+                <button
+                  title={accountLocked ? 'Unlock account to allow login' : 'Lock account to prevent login'}
+                  onClick={() => toggleAccountLock(!accountLocked)}
+                  disabled={isLoading}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${accountLocked ? 'bg-gray-200 dark:bg-gray-700' : 'bg-red-600'}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${accountLocked ? 'translate-x-1' : 'translate-x-6'}`} />
+                </button>
+              ) : (
+                <span className={`text-xs font-black uppercase tracking-wider ${accountLocked ? 'text-red-500' : 'text-green-500'}`}>
+                  {accountLocked ? 'Locked' : 'Active'}
+                </span>
+              )}
             </div>
           </section>
 
@@ -263,25 +273,33 @@ export const EmployeeAccessControlModal = ({
                           <p className="text-[9px] text-gray-400 font-medium">{perm.desc}</p>
                         </div>
                       </div>
-                      <button
-                        title={`Toggle ${perm.label}`}
-                        onClick={() => togglePermission(perm.key as PermKey)}
-                        disabled={isLoading || loadingPermissions}
-                        className={`relative inline-flex h-5 w-10 items-center rounded-full transition-all duration-300 ${hrPermissions[perm.key as PermKey] ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-700'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${hrPermissions[perm.key as PermKey] ? 'translate-x-5' : 'translate-x-1'}`} />
-                      </button>
+                      {isCurrentUserAdmin ? (
+                        <button
+                          title={`Toggle ${perm.label}`}
+                          onClick={() => togglePermission(perm.key as PermKey)}
+                          disabled={isLoading || loadingPermissions}
+                          className={`relative inline-flex h-5 w-10 items-center rounded-full transition-all duration-300 ${hrPermissions[perm.key as PermKey] ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-700'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${hrPermissions[perm.key as PermKey] ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      ) : (
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${hrPermissions[perm.key as PermKey] ? 'text-green-600' : 'text-gray-400'}`}>
+                          {hrPermissions[perm.key as PermKey] ? 'Allowed' : 'Disabled'}
+                        </span>
+                      )}
                     </div>
                   ))}
                   
-                  <Button
-                    onClick={handleSavePermissions}
-                    isLoading={isLoading}
-                    variant="primary"
-                    className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-xl transition-all shadow-xl shadow-red-600/20"
-                  >
-                    Apply Administrative Changes
-                  </Button>
+                  {isCurrentUserAdmin && (
+                    <Button
+                      onClick={handleSavePermissions}
+                      isLoading={isLoading}
+                      variant="primary"
+                      className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-xl transition-all shadow-xl shadow-red-600/20"
+                    >
+                      Apply Administrative Changes
+                    </Button>
+                  )}
                 </div>
               )}
             </section>

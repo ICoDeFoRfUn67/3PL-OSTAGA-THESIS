@@ -1163,12 +1163,6 @@ export const PayslipDetailModal = ({
               >
                 Edit Payroll
               </button>
-              <button
-                onClick={onClose}
-                className="bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-semibold py-2.5 px-6 rounded-xl transition-all text-sm"
-              >
-                Close
-              </button>
             </>
           )}
         </div>

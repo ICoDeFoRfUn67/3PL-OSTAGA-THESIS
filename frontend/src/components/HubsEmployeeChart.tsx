@@ -67,8 +67,8 @@ export default function HubsEmployeeChart({ hubsData = [], employees = [] }: Pro
             tickLabelStyle: {
               angle: -40,
               textAnchor: 'end',
-              fontSize: tickFontSize,
-              fill: textColor,
+              fontSize: isMobile ? 0 : tickFontSize,
+              fill: isMobile ? 'transparent' : textColor,
             },
           },
         ]}
@@ -119,6 +119,9 @@ export default function HubsEmployeeChart({ hubsData = [], employees = [] }: Pro
           '& .MuiChartsAxis-tickLabel': {
             fill: `${textColor} !important`,
             fontSize: `${tickFontSize}px !important`,
+          },
+          '& .MuiChartsAxis-bottom .MuiChartsAxis-tickLabel': {
+            display: isMobile ? 'none !important' : 'block !important',
           },
           // Axis title/label (fallbacks)
           '& .MuiChartsAxis-label': {

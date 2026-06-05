@@ -410,7 +410,7 @@ export const BottomNavigation = ({
                           ${
                             isActive
                               ? 'text-red-500'
-                              : 'text-gray-500'
+                              : isDarkMode ? 'text-white/90' : 'text-gray-500'
                           }
                         `}
                       >
@@ -431,7 +431,7 @@ export const BottomNavigation = ({
                           ${
                             isActive
                               ? 'text-red-500'
-                              : 'text-gray-500'
+                              : isDarkMode ? 'text-white/90' : 'text-gray-500'
                           }
                         `}
                       >

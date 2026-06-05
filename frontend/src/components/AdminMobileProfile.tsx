@@ -144,7 +144,7 @@ function AdminMobileProfile() {
   };
 
   return (
-    <div className="block md:hidden w-full">
+    <div className="block md:hidden w-full relative z-[2000]">
       <div className="relative">
 
         {/* BACKGROUND GLOW */}
@@ -153,7 +153,7 @@ function AdminMobileProfile() {
         </div>
 
         {/* HEADER CARD */}
-        <div className={`relative overflow-visible rounded-b-[30px] rounded-t-none border-x-0 border-t-0 border-b ${isDarkMode ? 'border-white/10 bg-gradient-to-r from-[#040B18] via-[#050505] to-[#180707] backdrop-blur-xl shadow-none' : 'border-gray-200 bg-white/90 shadow-none'}`}>
+        <div className={`relative overflow-visible rounded-b-[30px] rounded-t-none border-x-0 border-t-0 border-b ${isDarkMode ? 'border-white/10 bg-gradient-to-r from-[#040B18] via-[#050505] to-[#180707] shadow-none' : 'border-gray-200 bg-white shadow-none'}`}>
 
           {/* DECORATIVE RED LINES */}
           <div className="absolute inset-0 overflow-hidden rounded-b-[30px] rounded-t-none">
@@ -235,7 +235,7 @@ function AdminMobileProfile() {
 
                 {/* DROPDOWN */}
                 {open && (
-                  <div className={`absolute right-0 top-[62px] ${isDarkMode ? 'w-48 rounded-2xl border border-white/10 bg-[#0B1220] backdrop-blur-2xl shadow-[0_25px_60px_rgba(0,0,0,0.8)]' : 'w-44 rounded-xl border border-gray-200 bg-white shadow-lg'} overflow-hidden z-50`}>
+                  <div className={`absolute right-0 top-[62px] ${isDarkMode ? 'w-48 rounded-2xl border border-white/10 bg-[#0B1220] shadow-[0_25px_60px_rgba(0,0,0,0.8)]' : 'w-44 rounded-xl border border-gray-200 bg-white shadow-lg'} overflow-hidden z-[2100]`}>
 
                     <div className={`px-4 py-2 ${isDarkMode ? 'border-b border-white/5' : 'border-b border-gray-100'}`}>
                       <p className={`${isDarkMode ? 'text-red-400' : 'text-gray-500'} text-[10px] uppercase tracking-[0.25em] font-bold`}>Account</p>

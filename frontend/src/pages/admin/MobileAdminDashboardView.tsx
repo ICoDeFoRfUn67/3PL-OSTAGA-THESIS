@@ -161,7 +161,7 @@ export const MobileAdminDashboardView = ({
             </div>
             <div>
               <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Employees</p>
-              <p className="text-3xl font-bold text-white">{totalEmployees}</p>
+              <p className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{totalEmployees}</p>
             </div>
           </Card>
 
@@ -173,7 +173,7 @@ export const MobileAdminDashboardView = ({
             </div>
             <div>
               <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Hubs</p>
-              <p className="text-3xl font-bold text-white">{hubs.length}</p>
+              <p className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{hubs.length}</p>
             </div>
           </Card>
         </div>
@@ -184,7 +184,7 @@ export const MobileAdminDashboardView = ({
           
           {/* Employee Status */}
           <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 min-w-[280px] snap-center flex flex-col`}>
-            <h3 className="text-sm font-semibold text-white mb-4">Employee Status</h3>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Employee Status</h3>
             <div className="flex items-center gap-4 flex-1">
               <div className="w-24 h-24">
                 <ResponsiveContainer width="100%" height="100%">
@@ -208,7 +208,7 @@ export const MobileAdminDashboardView = ({
                         <span className="text-gray-400">{entry.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-white font-medium">{pct}%</span>
+                        <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium`}>{pct}%</span>
                         <span className="text-gray-500">({entry.value})</span>
                       </div>
                     </div>
@@ -220,20 +220,20 @@ export const MobileAdminDashboardView = ({
 
           {/* Employment Type */}
           <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 min-w-[280px] snap-center flex flex-col`}>
-            <h3 className="text-sm font-semibold text-white mb-4">Employment Type</h3>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Employment Type</h3>
             <div className="space-y-4 flex-1 mt-2">
               {employmentTypeData.map((entry: any, idx: number) => {
                 const pct = Math.round((entry.value / totalEmployees) * 100);
                 return (
                   <div key={idx} className="space-y-1">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-gray-300 font-medium">{entry.name}</span>
+                      <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>{entry.name}</span>
                       <div className="flex gap-2">
-                        <span className="text-white">{entry.value}</span>
+                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{entry.value}</span>
                         <span className="text-gray-500">({pct}%)</span>
                       </div>
                     </div>
-                    <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                    <div className={`h-1.5 w-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} rounded-full overflow-hidden`}>
                       <div className={`h-full rounded-full ${getEmploymentBgClass(entry.name)} ${pctToWidthClass(pct)}`} />
                     </div>
                   </div>
@@ -244,7 +244,7 @@ export const MobileAdminDashboardView = ({
 
           {/* Workforce Status */}
           <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 min-w-[280px] snap-center flex flex-col`}>
-            <h3 className="text-sm font-semibold text-white mb-4">Workforce Status</h3>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Workforce Status</h3>
             <div className="space-y-3 flex-1 mt-1">
               {statusData.map((entry: any, idx: number) => (
                 <div key={idx} className="flex justify-between items-center relative pl-3">
@@ -260,7 +260,7 @@ export const MobileAdminDashboardView = ({
 
         {/* Map */}
         <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} overflow-hidden relative`}>
-          <div className="absolute top-0 left-0 right-0 z-[1000] flex justify-between items-center p-4 bg-gradient-to-b from-[#111827] to-transparent pointer-events-none">
+          <div className={`absolute top-0 left-0 right-0 z-[1000] flex justify-between items-center p-4 bg-gradient-to-b ${isDarkMode ? 'from-[#111827]' : 'from-white/95'} to-transparent pointer-events-none`}>
             {showMapSearch ? (
               <div className="flex items-center gap-2 w-full pointer-events-auto">
                 <div className="relative flex-1">
@@ -279,7 +279,7 @@ export const MobileAdminDashboardView = ({
                     setShowMapSearch(false);
                     setSearchLocationTerm('');
                   }}
-                  className="text-[10px] font-semibold text-blue-400 px-2 py-1 bg-gray-800/80 rounded-md border border-gray-700 active:bg-gray-700 transition-colors"
+                  className={`text-[10px] font-semibold text-blue-400 px-2 py-1 ${isDarkMode ? 'bg-gray-800/80 border-gray-700 active:bg-gray-700' : 'bg-gray-100 border-gray-200 active:bg-gray-200'} rounded-md border transition-colors`}
                 >
                   Cancel
                 </button>
@@ -287,28 +287,28 @@ export const MobileAdminDashboardView = ({
             ) : (
               <>
                 <div className="flex items-center gap-2 pointer-events-auto">
-                  <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center">
-                    <MapPin className="w-4 h-4 text-gray-300" />
+                  <div className={`w-8 h-8 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} flex items-center justify-center`}>
+                    <MapPin className={`w-4 h-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-white">Hub Locations</h3>
-                    <p className="text-[9px] text-gray-400">Live hub overview</p>
+                    <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Hub Locations</h3>
+                    <p className={`text-[9px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Live hub overview</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowMapSearch(true)}
                   title="Open search"
-                  className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center pointer-events-auto border border-gray-700 hover:bg-gray-700 active:bg-gray-600 transition-colors"
+                  className={`w-8 h-8 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 active:bg-gray-600' : 'bg-white border-gray-200 hover:bg-gray-50 active:bg-gray-100'} flex items-center justify-center pointer-events-auto border transition-colors`}
                 >
-                  <Search className="w-3.5 h-3.5 text-gray-400" />
+                  <Search className={`w-3.5 h-3.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
                 </button>
               </>
             )}
           </div>
           
-          <div className="h-[250px] w-full bg-[#0B1120]">
-            <MapContainer center={[12.8797, 121.774]} zoom={5} zoomControl={false} attributionControl={false} style={{ width: '100%', height: '100%', background: '#0B1120' }}>
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+          <div className={`h-[250px] w-full ${isDarkMode ? 'bg-[#0B1120]' : 'bg-gray-100'}`}>
+            <MapContainer center={[12.8797, 121.774]} zoom={5} zoomControl={false} attributionControl={false} style={{ width: '100%', height: '100%', background: isDarkMode ? '#0B1120' : '#f3f4f6' }}>
+              <TileLayer url={isDarkMode ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'} />
               <FitBoundsComponent mapHubs={filteredHubs} getCoords={getHubCoordinates} />
               {filteredHubs.map((hub: any) => {
                 const [lat, lng] = getHubCoordinates(hub);
@@ -324,16 +324,16 @@ export const MobileAdminDashboardView = ({
           </div>
         {/* Insight Box */}
         {hubEmployeeData.length > 0 && (
-          <div className="mt-2 p-3 rounded-lg border border-gray-800 bg-gray-800/30 flex items-center gap-3 mx-4 mb-4">
-            <div className="w-8 h-8 rounded-md bg-gray-800 flex items-center justify-center shrink-0 border border-gray-700">
+          <div className={`mt-2 p-3 rounded-lg border ${isDarkMode ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-50'} flex items-center gap-3 mx-4 mb-4`}>
+            <div className={`w-8 h-8 rounded-md ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} flex items-center justify-center shrink-0 border`}>
               <div className="flex gap-0.5 items-end h-3.5">
-                <div className="w-1 h-2 bg-gray-500 rounded-sm"></div>
-                <div className="w-1 h-3.5 bg-gray-300 rounded-sm"></div>
-                <div className="w-1 h-1.5 bg-gray-500 rounded-sm"></div>
+                <div className={`w-1 h-2 ${isDarkMode ? 'bg-gray-500' : 'bg-gray-400'} rounded-sm`}></div>
+                <div className={`w-1 h-3.5 ${isDarkMode ? 'bg-gray-300' : 'bg-gray-600'} rounded-sm`}></div>
+                <div className={`w-1 h-1.5 ${isDarkMode ? 'bg-gray-500' : 'bg-gray-400'} rounded-sm`}></div>
               </div>
             </div>
-            <p className="text-xs text-gray-400">
-              <span className="text-white font-medium">
+            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-650'}`}>
+              <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
                 {hubEmployeeData.reduce((prev: any, current: any) => (prev.Active > current.Active) ? prev : current).name} Hub
               </span> has the highest number of active employees.
             </p>
@@ -341,13 +341,12 @@ export const MobileAdminDashboardView = ({
         )}
       </Card>
 
-        {/* Hub Employee Distribution Chart */}
-        <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4`}>
+        {/* Hub Employee Distribution Chart */}        <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4`}>
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center border border-gray-700">
-              <Users className="w-4 h-4 text-gray-300" />
+            <div className={`w-8 h-8 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} flex items-center justify-center border`}>
+              <Users className={`w-4 h-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} />
             </div>
-            <h3 className="text-sm font-semibold text-white">Hub Employee Distribution</h3>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Hub Employee Distribution</h3>
           </div>
 
           {/* Fixed Legend */}
@@ -362,7 +361,7 @@ export const MobileAdminDashboardView = ({
             {hubEmployeeData.length > 0 ? (
                <HubsEmployeeChart hubsData={hubs} employees={allEmployees} />
             ) : (
-              <EmptyState title="No data" />
+               <EmptyState title="No data" />
             )}
           </div>
 
@@ -370,16 +369,16 @@ export const MobileAdminDashboardView = ({
 
         {/* Employees Table */}
         <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} overflow-hidden flex flex-col`}>
-          <div className="p-4 flex justify-between items-center border-b border-gray-800">
-            <h3 className="text-sm font-semibold text-white">Employees</h3>
+          <div className={`p-4 flex justify-between items-center border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-250'}`}>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Employees</h3>
             <div className="relative w-36">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-              <input type="text" placeholder="Search employees..." className="w-full bg-[#0B1120] border border-gray-800 rounded-full py-1.5 pl-8 pr-3 text-[10px] text-gray-300 placeholder-gray-500 focus:outline-none focus:border-gray-700" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              <input type="text" placeholder="Search employees..." className={`w-full ${isDarkMode ? 'bg-[#0B1120] border-gray-800 text-gray-300 focus:border-gray-700' : 'bg-white border-gray-200 text-gray-900 focus:border-gray-300'} border rounded-full py-1.5 pl-8 pr-3 text-[10px] placeholder-gray-500 focus:outline-none`} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[11px] whitespace-nowrap">
-              <thead className="bg-gray-800/60 text-gray-300 uppercase text-[9px] tracking-wider">
+              <thead className={`${isDarkMode ? 'bg-gray-800/60 text-gray-300' : 'bg-gray-100 text-gray-600'} uppercase text-[9px] tracking-wider`}>
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Name</th>
                   <th className="px-4 py-2.5 font-medium">Position</th>
@@ -388,12 +387,12 @@ export const MobileAdminDashboardView = ({
                   <th className="px-4 py-2.5 font-medium text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'}`}>
                 {employees.slice(0, 10).map((emp: any) => (
-                  <tr key={emp.id} className="hover:bg-gray-800/30 transition-colors">
-                    <td className="px-4 py-3 text-gray-200">{emp.full_name}</td>
-                    <td className="px-4 py-3 text-gray-400">{emp.position}</td>
-                    <td className="px-4 py-3 text-gray-400">{emp.hub_name || 'N/A'}</td>
+                  <tr key={emp.id} className={`${isDarkMode ? 'hover:bg-gray-800/30' : 'hover:bg-gray-50'} transition-colors`}>
+                    <td className={`px-4 py-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-850'}`}>{emp.full_name}</td>
+                    <td className={`px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{emp.position}</td>
+                    <td className={`px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{emp.hub_name || 'N/A'}</td>
                     <td className={`px-4 py-3 font-semibold ${getStatusTextClass(emp.status)}`}>{emp.status}</td>
                     <td className="px-4 py-3 text-center">
                       <button onClick={() => { setSelectedEmployee(emp); setShowEmployeeModal(true); }} className="px-3.5 py-1 bg-blue-500/10 text-blue-400 rounded-full text-[10px] font-semibold border border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-300 transition-all duration-200">
@@ -405,30 +404,30 @@ export const MobileAdminDashboardView = ({
               </tbody>
             </table>
           </div>
-          <div className="p-3 border-t border-gray-800 text-center">
-            <button onClick={() => navigate('/admin/employees')} className="text-[11px] text-gray-400 hover:text-white transition-colors">View all employees &gt;</button>
+          <div className={`p-3 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} text-center`}>
+            <button onClick={() => navigate('/admin/employees')} className={`text-[11px] ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} transition-colors`}>View all employees &gt;</button>
           </div>
         </Card>
 
         {/* Hubs Table */}
         <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} overflow-hidden flex flex-col mb-6`}>
-          <div className="p-4 flex justify-between items-center border-b border-gray-800">
-            <h3 className="text-sm font-semibold text-white">Hubs</h3>
+          <div className={`p-4 flex justify-between items-center border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-250'}`}>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Hubs</h3>
             <div className="relative w-36">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-              <input type="text" placeholder="Search hubs..." className="w-full bg-[#0B1120] border border-gray-800 rounded-full py-1.5 pl-8 pr-3 text-[10px] text-gray-300 placeholder-gray-500 focus:outline-none focus:border-gray-700" value={searchHubTerm} onChange={e => setSearchHubTerm(e.target.value)} />
+              <input type="text" placeholder="Search hubs..." className={`w-full ${isDarkMode ? 'bg-[#0B1120] border-gray-800 text-gray-300 focus:border-gray-700' : 'bg-white border-gray-200 text-gray-900 focus:border-gray-300'} border rounded-full py-1.5 pl-8 pr-3 text-[10px] placeholder-gray-500 focus:outline-none`} value={searchHubTerm} onChange={e => setSearchHubTerm(e.target.value)} />
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[11px] whitespace-nowrap">
-              <thead className="bg-gray-800/60 text-gray-300 uppercase text-[9px] tracking-wider">
+              <thead className={`${isDarkMode ? 'bg-gray-800/60 text-gray-300' : 'bg-gray-100 text-gray-600'} uppercase text-[9px] tracking-wider`}>
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Hub Name</th>
                   <th className="px-4 py-2.5 font-medium">Location</th>
                   <th className="px-4 py-2.5 font-medium text-center">Employees</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'}`}>
                 {hubs
                   .filter((hub: any) =>
                     !searchHubTerm ||
@@ -440,9 +439,9 @@ export const MobileAdminDashboardView = ({
                   .map((hub: any) => {
                     const cnt = allEmployees.filter((emp: any) => emp.hub === hub.id).length;
                     return (
-                      <tr key={hub.id} className="hover:bg-gray-800/30 transition-colors">
-                        <td className="px-4 py-3 text-gray-200">{hub.name}</td>
-                        <td className="px-4 py-3 text-gray-400">{hub.location || hub.city || 'N/A'}</td>
+                      <tr key={hub.id} className={`${isDarkMode ? 'hover:bg-gray-800/30' : 'hover:bg-gray-50'} transition-colors`}>
+                        <td className={`px-4 py-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-850'}`}>{hub.name}</td>
+                        <td className={`px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{hub.location || hub.city || 'N/A'}</td>
                         <td className="px-4 py-3 font-semibold text-emerald-500 text-center">{cnt}</td>
                       </tr>
                     )
@@ -450,22 +449,22 @@ export const MobileAdminDashboardView = ({
               </tbody>
             </table>
           </div>
-          <div className="p-3 border-t border-gray-800 text-center">
-            <button onClick={() => navigate('/admin/hubs')} className="text-[11px] text-gray-400 hover:text-white transition-colors">View all hubs &gt;</button>
+          <div className={`p-3 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} text-center`}>
+            <button onClick={() => navigate('/admin/hubs')} className={`text-[11px] ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} transition-colors`}>View all hubs &gt;</button>
           </div>
         </Card>
 
       </div>
 
       {/* Floating Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#0B1120] border-t border-gray-800 flex justify-around items-center px-2 z-[9000]">
+      <div className={`fixed bottom-0 left-0 right-0 h-16 ${isDarkMode ? 'bg-[#0B1120] border-gray-800' : 'bg-white border-gray-200'} border-t flex justify-around items-center px-2 z-[9000]`}>
         <div onClick={() => navigate('/admin')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
           <Home className="w-5 h-5 text-blue-500" />
           <span className="text-[9px] text-blue-500 font-medium">Dashboard</span>
         </div>
         <div onClick={() => navigate('/admin/hubs')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
-          <MapPin className="w-5 h-5 text-gray-500" />
-          <span className="text-[9px] text-gray-500">Hubs</span>
+          <MapPin className={`w-5 h-5 ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`} />
+          <span className={`text-[9px] ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>Hubs</span>
         </div>
         <div className="relative -top-5">
           <div onClick={() => navigate('/admin/employees')} className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)] cursor-pointer">
@@ -473,12 +472,12 @@ export const MobileAdminDashboardView = ({
           </div>
         </div>
         <div onClick={() => navigate('/admin/employees')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
-          <Users className="w-5 h-5 text-gray-500" />
-          <span className="text-[9px] text-gray-500">Employees</span>
+          <Users className={`w-5 h-5 ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`} />
+          <span className={`text-[9px] ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>Employees</span>
         </div>
         <div onClick={() => navigate('/admin/edit-requests')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
-          <FileText className="w-5 h-5 text-gray-500" />
-          <span className="text-[9px] text-gray-500">Edit</span>
+          <FileText className={`w-5 h-5 ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`} />
+          <span className={`text-[9px] ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>Edit</span>
         </div>
       </div>
 

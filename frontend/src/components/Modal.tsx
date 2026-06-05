@@ -35,7 +35,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md', noPadding
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -44,7 +44,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md', noPadding
     >
       <div
         ref={modalRef}
-        className={`bg-white dark:bg-[#050C1B] text-slate-900 dark:text-white rounded-[32px] shadow-2xl max-h-[90vh] flex flex-col min-h-0 w-full relative z-[9999] border border-slate-200/80 dark:border-slate-800/85 transition-all overflow-hidden ${sizeClasses[size]}`}
+        className={`bg-white dark:bg-[#050C1B] text-slate-900 dark:text-white rounded-[32px] shadow-2xl max-h-[90vh] max-md:max-h-[calc(100vh-140px)] flex flex-col min-h-0 w-full relative z-[10000] border border-slate-200/80 dark:border-slate-800/85 transition-all overflow-hidden ${sizeClasses[size]}`}
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-[#050C1B]">
