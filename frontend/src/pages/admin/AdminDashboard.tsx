@@ -786,9 +786,9 @@ export const AdminDashboard = () => {
 
       {/* Employee Details Modal */}
       {showEmployeeModal && selectedEmployee && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setShowEmployeeModal(false)}>
+        <div className="fixed inset-0 z-[50000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setShowEmployeeModal(false)}>
           
-          <div className="bg-white dark:bg-[#0F172A] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden relative z-[9999] border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-[#0F172A] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden relative z-[50000] border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
             
             {/* Header Banner */}
             <div className="relative shrink-0 overflow-hidden bg-gradient-to-r from-red-800 to-red-650 p-6 md:p-8 text-white">

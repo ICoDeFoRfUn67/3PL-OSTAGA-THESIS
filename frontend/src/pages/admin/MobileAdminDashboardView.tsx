@@ -320,25 +320,7 @@ export const MobileAdminDashboardView = ({
                   </Marker>
                 );
               })}
-            </MapContainer>
-          </div>
-        {/* Insight Box */}
-        {hubEmployeeData.length > 0 && (
-          <div className={`mt-2 p-3 rounded-lg border ${isDarkMode ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-50'} flex items-center gap-3 mx-4 mb-4`}>
-            <div className={`w-8 h-8 rounded-md ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} flex items-center justify-center shrink-0 border`}>
-              <div className="flex gap-0.5 items-end h-3.5">
-                <div className={`w-1 h-2 ${isDarkMode ? 'bg-gray-500' : 'bg-gray-400'} rounded-sm`}></div>
-                <div className={`w-1 h-3.5 ${isDarkMode ? 'bg-gray-300' : 'bg-gray-600'} rounded-sm`}></div>
-                <div className={`w-1 h-1.5 ${isDarkMode ? 'bg-gray-500' : 'bg-gray-400'} rounded-sm`}></div>
-              </div>
-            </div>
-            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-650'}`}>
-              <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
-                {hubEmployeeData.reduce((prev: any, current: any) => (prev.Active > current.Active) ? prev : current).name} Hub
-              </span> has the highest number of active employees.
-            </p>
-          </div>
-        )}
+            </MapContainer>          </div>
       </Card>
 
         {/* Hub Employee Distribution Chart */}        <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4`}>
@@ -364,6 +346,24 @@ export const MobileAdminDashboardView = ({
                <EmptyState title="No data" />
             )}
           </div>
+
+          {/* Insight Box */}
+          {hubEmployeeData.length > 0 && (
+            <div className={`mt-2 p-3 rounded-lg border ${isDarkMode ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-55'} flex items-center gap-3 mt-4`}>
+              <div className={`w-8 h-8 rounded-md ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} flex items-center justify-center shrink-0 border`}>
+                <div className="flex gap-0.5 items-end h-3.5">
+                  <div className={`w-1 h-2 ${isDarkMode ? 'bg-gray-500' : 'bg-gray-400'} rounded-sm`}></div>
+                  <div className={`w-1 h-3.5 ${isDarkMode ? 'bg-gray-300' : 'bg-gray-600'} rounded-sm`}></div>
+                  <div className={`w-1 h-1.5 ${isDarkMode ? 'bg-gray-500' : 'bg-gray-400'} rounded-sm`}></div>
+                </div>
+              </div>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-650'}`}>
+                <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
+                  {hubEmployeeData.reduce((prev: any, current: any) => (prev.Active > current.Active) ? prev : current).name} Hub
+                </span> has the highest number of active employees.
+              </p>
+            </div>
+          )}
 
         </Card>
 

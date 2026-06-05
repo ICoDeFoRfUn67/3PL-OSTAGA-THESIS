@@ -295,7 +295,7 @@ export const LoginScreen = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-[#ff2746] via-[#ff1238] to-[#d00024] lg:hidden" />
 
         {/* MOBILE TOP WHITE */}
-        <div className="absolute left-0 top-0 h-[34%] min-h-[240px] w-full overflow-hidden rounded-b-[55px] bg-[#f7f2f2] lg:hidden">
+        <div className="absolute left-0 top-0 h-[24%] min-h-[160px] w-full overflow-hidden rounded-b-[40px] bg-[#f7f2f2] lg:hidden">
           {/* CURVED BOTTOM */}
           <svg
             className="absolute bottom-[-1px] left-0 w-full"
@@ -312,16 +312,16 @@ export const LoginScreen = () => {
           </svg>
 
           {/* MOBILE LOGO */}
-          <div className="absolute left-1/2 top-[14%] -translate-x-1/2">
+          <div className="absolute left-1/2 top-[10%] -translate-x-1/2">
             <img
               src={mobileLogoLogin}
               alt="3PL"
-              className="w-[140px] object-contain opacity-95"
+              className="w-[100px] object-contain opacity-95"
             />
           </div>
 
           {/* DOTS */}
-          <div className="absolute right-8 top-16 grid grid-cols-4 gap-3">
+          <div className="absolute right-8 top-10 grid grid-cols-4 gap-3">
             {Array.from({ length: 16 }).map(
               (_, index) => (
                 <div
@@ -333,7 +333,7 @@ export const LoginScreen = () => {
           </div>
 
           {/* CURVE LINE */}
-          <div className="absolute bottom-5 left-1/2 h-[120px] w-[120%] -translate-x-1/2 rounded-[100%] border border-white/20" />
+          <div className="absolute bottom-3 left-1/2 h-[80px] w-[120%] -translate-x-1/2 rounded-[100%] border border-white/20" />
         </div>
       </div>
 
@@ -536,7 +536,7 @@ export const LoginScreen = () => {
               </div>
 
               {/* ================= MOBILE UI ================= */}
-              <div className="relative flex h-screen flex-col overflow-y-auto pt-[150px] pb-4 lg:hidden">
+              <div className="relative flex h-screen flex-col overflow-y-auto pt-[165px] pb-4 lg:hidden">
                 {/* LOCK */}
                 <motion.div
                   animate={{
