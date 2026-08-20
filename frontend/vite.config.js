@@ -29,13 +29,17 @@ export default defineConfig({
                 manualChunks: function (id) {
                     if (!id.includes('node_modules'))
                         return;
-                    if (id.includes('react') || id.includes('react-dom'))
+                    // Bundle React core + chart libraries that depend on React
+                    // into a single chunk to avoid circular chunk references.
+                    if (id.includes('node_modules/react-dom/') ||
+                        id.includes('node_modules\\react-dom\\') ||
+                        id.includes('node_modules/react/') ||
+                        id.includes('node_modules\\react\\') ||
+                        id.includes('node_modules/scheduler/') ||
+                        id.includes('node_modules\\scheduler\\') ||
+                        id.includes('recharts') ||
+                        id.includes('@mui'))
                         return 'vendor_react';
-                    // Avoid creating a separate vendor chunk for leaflet/react-leaflet
-                    // to prevent circular chunk references with react packages.
-                    if (id.includes('recharts') || id.includes('@mui'))
-                        return 'vendor_charts';
-                    // Let Rollup handle other node_modules to avoid circular chunk references
                     return undefined;
                 }
             }
