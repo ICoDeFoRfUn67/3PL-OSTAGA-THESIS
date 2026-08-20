@@ -123,10 +123,13 @@ import dj_database_url
 
 # Allow tuning of connection pooling and SSL via env vars
 _CONN_MAX_AGE = int(os.environ.get('CONN_MAX_AGE', '600'))
-# For local dev without SSL, you might want to set DB_SSL_REQUIRE=False or default to False if DATABASE_URL is local.
-# We'll default to False for the fallback but respect env var.
+# For local dev without SSL, default to False. Respect env var override.
 _default_ssl = 'False' if 'localhost' in _DATABASE_URL or '127.0.0.1' in _DATABASE_URL else 'True'
 _DB_SSL_REQUIRE = os.environ.get('DB_SSL_REQUIRE', _default_ssl).lower() in ('1', 'true', 'yes')
+
+# If sslmode is already embedded in the URL (e.g. Aiven: ?sslmode=require),
+# don't pass ssl_require separately to avoid conflicts.
+_ssl_in_url = 'sslmode=' in _DATABASE_URL
 
 if _DATABASE_URL.startswith('sqlite'):
     DATABASES = {
@@ -140,7 +143,7 @@ else:
         'default': dj_database_url.config(
             default=_DATABASE_URL,
             conn_max_age=_CONN_MAX_AGE,
-            ssl_require=_DB_SSL_REQUIRE,
+            ssl_require=False if _ssl_in_url else _DB_SSL_REQUIRE,
         )
     }
 
