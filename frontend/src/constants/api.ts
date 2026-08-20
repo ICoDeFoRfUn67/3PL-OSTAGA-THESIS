@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
   ATTENDANCE_CLOCK_IN: '/attendance/clock_in/',
   ATTENDANCE_CLOCK_OUT: '/attendance/clock_out/',
   ATTENDANCE_DETAIL: (id: number) => `/attendance/${id}/`,
+  ATTENDANCE_AGGREGATE: '/attendance/aggregate/',
   
   // Payroll
   PAYROLL: '/payroll/',
@@ -104,6 +105,15 @@ export const API_ENDPOINTS = {
 
   // Leave Requests
   LEAVE_REQUESTS: '/leave-requests/',
+
+  // Dashboard Analytics
+  DASHBOARD_ANALYTICS: '/dashboard-analytics/',
+
+  // Top Employees by Hub
+  TOP_EMPLOYEES_BY_HUB: '/top-employees-by-hub/',
+
+  // Attendance Summary (today)
+  ATTENDANCE_SUMMARY_TODAY: '/attendance/summary/',
 } as const;
 
 export const QUERY_KEYS = {
@@ -112,6 +122,7 @@ export const QUERY_KEYS = {
   HUBS: ['hubs'],
   HUB: (id: number) => ['hubs', id],
   ATTENDANCE: ['attendance'],
+  ATTENDANCE_SUMMARY: ['attendance-summary'],
   PAYROLL: ['payroll'],
   EDIT_REQUESTS: ['edit-requests'],
   LIVE_LOCATIONS: ['live-locations'],
@@ -122,4 +133,7 @@ export const QUERY_KEYS = {
   DOCUMENTS: ['documents'],
   DOCUMENT: (id: number) => ['documents', id],
   LEAVE_REQUESTS: ['leave-requests'],
+  DASHBOARD_ANALYTICS: ['dashboard-analytics'],
+  TOP_EMPLOYEES_BY_HUB: ['top-employees-by-hub'],
+  EMPLOYEES_ONLINE: ['employees-online'],
 } as const;

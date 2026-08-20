@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authAPI, employeeAPI, hubAPI, attendanceAPI, payrollAPI, editRequestAPI, leaveRequestAPI, activityLogAPI, securityAlertAPI, documentAPI } from '@/api/apiService';
+import { authAPI, employeeAPI, hubAPI, attendanceAPI, payrollAPI, editRequestAPI, leaveRequestAPI, activityLogAPI, securityAlertAPI, documentAPI, dashboardAPI } from '@/api/apiService';
 import { QUERY_KEYS } from '@/constants/api';
 
 // Auth hooks
@@ -25,6 +25,7 @@ export const useGetEmployees = (params?: Record<string, any>) => {
     queryKey: [QUERY_KEYS.EMPLOYEES, params],
     queryFn: () => employeeAPI.getEmployees(params),
     staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 1,
   });
 };
 
@@ -129,10 +130,32 @@ export const useUpdateHub = () => {
 
 // Attendance hooks
 export const useGetAttendance = (params?: Record<string, any>) => {
+  const isEnabled = !params || !('employee_id' in params) || (
+    params.employee_id !== undefined && 
+    params.employee_id !== 'undefined' && 
+    params.employee_id !== null && 
+    !Number.isNaN(Number(params.employee_id))
+  );
   return useQuery({
     queryKey: [QUERY_KEYS.ATTENDANCE, params],
     queryFn: () => attendanceAPI.getAttendance(params),
     staleTime: 1 * 60 * 1000, // 1 minute
+    enabled: isEnabled,
+  });
+};
+
+export const useGetAttendanceSummary = (params?: Record<string, any>) => {
+  const isEnabled = !params || !('employee_id' in params) || (
+    params.employee_id !== undefined && 
+    params.employee_id !== 'undefined' && 
+    params.employee_id !== null && 
+    !Number.isNaN(Number(params.employee_id))
+  );
+  return useQuery({
+    queryKey: [QUERY_KEYS.ATTENDANCE_SUMMARY, params],
+    queryFn: () => attendanceAPI.getAttendanceSummary(params),
+    staleTime: 1 * 60 * 1000, // 1 minute
+    enabled: isEnabled,
   });
 };
 
@@ -355,6 +378,58 @@ export const useDeleteDocument = () => {
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DOCUMENTS });
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CURRENT_USER });
       }
+    },
+  });
+};
+
+// Dashboard Analytics hook
+export const useGetDashboardAnalytics = (params?: Record<string, any>) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.DASHBOARD_ANALYTICS, params],
+    queryFn: () => dashboardAPI.getAnalytics(params),
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+};
+
+// Online employees hook — fast refresh for real-time presence
+export const useGetOnlineEmployees = (params?: Record<string, any>) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.EMPLOYEES_ONLINE, params],
+    queryFn: () => employeeAPI.getOnlineEmployees(params),
+    staleTime: 5 * 1000,
+    refetchInterval: 5 * 1000,
+  });
+};
+
+// Top Employees by Hub hook
+export const useGetTopEmployeesByHub = (hubId?: number | null) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.TOP_EMPLOYEES_BY_HUB, hubId],
+    queryFn: () => dashboardAPI.getTopEmployeesByHub(hubId ? { hub_id: hubId } : undefined),
+    staleTime: 60 * 1000, // 1 minute
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useApproveAttendance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => attendanceAPI.approveAttendance(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ATTENDANCE });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ATTENDANCE_SUMMARY });
+    },
+  });
+};
+
+export const useDisapproveAttendance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => attendanceAPI.disapproveAttendance(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ATTENDANCE });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ATTENDANCE_SUMMARY });
     },
   });
 };

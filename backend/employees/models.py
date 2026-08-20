@@ -4,6 +4,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from datetime import date
 import os
+from typing import TYPE_CHECKING, Any
+
+# Provide typing-only stubs for static analysis (no runtime effect)
+if TYPE_CHECKING:
+    # Simple name hints for the type checker. Use Any to avoid declaring
+    # classes that would be re-declared later in this module.
+    LeaveRequest: Any
+    LeaveAttachment: Any
 
 
 # ===================== FILE PATH HELPERS =====================
@@ -41,9 +49,9 @@ class Hub(models.Model):
     longitude = models.FloatField()
     employee_count = models.IntegerField(default=0)
     # Per-hub override rates (percent values). Optional: if zero, fall back to DEFAULT_GOV_RATES
-    sss_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    philhealth_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    pagibig_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    sss_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0'))
+    philhealth_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0'))
+    pagibig_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0'))
 
     def __str__(self):
         return f"{self.name} ({self.city})"
@@ -52,6 +60,8 @@ class Hub(models.Model):
 # ===================== EMPLOYEE =====================
 
 class Employee(models.Model):
+    # Inform static type checkers that an auto-generated primary key exists
+    id: int
 
     STATUS_CHOICES = [
         ('Active', 'Active'),
@@ -93,8 +103,13 @@ class Employee(models.Model):
     email_address = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
 
-    current_address = models.TextField(blank=True, null=True)
-    permanent_address = models.TextField(blank=True, null=True)
+    # Structured address fields (replaces legacy free-text fields)
+    complete_address = models.TextField(blank=True, null=True)
+    region = models.CharField(max_length=100, blank=True, null=True)
+    province = models.CharField(max_length=100, blank=True, null=True)
+    city_municipality = models.CharField(max_length=100, blank=True, null=True)
+    barangay = models.CharField(max_length=200, blank=True, null=True)
+    zip_code = models.CharField(max_length=20, blank=True, null=True)
 
     # ===== EMPLOYMENT =====
     position = models.CharField(max_length=100)
@@ -141,7 +156,16 @@ class Employee(models.Model):
 
 class HRPermission(models.Model):
     """Stores permissions for HR users"""
+    ACCESS_TYPE_CHOICES = [
+        ('Single', 'Single Hub Access'),
+        ('Multiple', 'Multiple Hub Access'),
+    ]
+
     hr_employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='hr_permissions')
+    
+    # Hub Management
+    access_type = models.CharField(max_length=20, choices=ACCESS_TYPE_CHOICES, default='Single')
+    managed_hubs = models.ManyToManyField('Hub', related_name='hr_managers', blank=True)
     
     # HR Permissions
     can_view_employees = models.BooleanField(default=False)
@@ -177,7 +201,7 @@ class EmployeeDocument(models.Model):
 
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs):  # type: ignore
         if self.file:
             self.file_name = os.path.basename(self.file.name)
             self.file_size = self.file.size // 1024  # KB
@@ -190,16 +214,81 @@ class EmployeeDocument(models.Model):
 # ===================== ATTENDANCE =====================
 
 class Attendance(models.Model):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='attendance_records')
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+
     date = models.DateField()
 
-    clock_in_time = models.DateTimeField(null=True, blank=True)
-    clock_out_time = models.DateTimeField(null=True, blank=True)
+    clock_in_time = models.DateTimeField(
+        null=True,
+        blank=True
+    )
 
-    clock_in_image = models.ImageField(upload_to=attendance_clock_in_path, null=True, blank=True)
-    clock_out_image = models.ImageField(upload_to=attendance_clock_out_path, null=True, blank=True)
+    clock_out_time = models.DateTimeField(
+        null=True,
+        blank=True
+    )
 
-    status = models.CharField(max_length=20, default='Present')
+    clock_in_image = models.ImageField(
+        upload_to=attendance_clock_in_path,
+        null=True,
+        blank=True
+    )
+
+    clock_out_image = models.ImageField(
+        upload_to=attendance_clock_out_path,
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        default='Present'
+    )
+
+    # Whether this attendance record has been reviewed/approved by HR
+    is_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_attendances'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    # GPS LOCATION FIELDS
+
+    clock_in_latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        null=True,
+        blank=True
+    )
+
+    clock_in_longitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        null=True,
+        blank=True
+    )
+
+    clock_out_latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        null=True,
+        blank=True
+    )
+
+    clock_out_longitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        null=True,
+        blank=True
+    )
 
     class Meta:
         unique_together = ['employee', 'date']
@@ -207,7 +296,6 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.employee.full_name} - {self.date}"
-
 
 # ===================== LOCATION =====================
 
@@ -402,6 +490,8 @@ class EditRequest(models.Model):
 # ===================== LEAVE REQUEST =====================
 
 class LeaveRequest(models.Model):
+    # Inform static type checkers that an auto-generated primary key exists
+    id: int
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
@@ -433,15 +523,23 @@ class LeaveRequest(models.Model):
 
 # Attachments for leave requests
 class LeaveAttachment(models.Model):
+    # Inform static type checkers that an auto-generated primary key exists
+    id: int
     leave_request = models.ForeignKey(LeaveRequest, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='leave_attachments/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        # Use getattr to avoid static-analysis complaints about dynamic model attributes
         try:
-            return f"Leave {self.leave_request.id} - {self.file.name}"
+            lr = getattr(self, 'leave_request', None)
+            lr_id = getattr(lr, 'id', None) if lr is not None else None
+            fname = getattr(self.file, 'name', None) if getattr(self, 'file', None) else None
+            if lr_id and fname:
+                return f"Leave {lr_id} - {fname}"
         except Exception:
-            return f"LeaveAttachment {self.id}"
+            pass
+        return f"LeaveAttachment {getattr(self, 'id', '')}"
 
 # ===================== ACTIVITY LOG =====================
 
@@ -449,7 +547,7 @@ class ActivityLog(models.Model):
     """Track all employee, HR, and Admin activities"""
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='activity_logs')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='activity_logs')
     
     role = models.CharField(max_length=20, choices=[
         ('Employee', 'Employee'),
@@ -494,7 +592,7 @@ class SecurityAlert(models.Model):
         ('critical', 'Critical'),
     ]
 
-    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
     
     alert_type = models.CharField(max_length=30, choices=ALERT_TYPE_CHOICES)
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='low')
@@ -611,8 +709,9 @@ class SavedImage(models.Model):
                     self.image_data = data
                     # Auto-detect content type if not set
                     if not self.content_type:
-                        if hasattr(raw_file, 'content_type'):
-                            self.content_type = raw_file.content_type
+                        content_type = getattr(raw_file, 'content_type', None)
+                        if content_type:
+                            self.content_type = content_type
                         else:
                             # Simple extension-based guess
                             ext = os.path.splitext(self.image.name)[1].lower()
@@ -650,45 +749,50 @@ def backup_employee_profile_image(sender, instance, created, **kwargs):
     if not instance.profile_image:
         return
 
-    fname = os.path.basename(instance.profile_image.name)
-    existing = SavedImage.objects.filter(
-        employee=instance,
-        image_type='profile',
-        original_filename=fname,
-    ).exists()
+    # Read bytes so they land in image_data (DB-persistent)
+    data = None
+    try:
+        raw = getattr(instance.profile_image, 'file', None)
+        if raw is not None:
+            raw.seek(0)
+            data = raw.read()
+    except Exception:
+        data = None
 
-    if not existing:
+    if not data:
         try:
-            # Read bytes so they land in image_data (DB-persistent)
+            instance.profile_image.open('rb')
+            data = instance.profile_image.read()
+            instance.profile_image.close()
+        except Exception:
             data = None
-            try:
-                raw = getattr(instance.profile_image, 'file', None)
-                if raw is not None:
-                    raw.seek(0)
-                    data = raw.read()
-            except Exception:
-                data = None
 
-            if not data:
-                try:
-                    instance.profile_image.open('rb')
-                    data = instance.profile_image.read()
-                    instance.profile_image.close()
-                except Exception:
-                    data = None
+    if not data:
+        return
 
-            saved = SavedImage(
-                employee=instance,
-                image=instance.profile_image,
-                image_type='profile',
-                original_filename=fname,
-                description=f"Auto-backup of profile image for {instance.full_name}",
-            )
-            if data:
-                saved.image_data = data
-            saved.save()
-        except Exception as e:
-            print(f"[signal] Error auto-backing up profile image: {e}")
+    # Check if there is already a SavedImage with the exact same bytes for this employee
+    # to avoid duplicate backups of the same image
+    latest_saved = SavedImage.objects.filter(
+        employee=instance,
+        image_type='profile'
+    ).order_by('-id').first()
+
+    if latest_saved and latest_saved.image_data == data:
+        return # already backed up this exact image
+
+    try:
+        fname = os.path.basename(instance.profile_image.name)
+        saved = SavedImage(
+            employee=instance,
+            image=instance.profile_image,
+            image_type='profile',
+            original_filename=fname,
+            description=f"Auto-backup of profile image for {instance.full_name}",
+        )
+        saved.image_data = data
+        saved.save()
+    except Exception as e:
+        print(f"[signal] Error auto-backing up profile image: {e}")
 
 def _read_image_bytes(image_field):
     """
@@ -801,13 +905,18 @@ def backup_leave_attachment(sender, instance, created, **kwargs):
     if not existing:
         try:
             data = _read_image_bytes(instance.file)
+            lr = getattr(instance, 'leave_request', None)
+            emp = getattr(lr, 'employee', None)
+            emp_full = getattr(emp, 'full_name', getattr(instance, 'employee', None) and getattr(instance.employee, 'full_name', 'Unknown'))
+            lr_id = getattr(lr, 'id', '')
+            employee_obj = emp or (getattr(instance, 'leave_request', None) and getattr(instance.leave_request, 'employee', None)) or getattr(instance, 'employee', None)
             saved = SavedImage(
-                employee=instance.leave_request.employee,
+                employee=employee_obj,
                 image=instance.file,
                 image_type='leave_attachment',
                 leave_attachment=instance,
                 original_filename=fname,
-                description=f"Leave attachment for {instance.leave_request.employee.full_name} (Request #{instance.leave_request.id})",
+                description=f"Leave attachment for {emp_full} (Request #{lr_id})",
             )
             if data:
                 saved.image_data = data

@@ -1,16 +1,20 @@
 import { useRef, ReactNode, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, ArrowLeft } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  onBack?: () => void;
+  title: string | ReactNode;
+  subtitle?: string;
+  icon?: ReactNode;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   noPadding?: boolean;
+  hideCloseButton?: boolean;
 }
 
-export const Modal = ({ isOpen, onClose, title, children, size = 'md', noPadding = false }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, onBack, title, subtitle, icon, children, size = 'md', noPadding = false, hideCloseButton = false }: ModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,15 +51,40 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md', noPadding
         className={`bg-white dark:bg-[#050C1B] text-slate-900 dark:text-white rounded-[32px] shadow-2xl max-h-[90vh] max-md:max-h-[calc(100vh-140px)] flex flex-col min-h-0 w-full relative z-[10000] border border-slate-200/80 dark:border-slate-800/85 transition-all overflow-hidden ${sizeClasses[size]}`}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-[#050C1B]">
-          <h2 className="text-xl font-extrabold tracking-tight">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-xl transition-all"
-            aria-label="Close modal"
-          >
-            <X size={20} />
-          </button>
+        <div className="shrink-0 flex justify-between items-start p-6 border-b border-slate-100 dark:border-slate-800/80 bg-white dark:bg-[#050C1B]">
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl transition-colors shrink-0"
+              >
+                <ArrowLeft size={20} strokeWidth={2.5} />
+              </button>
+            )}
+            {icon && (
+              <div className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-500 flex items-center justify-center shrink-0">
+                {icon}
+              </div>
+            )}
+            <div>
+              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight">
+                {title}
+              </h2>
+              {subtitle && (
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+          </div>
+          {!hideCloseButton && (
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl transition-colors shrink-0"
+            >
+              <X size={20} strokeWidth={2.5} />
+            </button>
+          )}
         </div>
 
         {/* Content — single scroll region */}

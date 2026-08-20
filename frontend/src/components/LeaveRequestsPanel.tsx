@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, Button, Badge, LoadingSpinner } from '@/components/common';
 import { useToast } from '@/hooks/useToast';
-import { CheckCircle, XCircle, Clock, Trash2, Eye, Download, X, FileText } from 'lucide-react';
-import { useClearAllLeaveRequests } from '@/hooks/useQueries';
+import { CheckCircle, XCircle, Clock, Eye, Download, X, FileText } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import AdminMobileProfile from '@/components/AdminMobileProfile';
 import { apiUrl } from '@/constants/api';
@@ -23,7 +22,7 @@ type LeaveRequest = {
   reviewed_at: string | null;
   notes: string | null;
   created_at: string;
-  attachments?: string[];
+  attachments?: Array<string | { url?: string; file?: { url?: string } }>;
 };
 
 export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilter?: LeaveRequestStatus | 'all' }) => {
@@ -35,7 +34,7 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [rejectNotes, setRejectNotes] = useState<Record<number, string>>({});
   const [previewFile, setPreviewFile] = useState<{ url: string; type: 'image' | 'pdf' | 'other' } | null>(null);
-  const clearAllMutation = useClearAllLeaveRequests();
+  // Clear-all leave requests removed per request
 
   useEffect(() => {
     fetchLeaveRequests();
@@ -137,17 +136,7 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
     }
   };
 
-  const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to clear all leave requests shown? This action cannot be undone.')) {
-      try {
-        await clearAllMutation.mutateAsync();
-        success('All leave requests cleared successfully.');
-        fetchLeaveRequests();
-      } catch (err) {
-        error('Failed to clear leave requests.');
-      }
-    }
-  };
+  // Clear-all leave requests UI removed — prefer targeted actions.
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -193,32 +182,17 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
               <p className="text-gray-600 dark:text-gray-400">Review and approve/reject employee leave requests</p>
             </div>
           
-          {leaveRequests.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              disabled={clearAllMutation.isPending}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
-            >
-              {clearAllMutation.isPending ? (
-                <LoadingSpinner size="sm" />
-              ) : (
-                <>
-                  <Trash2 size={16} />
-                  Clear All Requests
-                </>
-              )}
-            </button>
-          )}
+          {/* Clear all leave requests button removed per request */}
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex gap-2">
           {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
             <Button
               key={status}
               variant={filterStatus === status ? 'primary' : 'secondary'}
               onClick={() => setFilterStatus(status)}
-              className="capitalize"
+              className="capitalize w-full"
             >
               {status}
             </Button>
@@ -233,7 +207,18 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
           </Card>
         ) : (
           <div className="space-y-4">
-            {leaveRequests.map((request) => (
+            {leaveRequests.map((request) => {
+              const attachments = Array.isArray(request.attachments) ? request.attachments : [];
+              const srcs = attachments.map((a: any) => {
+                if (!a) return null;
+                if (typeof a === 'string') return a;
+                if (typeof a === 'object') return (a.url as string) || (a.file as any) || ((a.file && a.file.url) as string) || null;
+                return null;
+              }).filter(Boolean) as string[];
+
+              const unique = Array.from(new Set(srcs));
+
+              return (
               <Card key={request.id} className="p-0">
                 <div className="p-4 border-b dark:border-gray-700 flex justify-between items-start">
                   <div className="flex-1">
@@ -278,27 +263,29 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
                         <div className="text-sm text-gray-500 italic">No attachments provided</div>
                       ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {request.attachments!.map((url, idx) => {
-                            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                            const isPDF = /\.(pdf)$/i.test(url);
-                            const nameMatch = url.split('/').pop() || `file-${idx}`;
-                            return (
-                              <div 
-                                key={url} 
-                                onClick={() => {
-                                  if (isImage) {
-                                    setPreviewFile({ url, type: 'image' });
-                                  } else if (isPDF) {
-                                    setPreviewFile({ url, type: 'pdf' });
-                                  } else {
-                                    const link = document.createElement('a');
-                                    link.href = url;
-                                    link.download = nameMatch;
-                                    link.click();
-                                  }
-                                }}
-                                className="cursor-pointer border border-gray-200 dark:border-gray-800 rounded-xl p-3 bg-white dark:bg-gray-800/40 flex flex-col hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-md transition-all duration-200 group relative overflow-hidden"
-                              >
+                          {
+                            unique.map((url, idx) => {
+                              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                              const isPDF = /\.(pdf)$/i.test(url);
+                              const nameMatch = url.split('/').pop() || `file-${idx}`;
+
+                              return (
+                                <div 
+                                  key={url} 
+                                  onClick={() => {
+                                    if (isImage) {
+                                      setPreviewFile({ url, type: 'image' });
+                                    } else if (isPDF) {
+                                      setPreviewFile({ url, type: 'pdf' });
+                                    } else {
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = nameMatch;
+                                      link.click();
+                                    }
+                                  }}
+                                  className="cursor-pointer border border-gray-200 dark:border-gray-800 rounded-xl p-3 bg-white dark:bg-gray-800/40 flex flex-col hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-md transition-all duration-200 group relative overflow-hidden"
+                                >
                                 <div className="flex-1 mb-2.5 flex items-center justify-center overflow-hidden relative aspect-video rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-150 dark:border-gray-800">
                                   {isImage ? (
                                     <img src={url} alt={`attachment-${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -316,12 +303,10 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
                                     <span className="px-2.5 py-1.5 bg-white/95 dark:bg-gray-900/95 text-xs font-bold text-gray-800 dark:text-white rounded-lg shadow-md flex items-center gap-1.5 scale-95 group-hover:scale-100 transition-all duration-200">
                                       {isImage ? (
                                         <>
-                                          <Eye size={12} />
                                           View Image
                                         </>
                                       ) : isPDF ? (
                                         <>
-                                          <Eye size={12} />
                                           View PDF
                                         </>
                                       ) : (
@@ -340,8 +325,9 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
                                   {isImage ? 'Image File' : isPDF ? 'PDF Document' : `${nameMatch.split('.').pop()?.toUpperCase() || 'Binary'} File`}
                                 </div>
                               </div>
-                            );
-                          })}
+                              );
+                            })
+                          }
                         </div>
                       )}
                     </div>
@@ -395,7 +381,8 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
                   </div>
                 )}
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -408,38 +395,7 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
           onClose={() => setPreviewFile(null)}
         />
       )}
-      {/* MOBILE FLOATING CLEAR BUTTON */}
-      {leaveRequests.length > 0 && (
-        <button
-          onClick={handleClearAll}
-          disabled={clearAllMutation.isPending}
-          className="
-            md:hidden
-            fixed
-            bottom-28
-            right-4
-            z-50
-            w-12
-            h-12
-            rounded-full
-            bg-red-600
-            hover:bg-red-700
-            text-white
-            shadow-xl
-            flex
-            items-center
-            justify-center
-            disabled:opacity-50
-          "
-          aria-label="Clear All Requests"
-        >
-          {clearAllMutation.isPending ? (
-            <LoadingSpinner size="sm" />
-          ) : (
-            <Trash2 className="w-5 h-5" />
-          )}
-        </button>
-      )}
+      {/* Mobile floating clear button removed */}
     </div>
   );
 };

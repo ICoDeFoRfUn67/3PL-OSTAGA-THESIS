@@ -9,6 +9,8 @@ import { ChangePasswordModal } from '../../components/ChangePasswordModal';
 import apiClient from '@/api/apiService';
 import Sidebar from '@/components/Sidebar';
 import { useGetHubs } from '@/hooks/useQueries';
+import { EmployeeDocumentsCard } from '@/components/EmployeeDocumentsCard';
+import * as phil from 'phil-reg-prov-mun-brgy';
 
 interface EmployeeData {
   id: number;
@@ -22,8 +24,12 @@ interface EmployeeData {
   marital_status: string;
   email_address: string;
   phone_number: string;
-  current_address: string;
-  permanent_address: string;
+  complete_address: string;
+  region: string;
+  province: string;
+  city_municipality: string;
+  barangay: string;
+  zip_code: string;
   position: string;
   employment_type: string;
   status: string;
@@ -59,8 +65,6 @@ const FIELD_CONFIG = {
   date_of_birth: { label: 'Date of Birth', type: 'date' },
   email_address: { label: 'Email Address', type: 'email' },
   phone_number: { label: 'Phone Number', type: 'tel' },
-  current_address: { label: 'Current Address', type: 'textarea' },
-  permanent_address: { label: 'Permanent Address', type: 'textarea' },
   hired_date: { label: 'Hired Date', type: 'date' },
   jtp_code: { label: 'JTP Code', type: 'text' },
   employee_id: { label: 'Employee ID', type: 'text' },
@@ -147,7 +151,19 @@ export const EmployeeProfileDetailPage = () => {
   }, [id, error]);
 
   const handleFieldChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'region') {
+        next.province = ''; next.city_municipality = ''; next.barangay = '';
+      }
+      if (field === 'province') {
+        next.city_municipality = ''; next.barangay = '';
+      }
+      if (field === 'city_municipality') {
+        next.barangay = '';
+      }
+      return next;
+    });
   };
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +178,8 @@ export const EmployeeProfileDetailPage = () => {
       const editableFields = [
         'firstname', 'lastname', 'middle_initial', 'place_of_birth', 'date_of_birth',
         'gender', 'nationality', 'marital_status', 'email_address', 'phone_number',
-        'current_address', 'permanent_address', 'position', 'employment_type',
+        'complete_address', 'region', 'province', 'city_municipality', 'barangay', 'zip_code',
+        'position', 'employment_type',
         'status', 'role', 'hub', 'hired_date', 'jtp_code', 'employee_id',
         'emergency_contact_name', 'emergency_contact_phone', 'tin', 'sss',
         'philhealth', 'pagibig', 'can_login', 'can_edit_info'
@@ -170,9 +187,19 @@ export const EmployeeProfileDetailPage = () => {
 
       editableFields.forEach(key => {
         const value = (formData as any)[key];
+        // Include booleans (even false) and valid numbers; exclude null/undefined/empty strings
         if (value !== null && value !== undefined && value !== '') {
-          updateData[key] = value;
+          if (key === 'hub') {
+            // Ensure hub is sent as a valid integer — skip if NaN or 0
+            const numVal = Number(value);
+            if (!isNaN(numVal) && numVal > 0) updateData[key] = numVal;
+          } else {
+            updateData[key] = value;
+          }
         }
+        // Explicitly include false booleans (e.g. can_login: false)
+        if (key === 'can_login' && value === false) updateData[key] = false;
+        if (key === 'can_edit_info' && value === false) updateData[key] = false;
       });
 
       if (profileImage) {
@@ -205,10 +232,43 @@ export const EmployeeProfileDetailPage = () => {
       const updatedData = await apiClient.get(`/employees/${id}/`);
       setFormData(updatedData.data);
     } catch (err: any) {
-      error(err.response?.data?.message || 'Failed to save employee details');
-      console.error(err);
+      // Extract human-readable validation errors from DRF's field-keyed response
+      const errData = err.response?.data;
+      let errorMessage = 'Failed to save employee details';
+      if (errData) {
+        if (typeof errData === 'string') {
+          errorMessage = errData;
+        } else if (errData.detail) {
+          errorMessage = errData.detail;
+        } else if (errData.message) {
+          errorMessage = errData.message;
+        } else if (typeof errData === 'object') {
+          const fieldErrors = Object.entries(errData)
+            .map(([field, msgs]) => {
+              const msgStr = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${field}: ${msgStr}`;
+            })
+            .join(' | ');
+          if (fieldErrors) errorMessage = fieldErrors;
+        }
+      }
+      error(errorMessage);
+      console.error('Save error:', err.response?.data || err);
     }
   };
+
+
+  // Cascading location data using phil-reg-prov-mun-brgy
+  const regionsList = phil.regions.map(r => r.name);
+  const selectedRegionCode = phil.regions.find(r => r.name === formData.region)?.reg_code;
+  const availableProvinces = selectedRegionCode ? phil.getProvincesByRegion(selectedRegionCode).map(p => p.name) : [];
+  
+  const selectedProvinceCode = selectedRegionCode ? phil.getProvincesByRegion(selectedRegionCode).find(p => p.name === formData.province)?.prov_code : undefined;
+  const availableCities = selectedProvinceCode ? phil.getCityMunByProvince(selectedProvinceCode).map(c => c.name) : [];
+  
+  const selectedCityCode = selectedProvinceCode ? phil.getCityMunByProvince(selectedProvinceCode).find(c => c.name === formData.city_municipality)?.mun_code : undefined;
+  const availableBarangays = selectedCityCode ? phil.getBarangayByMun(selectedCityCode).map(b => b.name) : [];
+
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#0F1729]">
@@ -222,7 +282,7 @@ export const EmployeeProfileDetailPage = () => {
         {/* Top bar: Back + Action buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button variant="secondary" onClick={() => navigate(-1)} className="text-sm">
-            <ArrowLeft size={18} className="mr-2" /> Back
+            Back
           </Button>
 
           {!isLoading && !hasError && (
@@ -315,7 +375,9 @@ export const EmployeeProfileDetailPage = () => {
                       <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">#{formData.employee_id}</span>
                     </div>
                     <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-2">Company Role</p>
-                    <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{formData.role}</p>
+                    <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight mb-4">{formData.role}</p>
+                    <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-2">Assigned Hub</p>
+                    <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{formData.hub_name || 'N/A'}</p>
                   </div>
                 </Card>
 
@@ -366,9 +428,29 @@ export const EmployeeProfileDetailPage = () => {
                     <span className="w-6 h-0.5 bg-red-600 dark:bg-red-500"></span> Contact Details
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {['email_address', 'phone_number', 'current_address', 'permanent_address'].map(field => (
+                    {['email_address', 'phone_number'].map(field => (
                       <FormField key={field} field={field} value={(formData as any)[field] || ''} config={(FIELD_CONFIG as any)[field]} isEditing={isEditing} onChange={handleFieldChange} />
                     ))}
+                  </div>
+
+                  <div className="mt-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">Address Information</h3>
+                    {isEditing ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField field="complete_address" value={formData.complete_address || ''} config={{ label: 'Complete Address (Street/Block/Lot)', type: 'textarea' }} isEditing={true} onChange={handleFieldChange} />
+                        <FormField field="zip_code" value={formData.zip_code || ''} config={{ label: 'ZIP Code', type: 'text' }} isEditing={true} onChange={handleFieldChange} />
+                        <FormField field="region" value={formData.region || ''} config={{ label: 'Region', type: 'select', options: regionsList }} isEditing={true} onChange={handleFieldChange} />
+                        <FormField field="province" value={formData.province || ''} config={{ label: 'Province', type: 'select', options: availableProvinces, disabled: !formData.region }} isEditing={true} onChange={handleFieldChange} />
+                        <FormField field="city_municipality" value={formData.city_municipality || ''} config={{ label: 'City / Municipality', type: 'select', options: availableCities, disabled: !formData.province }} isEditing={true} onChange={handleFieldChange} />
+                        <FormField field="barangay" value={formData.barangay || ''} config={{ label: 'Barangay', type: 'select', options: availableBarangays, disabled: !formData.city_municipality }} isEditing={true} onChange={handleFieldChange} />
+                      </div>
+                    ) : (
+                      <div className="p-3 md:p-4 bg-gray-50 dark:bg-gray-800/70 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          {[formData.complete_address, formData.barangay, formData.city_municipality, formData.province, formData.region, formData.zip_code ? `ZIP: ${formData.zip_code}` : ''].filter(Boolean).join(', ') || '—'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </Card>
 
@@ -403,6 +485,11 @@ export const EmployeeProfileDetailPage = () => {
                     ))}
                   </div>
                 </Card>
+
+                <div className="mt-2">
+                  <EmployeeDocumentsCard employeeId={Number(id)} readOnly={!canEdit} />
+                </div>
+
               </div>
             </div>
         )}

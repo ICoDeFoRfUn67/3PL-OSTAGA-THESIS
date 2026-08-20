@@ -298,6 +298,11 @@ export const EmployeeLeaveHistoryModal = ({ isOpen, onClose }: Props) => {
                         ? 'Waiting for manager review'
                         : `Reviewed on ${new Date(selected.reviewed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                     </p>
+                    {selected.status === 'rejected' && selected.notes && (
+                      <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-105/20 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-400 font-medium leading-relaxed">
+                        <span className="font-bold">Rejection Reason:</span> &ldquo;{selected.notes}&rdquo;
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

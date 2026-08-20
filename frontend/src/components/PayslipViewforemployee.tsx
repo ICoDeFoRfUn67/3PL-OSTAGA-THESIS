@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/useToast';
-import { Download, ArrowLeft } from 'lucide-react';
+import { Download, ArrowLeft, ChevronRight } from 'lucide-react';
+import { useGetPayroll } from '@/hooks/useQueries';
+import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 
 type PayslipStatus = 'draft' | 'approved' | 'pending' | string;
 
@@ -79,6 +81,9 @@ type Payslip = {
   philhealth_no?: string;
   pagibig_no?: string;
   net_pay?: number | string;
+  // optional relation fields present in some API responses
+  employee?: number | string;
+  employee_id?: number | string;
 };
 
 interface PayslipDetailViewProps {
@@ -126,6 +131,16 @@ export const PayslipDetailModal = ({
 }: PayslipDetailViewProps) => {
   const { success, error } = useToast();
   const [localPayslip, setLocalPayslip] = useState<Payslip | null>(payslip);
+
+  // Fetch all payroll records to show history for the employee
+  const { data: allPayrollData } = useGetPayroll();
+  const allPayroll = normalizeApiResponse(allPayrollData) || [];
+  const history = (allPayroll || []).filter((p: any) => {
+    if (!payslip) return false;
+    const pEmpId = p.employee || p.employee_id;
+    const currentEmpId = payslip.employee || payslip.employee_id;
+    return pEmpId && currentEmpId && pEmpId === currentEmpId && p.id !== localPayslip?.id;
+  }).sort((a: any, b: any) => new Date(b.period_end || '').getTime() - new Date(a.period_end || '').getTime());
 
   useEffect(() => {
     setLocalPayslip(payslip);
@@ -255,7 +270,6 @@ export const PayslipDetailModal = ({
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-all border border-white/10"
                 title="Back to Payroll"
               >
-                <ArrowLeft size={14} />
                 Back
               </button>
             ) : <div />}
@@ -507,6 +521,70 @@ export const PayslipDetailModal = ({
             </div>
           </div>
         </div>
+
+        {/* Employee payslip history (semi-monthly) */}
+        {history && history.length > 0 && (
+          <div className="px-6 pb-6">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Payslip History (Semi-monthly)</h3>
+
+            {(() => {
+              const groups: Record<string, any[]> = {};
+              const labels: Record<string, string> = {};
+              history.forEach((p) => {
+                const d = new Date(p.period_start || p.period_end || 0);
+                const year = d.getFullYear();
+                const month = d.getMonth();
+                const day = d.getDate();
+                const half = day <= 15 ? 1 : 2;
+                const key = `${year}-${month}-${half}`;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(p);
+
+                if (!labels[key]) {
+                  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                  const monthName = monthNames[month] || (month+1).toString();
+                  if (half === 1) labels[key] = `${monthName} 1–15, ${year}`;
+                  else {
+                    const lastDay = new Date(year, month+1, 0).getDate();
+                    labels[key] = `${monthName} 16–${lastDay}, ${year}`;
+                  }
+                }
+              });
+
+              const sortedKeys = Object.keys(groups).sort((a,b) => {
+                const [ay, am, ah] = a.split('-').map(Number);
+                const [by, bm, bh] = b.split('-').map(Number);
+                if (ay !== by) return by - ay;
+                if (am !== bm) return bm - am;
+                return bh - ah;
+              });
+
+              return (
+                <div className="space-y-3">
+                  {sortedKeys.map((k) => (
+                    <div key={k} className="space-y-2">
+                      <div className="text-xs font-semibold text-gray-600">{labels[k]}</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                        {groups[k].map((prev) => (
+                          <div key={prev.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                            <div>
+                              <p className="text-xs font-bold text-gray-800">{formatPayslipPeriod(prev.period_start, prev.period_end)}</p>
+                              <p className="text-[10px] text-green-600 font-bold mt-1">Net Pay: ₱{toNumber(prev.net_pay || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            </div>
+                            <button onClick={() => setLocalPayslip(prev)} className="text-[10px] font-black uppercase tracking-widest text-red-650 hover:text-red-700 flex items-center gap-0.5">
+                              <span>View Record</span>
+                              <ChevronRight size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
       </div>
     </div>

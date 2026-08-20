@@ -43,7 +43,14 @@ export interface Employee {
   phone_number?: string;
   current_address?: string;
   permanent_address?: string;
-  
+  // Structured address
+  complete_address?: string;
+  region?: string;
+  province?: string;
+  city_municipality?: string;
+  barangay?: string;
+  zip_code?: string;
+
   // Employment
   position: string;
   employment_type: string;

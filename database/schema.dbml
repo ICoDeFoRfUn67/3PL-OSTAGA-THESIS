@@ -1,0 +1,265 @@
+// DBML generated from database/schema_postgres.sql
+
+Table auth_user {
+  id bigint [pk]
+  username varchar(150)
+}
+
+Table employees_hub {
+  id bigint [pk]
+  name varchar(100)
+  location varchar(100)
+  city varchar(100)
+  company varchar(100)
+  address varchar(200)
+  latitude double precision
+  longitude double precision
+  employee_count int
+  sss_rate numeric(5,2)
+  philhealth_rate numeric(5,2)
+  pagibig_rate numeric(5,2)
+}
+
+Table employees_employee {
+  id bigint [pk]
+  user_id bigint [unique]
+  firstname varchar(50)
+  lastname varchar(50)
+  middle_initial varchar(10)
+  place_of_birth varchar(100)
+  date_of_birth date
+  gender varchar(10)
+  nationality varchar(50)
+  marital_status varchar(20)
+  email_address varchar(254)
+  phone_number varchar(20)
+  current_address text
+  permanent_address text
+  position varchar(100)
+  employment_type varchar(20)
+  status varchar(20)
+  role varchar(20)
+  hub_id bigint
+  hired_date date
+  jtp_code varchar(50)
+  employee_id varchar(20) [unique]
+  emergency_contact_name varchar(100)
+  emergency_contact_phone varchar(20)
+  tin varchar(20)
+  sss varchar(20)
+  philhealth varchar(20)
+  pagibig varchar(20)
+  profile_image varchar(500)
+  can_login boolean
+  can_edit_info boolean
+  is_active boolean
+  created_at timestamptz
+  updated_at timestamptz
+  last_activity timestamptz
+}
+
+Table employees_hrpermission {
+  id bigint [pk]
+  hr_employee_id bigint [unique]
+  can_view_employees boolean
+  can_edit_employee_info boolean
+  can_edit_payslip boolean
+  can_delete_employees boolean
+  can_reset_password boolean
+  can_enable_employee_edit boolean
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table employees_employeedocument {
+  id bigint [pk]
+  employee_id bigint
+  file varchar(500)
+  file_name varchar(255)
+  file_size int
+  document_type varchar(20)
+  uploaded_at timestamptz
+}
+
+Table employees_attendance {
+  id bigint [pk]
+  employee_id bigint
+  date date
+  clock_in_time timestamptz
+  clock_out_time timestamptz
+  clock_in_image varchar(500)
+  clock_out_image varchar(500)
+  status varchar(20)
+  is_approved boolean
+  approved_by bigint
+  approved_at timestamptz
+  clock_in_latitude numeric(10,7)
+  clock_in_longitude numeric(10,7)
+  clock_out_latitude numeric(10,7)
+  clock_out_longitude numeric(10,7)
+}
+
+Table employees_editrequest {
+  id bigint [pk]
+  employee_id bigint
+  requested_data jsonb
+  uploaded_files varchar(500)
+  status varchar(20)
+  reviewed_by bigint
+  notes text
+  reviewed_at timestamptz
+  created_at timestamptz
+}
+
+Table employees_leaverequest {
+  id bigint [pk]
+  employee_id bigint
+  leave_type varchar(50)
+  start_date date
+  end_date date
+  reason text
+  status varchar(20)
+  reviewed_by bigint
+  notes text
+  reviewed_at timestamptz
+  created_at timestamptz
+}
+
+Table employees_leaveattachment {
+  id bigint [pk]
+  leave_request_id bigint
+  file varchar(500)
+  uploaded_at timestamptz
+}
+
+Table employees_payroll {
+  id bigint [pk]
+  employee_id bigint
+  period_start date
+  period_end date
+  total_hours numeric(10,2)
+  overtime_hours numeric(10,2)
+  lates int
+  absences int
+  standard_pay numeric(10,2)
+  basic_salary numeric(10,2)
+  overtime_pay numeric(10,2)
+  night_differential numeric(10,2)
+  ndot numeric(10,2)
+  rest_day numeric(10,2)
+  rest_day_ot numeric(10,2)
+  rest_day_nd numeric(10,2)
+  rest_day_ndot numeric(10,2)
+  special_holiday numeric(10,2)
+  special_holiday_ot numeric(10,2)
+  special_holiday_nd numeric(10,2)
+  special_holiday_ndot numeric(10,2)
+  legal_holiday numeric(10,2)
+  legal_holiday_ot numeric(10,2)
+  legal_holiday_nd numeric(10,2)
+  legal_holiday_ndot numeric(10,2)
+  legal_holiday_rd numeric(10,2)
+  legal_holiday_rdot numeric(10,2)
+  legal_holiday_rdnd numeric(10,2)
+  legal_holiday_rdndot numeric(10,2)
+  incentives numeric(10,2)
+  adjustment numeric(10,2)
+  gas numeric(10,2)
+  load numeric(10,2)
+  other_allowance numeric(10,2)
+  rewards_adjustments numeric(10,2)
+  kpi numeric(10,2)
+  allowances numeric(10,2)
+  late numeric(10,2)
+  id_deduction numeric(10,2)
+  uniform numeric(10,2)
+  insurance numeric(10,2)
+  surety_bond numeric(10,2)
+  convenience_fee numeric(10,2)
+  general_deduction numeric(10,2)
+  deduction_details jsonb
+  sss_deduction numeric(10,2)
+  philhealth_deduction numeric(10,2)
+  pagibig_deduction numeric(10,2)
+  sss_percent numeric(5,2)
+  philhealth_percent numeric(5,2)
+  pagibig_percent numeric(5,2)
+  net_pay numeric(10,2)
+  status varchar(20)
+  payslip_image varchar(500)
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table employees_livelocation {
+  id bigint [pk]
+  employee_id bigint
+  latitude double precision
+  longitude double precision
+  timestamp timestamptz
+}
+
+Table employees_activitylog {
+  id bigint [pk]
+  user_id bigint
+  employee_id bigint
+  role varchar(20)
+  action varchar(50)
+  details text
+  ip_address inet
+  user_agent text
+  created_at timestamptz
+}
+
+Table employees_securityalert {
+  id bigint [pk]
+  employee_id bigint
+  alert_type varchar(30)
+  severity varchar(10)
+  message text
+  details jsonb
+  is_resolved boolean
+  resolved_by bigint
+  resolved_at timestamptz
+  created_at timestamptz
+}
+
+Table employees_savedimage {
+  id bigint [pk]
+  employee_id bigint
+  image varchar(500)
+  image_type varchar(20)
+  image_data bytea
+  content_type varchar(100)
+  original_filename varchar(255)
+  edit_request_id bigint
+  attendance_id bigint
+  leave_attachment_id bigint
+  is_active boolean
+  is_approved boolean
+  description text
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Ref: employees_employee.user_id > auth_user.id
+Ref: employees_employee.hub_id > employees_hub.id
+Ref: employees_hrpermission.hr_employee_id > employees_employee.id
+Ref: employees_employeedocument.employee_id > employees_employee.id
+Ref: employees_attendance.employee_id > employees_employee.id
+Ref: employees_attendance.approved_by > auth_user.id
+Ref: employees_editrequest.employee_id > employees_employee.id
+Ref: employees_editrequest.reviewed_by > auth_user.id
+Ref: employees_leaverequest.employee_id > employees_employee.id
+Ref: employees_leaverequest.reviewed_by > auth_user.id
+Ref: employees_leaveattachment.leave_request_id > employees_leaverequest.id
+Ref: employees_payroll.employee_id > employees_employee.id
+Ref: employees_livelocation.employee_id > employees_employee.id
+Ref: employees_activitylog.user_id > auth_user.id
+Ref: employees_activitylog.employee_id > employees_employee.id
+Ref: employees_securityalert.employee_id > employees_employee.id
+Ref: employees_securityalert.resolved_by > auth_user.id
+Ref: employees_savedimage.employee_id > employees_employee.id
+Ref: employees_savedimage.edit_request_id > employees_editrequest.id
+Ref: employees_savedimage.attendance_id > employees_attendance.id
+Ref: employees_savedimage.leave_attachment_id > employees_leaveattachment.id

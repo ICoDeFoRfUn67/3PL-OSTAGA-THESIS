@@ -89,7 +89,12 @@ export const authAPI = {
 ========================= */
 export const employeeAPI = {
   getEmployees: async (params?: Record<string, unknown>) => {
-    const response = await apiClient.get(API_ENDPOINTS.EMPLOYEES, { params });
+    const cleanParams = params
+      ? Object.fromEntries(
+          Object.entries(params).filter(([, value]) => value !== null && value !== undefined && value !== '')
+        )
+      : undefined;
+    const response = await apiClient.get(API_ENDPOINTS.EMPLOYEES, { params: cleanParams });
     return response.data;
   },
 
@@ -186,6 +191,21 @@ export const attendanceAPI = {
 
   clockOut: async (data: FormData) => {
     const response = await apiClient.post(API_ENDPOINTS.ATTENDANCE_CLOCK_OUT, data);
+    return response.data;
+  },
+
+  getAttendanceSummary: async (params?: Record<string, unknown>) => {
+    const response = await apiClient.get(API_ENDPOINTS.ATTENDANCE_AGGREGATE, { params });
+    return response.data;
+  },
+
+  approveAttendance: async (id: number) => {
+    const response = await apiClient.post(`/attendance/${id}/approve/`);
+    return response.data;
+  },
+
+  disapproveAttendance: async (id: number) => {
+    const response = await apiClient.post(`/attendance/${id}/disapprove/`);
     return response.data;
   },
 };
@@ -373,6 +393,21 @@ export const accountAPI = {
 
   resetPassword: async (employeeId: number) => {
     const response = await apiClient.post(API_ENDPOINTS.RESET_PASSWORD(employeeId));
+    return response.data;
+  },
+};
+
+/* =========================
+   DASHBOARD API
+========================= */
+export const dashboardAPI = {
+  getAnalytics: async (params?: Record<string, unknown>) => {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD_ANALYTICS, { params });
+    return response.data;
+  },
+
+  getTopEmployeesByHub: async (params?: Record<string, unknown>) => {
+    const response = await apiClient.get(API_ENDPOINTS.TOP_EMPLOYEES_BY_HUB, { params });
     return response.data;
   },
 };

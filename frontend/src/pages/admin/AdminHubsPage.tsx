@@ -360,10 +360,12 @@ const AddHubModal = ({
     try {
       await createHub.mutateAsync({
         name: formData.name,
-        city: formData.city || undefined,
-        address: formData.address || undefined,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
+        location: formData.city || formData.name,
+        city: formData.city || 'Quezon',
+        company: 'J&T Express',
+        address: formData.address || formData.city || formData.name,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : 14.5995,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : 120.9842,
       });
       toast.success('Hub created successfully');
       setFormData({ ...emptyFormData });
@@ -513,10 +515,12 @@ const EditHubModal = ({
         id: hub.id,
         data: {
           name: formData.name,
-          city: formData.city || undefined,
-          address: formData.address || undefined,
-          latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-          longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
+          location: formData.city || formData.name,
+          city: formData.city || 'Quezon',
+          company: 'J&T Express',
+          address: formData.address || formData.city || formData.name,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : 14.5995,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : 120.9842,
         },
       });
       toast.success('Hub updated successfully');
@@ -828,15 +832,17 @@ const HubCard = ({
 // ======================================
 
 export const AdminHubsPage = () => {
-  const { canViewEmployees } = useAuth();
+  const { canViewEmployees, isHR, employee } = useAuth();
   const { isDarkMode } = useTheme();
   // `navigate` declared earlier but unused; remove to avoid lint "assigned but never used"
 
   const [searchTerm, setSearchTerm] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [hubsCurrentPage, setHubsCurrentPage] = useState(1);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const itemsPerPage = 8;
+  const hubsPerPage = 12;
   
 
   // Keep Leaflet map in sync when container is resized (fixes blank spaces)
@@ -909,7 +915,7 @@ export const AdminHubsPage = () => {
 
   const getHubCoordinates = useCallback(
     (hub: Hub): [number, number] => {
-      if (hub.latitude && hub.longitude) return [hub.latitude, hub.longitude];
+      if (hub.latitude && hub.longitude) return [Number(hub.latitude), Number(hub.longitude)];
       const city = hub.city?.toLowerCase() ?? '';
       return cityCoords[city] || [14.5995, 120.9842];
     },
@@ -976,14 +982,34 @@ export const AdminHubsPage = () => {
   // FILTER HUBS
   // ======================================
 
+  const managedHubIds = useMemo(() => {
+    if (!isHR || !employee?.hr_permissions?.managed_hubs) return null;
+    return employee.hr_permissions.managed_hubs.map((h: any) => typeof h === 'number' ? h : h.id);
+  }, [isHR, employee]);
+
   const filteredHubs = useMemo(() => {
-    return hubs.filter(
+    let allowedHubs = hubs;
+    if (isHR && managedHubIds) {
+      allowedHubs = allowedHubs.filter((hub: Hub) => managedHubIds.includes(hub.id));
+    }
+    return allowedHubs.filter(
       (hub: Hub) =>
         hub.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         hub.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         hub.city?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [hubs, searchTerm]);
+  }, [hubs, searchTerm, isHR, managedHubIds]);
+
+  // Reset pagination when search changes
+  useEffect(() => {
+    setHubsCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalHubsPages = Math.ceil(filteredHubs.length / hubsPerPage);
+  const paginatedHubs = useMemo(() => {
+    const start = (hubsCurrentPage - 1) * hubsPerPage;
+    return filteredHubs.slice(start, start + hubsPerPage);
+  }, [filteredHubs, hubsCurrentPage]);
 
   const getHubEmployeeCount = useCallback(
     (hubId: number) => allEmployees.filter((emp: Employee) => emp.hub === hubId).length,
@@ -1531,10 +1557,10 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
           {/* ========== HUB CARDS GRID ========== */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                All Hubs
-                <span className="text-sm font-normal text-gray-400 dark:text-gray-500 ml-2">
-                  ({filteredHubs.length})
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                {isHR ? 'Assigned Hubs' : 'All Hubs'}
+                <span className="inline-flex items-center justify-center h-6 px-2.5 rounded-full bg-red-50 dark:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400">
+                  {filteredHubs.length} total
                 </span>
               </h2>
             </div>
@@ -1549,7 +1575,7 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
               gap-4
               ">
                 <AnimatePresence mode="popLayout">
-                  {filteredHubs.map((hub) => (
+                  {paginatedHubs.map((hub) => (
                     <HubCard
                       key={hub.id}
                       hub={hub}
@@ -1584,6 +1610,35 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
                     Add First Hub
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Hubs Pagination */}
+            {filteredHubs.length > 0 && totalHubsPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-8 pb-4">
+                <button
+                  onClick={() => setHubsCurrentPage(Math.max(1, hubsCurrentPage - 1))}
+                  disabled={hubsCurrentPage === 1}
+                  title="Previous page"
+                  className="h-10 w-10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <span className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/[0.06] text-gray-900 dark:text-white">
+                    {hubsCurrentPage}
+                  </span>
+                  <span>of</span>
+                  <span>{totalHubsPages}</span>
+                </div>
+                <button
+                  onClick={() => setHubsCurrentPage(Math.min(totalHubsPages, hubsCurrentPage + 1))}
+                  disabled={hubsCurrentPage === totalHubsPages || totalHubsPages === 0}
+                  title="Next page"
+                  className="h-10 w-10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                >
+                  <ChevronRight size={20} />
+                </button>
               </div>
             )}
           </div>

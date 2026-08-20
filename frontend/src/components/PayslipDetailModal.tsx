@@ -174,8 +174,9 @@ export const PayslipDetailModal = ({
   onSave,
 }: PayslipDetailModalProps) => {
   const { success, error } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isHR } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [localPayslip, setLocalPayslip] = useState<Payslip | null>(payslip);
   const [periodStart, setPeriodStart] = useState<string>('');
@@ -483,6 +484,26 @@ export const PayslipDetailModal = ({
       error(axiosErr?.response?.data?.detail || axiosErr?.message || 'Failed to save payroll');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleApproveToggle = async (newStatus: 'approved' | 'pending' | 'draft') => {
+    if (!localPayslip?.id) return;
+    try {
+      setIsApproving(true);
+      const updated = await updatePayrollMutation.mutateAsync({ id: localPayslip.id, data: { status: newStatus } });
+      setLocalPayslip({ ...localPayslip, status: newStatus });
+      const statusMsg: Record<string, string> = {
+        approved: 'Payslip approved successfully',
+        pending: 'Payslip set to Pending',
+        draft: 'Payslip set to Draft',
+      };
+      success(statusMsg[newStatus] || 'Payslip status updated');
+      onSave?.(updated);
+    } catch (err: any) {
+      error(err?.response?.data?.detail || 'Failed to update payslip status');
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -798,7 +819,7 @@ export const PayslipDetailModal = ({
   if (!payslip && !localPayslip) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="3xl">
+    <Modal isOpen={isOpen} onClose={onClose} onBack={onClose} title="Employee Payslip" size="3xl" hideCloseButton={true}>
       <div className="space-y-6">
         
         {/* HEADER AREA */}
@@ -1110,27 +1131,15 @@ export const PayslipDetailModal = ({
           <div className="flex gap-4 items-center">
             <div>
               <span className="text-[10px] text-blue-200 uppercase font-black block text-right">Status</span>
-              {isEditMode ? (
-                <select
-                  title="Status"
-                  value={formData.status}
-                  onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
-                  className="input-field py-1 px-3 text-xs bg-white text-gray-800 rounded-xl mt-1 border-0 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm font-semibold"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="pending">Pending</option>
-                  {isAdmin && <option value="approved">Approved</option>}
-                </select>
-              ) : (
-                <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full mt-1 uppercase tracking-wider border shadow-sm ${localPayslip?.status === 'approved'
-                    ? 'bg-green-500 border-green-400 text-white'
-                    : localPayslip?.status === 'pending'
-                    ? 'bg-amber-500 border-amber-400 text-white'
-                    : 'bg-yellow-500 border-yellow-400 text-white'
-                  }`}>
-                  {localPayslip?.status || 'Draft'}
-                </span>
-              )}
+              <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full mt-1 uppercase tracking-wider border shadow-sm ${
+                localPayslip?.status === 'approved'
+                  ? 'bg-green-500 border-green-400 text-white'
+                  : localPayslip?.status === 'pending'
+                  ? 'bg-amber-500 border-amber-400 text-white'
+                  : 'bg-yellow-500 border-yellow-400 text-white'
+              }`}>
+                {localPayslip?.status || 'Draft'}
+              </span>
             </div>
           </div>
         </div>
@@ -1157,43 +1166,57 @@ export const PayslipDetailModal = ({
             </>
           ) : (
             <>
-              <button
-                onClick={() => setIsEditMode(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md text-sm"
-              >
-                Edit Payroll
-              </button>
+              {/* Approve / Revert - Admin only */}
+              {isAdmin && localPayslip?.status !== 'approved' && (
+                <button
+                  onClick={() => handleApproveToggle('approved')}
+                  disabled={isApproving}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md text-sm flex items-center gap-2"
+                >
+                  {isApproving ? 'Approving...' : '✓ Approve Payslip'}
+                </button>
+              )}
+              {isAdmin && localPayslip?.status === 'approved' && (
+                <button
+                  onClick={() => handleApproveToggle('pending')}
+                  disabled={isApproving}
+                  className="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md text-sm"
+                >
+                  {isApproving ? 'Reverting...' : '↺ Revert Approval'}
+                </button>
+              )}
+              {/* HR status controls - Set to Pending or Draft */}
+              {isHR && !isAdmin && localPayslip?.status !== 'pending' && localPayslip?.status !== 'approved' && (
+                <button
+                  onClick={() => handleApproveToggle('pending')}
+                  disabled={isApproving}
+                  className="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md text-sm flex items-center gap-2"
+                >
+                  {isApproving ? 'Updating...' : '⏳ Set to Pending'}
+                </button>
+              )}
+              {isHR && !isAdmin && localPayslip?.status === 'pending' && (
+                <button
+                  onClick={() => handleApproveToggle('draft')}
+                  disabled={isApproving}
+                  className="bg-slate-500 hover:bg-slate-600 disabled:bg-slate-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md text-sm flex items-center gap-2"
+                >
+                  {isApproving ? 'Updating...' : '✏️ Set to Draft'}
+                </button>
+              )}
+              {/* Edit button - hidden for HR when approved */}
+              {!(isHR && !isAdmin && localPayslip?.status === 'approved') && (
+                <button
+                  onClick={() => setIsEditMode(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md text-sm"
+                >
+                  Edit Payslip
+                </button>
+              )}
             </>
           )}
         </div>
 
-        {/* HISTORY SECTION */}
-        {history.length > 0 && (
-          <div className="pt-6 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900/10 rounded-b-2xl">
-            <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Past Payroll History</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {history.map((prev) => (
-                <div key={prev.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900/60 rounded-2xl border border-gray-200 dark:border-slate-850 hover:border-red-400 dark:hover:border-red-900 transition-all shadow-sm">
-                  <div>
-                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                      {formatPayslipPeriod(prev.period_start, prev.period_end)}
-                    </p>
-                    <p className="text-[10px] text-green-600 font-bold mt-1">
-                      Net Pay: ₱{toNumber(prev.net_pay || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setLocalPayslip(prev)}
-                    className="text-[10px] font-black uppercase tracking-widest text-red-650 hover:text-red-700 flex items-center gap-0.5"
-                  >
-                    <span>View Record</span>
-                    <ChevronRight size={10} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </Modal>
   );

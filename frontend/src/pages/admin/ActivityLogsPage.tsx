@@ -138,22 +138,6 @@ export const ActivityLogsPage = () => {
           </p>
         </div>
         
-        {activityLogs.length > 0 && (
-          <button
-            onClick={handleClearAll}
-            disabled={clearAllMutation.isPending}
-            className="hidden md:flex ml-auto items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
-          >
-            {clearAllMutation.isPending ? (
-              <LoadingSpinner size="sm" />
-            ) : (
-              <>
-                <Trash2 size={16} />
-                Clear All Logs
-              </>
-            )}
-          </button>
-        )}
       </div>
 
       {/* Stats */}
@@ -390,38 +374,7 @@ export const ActivityLogsPage = () => {
       )}
        </div>
 
-      {/* MOBILE FLOATING CLEAR BUTTON */}
-      {activityLogs.length > 0 && (
-        <button
-          onClick={handleClearAll}
-          disabled={clearAllMutation.isPending}
-          className="
-            md:hidden
-            fixed
-            bottom-28
-            right-4
-            z-50
-            w-12
-            h-12
-            rounded-full
-            bg-red-600
-            hover:bg-red-700
-            text-white
-            shadow-xl
-            flex
-            items-center
-            justify-center
-            disabled:opacity-50
-          "
-          aria-label="Clear All Logs"
-        >
-          {clearAllMutation.isPending ? (
-            <LoadingSpinner size="sm" />
-          ) : (
-            <Trash2 className="w-5 h-5" />
-          )}
-        </button>
-      )}
+
       </div>
     </div>
   );

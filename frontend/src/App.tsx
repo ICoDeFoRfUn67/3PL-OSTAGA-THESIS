@@ -1,44 +1,49 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { employeeAPI } from '@/api/apiService';
 
-
-
-// Pages
-import { LoginScreen } from '@/pages/auth/LoginScreen';
-import { AdminDashboard } from '@/pages/admin/AdminDashboard';
-import { AdminEmployeesPage } from '@/pages/admin/AdminEmployeesPage';
-import { AdminHubsPage } from '@/pages/admin/AdminHubsPage';
-import { AccessControlPage } from '@/pages/admin/AccessControlPage';
-import { AttendancePage } from '@/pages/admin/AttendancePage';
-import { PayslipPage } from '@/pages/admin/PayslipPage';
-import { ActivityLogsPage } from '@/pages/admin/ActivityLogsPage';
-import { SecurityAlertsPage } from '@/pages/admin/SecurityAlertsPage';
-import HrDashboardPage from '@/pages/hr/HrDashboardPage';
-import HrEmployeesPage from '@/pages/hr/HrEmployeesPage';
-import HrEmployeeRequestPage from '@/pages/hr/HrEmployeeRequestPage';
-import HrEditRequestPage from '@/pages/hr/HrEditRequestPage';
-import HrLeaveRequestPage from '@/pages/hr/HrLeaveRequestPage';
-import HrHubsPage from '@/pages/hr/HrHubsPage';
-import HrAccessControlPage from '@/pages/hr/HrAccessControlPage';
-import HrAttendancePage from '@/pages/hr/HrAttendancePage';
-import HrPayslipPage from '@/pages/hr/HrPayslipPage';
-import HrActivityLogsPage from '@/pages/hr/HrActivityLogsPage';
-import HrSecurityAlertsPage from '@/pages/hr/HrSecurityAlertsPage';
-import { EmployeeDashboard } from '@/pages/employee/EmployeeDashboard';
-import { AttendanceHistoryScreen } from '@/pages/employee/AttendanceHistoryScreen';
-import { EmployeeProfileDetailPage } from '@/pages/employee/EmployeeProfileDetailPage';
-import { EditRequestsPanel } from '@/components/EditRequestsManagementPanel';
-import { LeaveRequestsPanel } from '@/components/LeaveRequestsPanel';
-import { EmployeeLeaveRequestForm } from '@/components/EmployeeLeaveRequestForm';
-
 // Components
-import { Layout } from '@/components/common';
+import { Layout, LoadingSpinner } from '@/components/common';
 import { ThemeProvider } from '@/context/ThemeContext';
 import BottomNavigation from '@/components/BottomNavigation';
+
+// Styles
+import '@/styles/globals.css';
+
+// Lazy load Pages to dramatically improve initial page load speed
+const LoginScreen = React.lazy(() => import('@/pages/auth/LoginScreen').then(m => ({ default: m.LoginScreen })));
+const AdminDashboard = React.lazy(() => import('@/pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminEmployeesPage = React.lazy(() => import('@/pages/admin/AdminEmployeesPage').then(m => ({ default: m.AdminEmployeesPage })));
+const AdminHubsPage = React.lazy(() => import('@/pages/admin/AdminHubsPage').then(m => ({ default: m.AdminHubsPage })));
+const AccessControlPage = React.lazy(() => import('@/pages/admin/AccessControlPage').then(m => ({ default: m.AccessControlPage })));
+const AttendancePage = React.lazy(() => import('@/pages/admin/AttendancePage').then(m => ({ default: m.AttendancePage })));
+const AdminEmployeeAttendanceHistoryPage = React.lazy(() => import('@/pages/admin/AdminEmployeeAttendanceHistoryPage').then(m => ({ default: m.AdminEmployeeAttendanceHistoryPage })));
+const PayslipPage = React.lazy(() => import('@/pages/admin/PayslipPage').then(m => ({ default: m.PayslipPage })));
+const AdminEmployeePayslipHistoryPage = React.lazy(() => import('@/pages/admin/AdminEmployeePayslipHistoryPage').then(m => ({ default: m.AdminEmployeePayslipHistoryPage })));
+const ActivityLogsPage = React.lazy(() => import('@/pages/admin/ActivityLogsPage').then(m => ({ default: m.ActivityLogsPage })));
+const SecurityAlertsPage = React.lazy(() => import('@/pages/admin/SecurityAlertsPage').then(m => ({ default: m.SecurityAlertsPage })));
+
+const HrDashboardPage = React.lazy(() => import('@/pages/hr/HrDashboardPage'));
+const HrEmployeesPage = React.lazy(() => import('@/pages/hr/HrEmployeesPage'));
+const HrEmployeeRequestPage = React.lazy(() => import('@/pages/hr/HrEmployeeRequestPage'));
+const HrEditRequestPage = React.lazy(() => import('@/pages/hr/HrEditRequestPage'));
+const HrLeaveRequestPage = React.lazy(() => import('@/pages/hr/HrLeaveRequestPage'));
+const HrHubsPage = React.lazy(() => import('@/pages/hr/HrHubsPage'));
+const HrAccessControlPage = React.lazy(() => import('@/pages/hr/HrAccessControlPage'));
+const HrAttendancePage = React.lazy(() => import('@/pages/hr/HrAttendancePage'));
+const HrPayslipPage = React.lazy(() => import('@/pages/hr/HrPayslipPage'));
+const HrActivityLogsPage = React.lazy(() => import('@/pages/hr/HrActivityLogsPage'));
+const HrSecurityAlertsPage = React.lazy(() => import('@/pages/hr/HrSecurityAlertsPage'));
+
+const EmployeeDashboard = React.lazy(() => import('@/pages/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
+const AttendanceHistoryScreen = React.lazy(() => import('@/pages/employee/AttendanceHistoryScreen').then(m => ({ default: m.AttendanceHistoryScreen })));
+const EmployeeProfileDetailPage = React.lazy(() => import('@/pages/employee/EmployeeProfileDetailPage').then(m => ({ default: m.EmployeeProfileDetailPage })));
+const EditRequestsPanel = React.lazy(() => import('@/components/EditRequestsManagementPanel').then(m => ({ default: m.EditRequestsPanel })));
+const LeaveRequestsPanel = React.lazy(() => import('@/components/LeaveRequestsPanel').then(m => ({ default: m.LeaveRequestsPanel })));
+const EmployeeLeaveRequestForm = React.lazy(() => import('@/components/EmployeeLeaveRequestForm').then(m => ({ default: m.EmployeeLeaveRequestForm })));
 
 // Styles
 import '@/styles/globals.css';
@@ -114,6 +119,7 @@ function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
   return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900"><LoadingSpinner /></div>}>
     <Routes>
       {/* Auth Routes */}
       <Route
@@ -134,7 +140,9 @@ function AppRoutes() {
                 <Route path="hubs" element={<AdminHubsPage />} />
                 <Route path="access-control" element={<AccessControlPage />} />
                 <Route path="attendance" element={<AttendancePage />} />
+                <Route path="attendance/employee/:id" element={<AdminEmployeeAttendanceHistoryPage />} />
                 <Route path="payslip" element={<PayslipPage />} />
+                <Route path="payslip/employee/:id" element={<AdminEmployeePayslipHistoryPage />} />
                 <Route path="edit-requests" element={<EditRequestsPanel />} />
                 <Route path="leave-requests" element={<LeaveRequestsPanel />} />
                 <Route path="activity-logs" element={<ActivityLogsPage />} />
@@ -159,7 +167,9 @@ function AppRoutes() {
                 <Route path="hubs" element={<HrHubsPage />} />
                 <Route path="access-control" element={<HrAccessControlPage />} />
                 <Route path="attendance" element={<HrAttendancePage />} />
+                <Route path="attendance/employee/:id" element={<AdminEmployeeAttendanceHistoryPage />} />
                 <Route path="payslip" element={<HrPayslipPage />} />
+                <Route path="payslip/employee/:id" element={<AdminEmployeePayslipHistoryPage />} />
                 <Route path="leave-requests" element={<HrLeaveRequestPage />} />
                 <Route path="activity-logs" element={<HrActivityLogsPage />} />
                 <Route path="security-alerts" element={<HrSecurityAlertsPage />} />
@@ -196,11 +206,12 @@ function AppRoutes() {
       {/* 404 */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 
 function App() {
-  // Heartbeat pinger: mark authenticated users as active every 30s
+  // Heartbeat pinger: mark authenticated users as active every 15s
   const Heartbeat = () => {
     const { isAuthenticated } = useAuth();
 
@@ -216,7 +227,7 @@ function App() {
       };
 
       send();
-      const id = setInterval(send, 30000);
+      const id = setInterval(send, 15000);
       return () => clearInterval(id);
     }, [isAuthenticated]);
 
@@ -226,7 +237,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Heartbeat />
           <AppRoutes />
           {/* Toast Notifications */}

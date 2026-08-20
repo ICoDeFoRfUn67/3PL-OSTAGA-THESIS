@@ -29,11 +29,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # production deployments.
 SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-insecure-please-set-SECRET_KEY-2026-06-01-CHANGE_ME-xxxxxxxxxxxx'
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes')
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True

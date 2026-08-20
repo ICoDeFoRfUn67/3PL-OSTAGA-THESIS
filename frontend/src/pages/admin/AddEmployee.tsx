@@ -1,18 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  User, Lock, Eye, EyeOff, Phone, Mail, MapPin, Hash,
+  ChevronLeft, ArrowRight, CheckCircle2, Building2, Calendar,
+  CreditCard, ShieldCheck, AlertCircle, Search, Info
+} from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/apiService';
 import { API_ENDPOINTS, QUERY_KEYS } from '@/constants/api';
-
+import { useGetHubs } from '@/hooks/useQueries';
+import { useAuth } from '@/hooks';
+import { normalizeApiResponse } from '@/utils/apiResponseHandler';
+import * as phil from 'phil-reg-prov-mun-brgy';
 type RoleType = string;
 type EmploymentType = string;
-type StatusType = string;
 type GenderType = string;
-type MaritalStatusType = string;
 
-type HubOption = {
-  id: number;
-  name: string;
-};
+type HubOption = { id: number; name: string };
 
 interface AddEmployeeProps {
   onCancel?: () => void;
@@ -30,14 +33,18 @@ interface EmployeeFormState {
   dateOfBirth: string;
   gender: GenderType;
   nationality: string;
-  maritalStatus: MaritalStatusType;
+  maritalStatus: string;
   email: string;
   phone: string;
-  currentAddress: string;
-  permanentAddress: string;
+  completeAddress: string;
+  region: string;
+  province: string;
+  cityMunicipality: string;
+  barangay: string;
+  zipCode: string;
   position: string;
   employmentType: EmploymentType;
-  status: StatusType;
+  status: string;
   role: RoleType;
   hub: string;
   hireDate: string;
@@ -53,6 +60,8 @@ interface EmployeeFormState {
   canLogin: boolean;
   isActive: boolean;
   createdAt: string;
+  accessType: 'Single' | 'Multiple';
+  managedHubs: number[];
 }
 
 const initialFormState: EmployeeFormState = {
@@ -63,15 +72,19 @@ const initialFormState: EmployeeFormState = {
   lastName: '',
   placeOfBirth: '',
   dateOfBirth: '',
-  gender: 'Male',
+  gender: '',
   nationality: '',
   maritalStatus: 'Single',
   email: '',
   phone: '',
-  currentAddress: '',
-  permanentAddress: '',
+  completeAddress: '',
+  region: '',
+  province: '',
+  cityMunicipality: '',
+  barangay: '',
+  zipCode: '',
   position: '',
-  employmentType: 'Full Time',
+  employmentType: '',
   status: 'Active',
   role: 'Employee',
   hub: '',
@@ -88,100 +101,293 @@ const initialFormState: EmployeeFormState = {
   canLogin: true,
   isActive: true,
   createdAt: new Date().toISOString(),
+  accessType: 'Single',
+  managedHubs: [],
 };
 
+/* ─── field style constants ─── */
+const inputCls =
+  'mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-800 outline-none transition ' +
+  'placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ' +
+  'dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-500/20';
+
+const iconInputCls =
+  'mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition ' +
+  'placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ' +
+  'dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-500/20';
+
+const selectCls =
+  'mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-800 outline-none transition ' +
+  'focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ' +
+  'dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20';
+
+const iconSelectCls =
+  'mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition ' +
+  'focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ' +
+  'dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20';
+
+const labelCls = 'block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400';
+const redStar = <span className="text-red-500 ml-0.5">*</span>;
+
+function FieldIcon({ icon: Icon }: { icon: React.ElementType }) {
+  return (
+    <Icon
+      size={14}
+      className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+    />
+  );
+}
+
+/* ─── Step indicator ─── */
+const STEPS = ['Account', 'Personal & Contact', 'Employment & Compliance'];
+
+function StepIndicator({ step }: { step: number }) {
+  return (
+    <div className="flex items-center w-full mb-4">
+      {STEPS.map((label, i) => {
+        const done = i < step;
+        const active = i === step;
+        return (
+          <div key={label} className="flex flex-1 items-center min-w-0">
+            <div className="flex flex-col items-center shrink-0">
+              <div
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all
+                  ${done ? 'bg-blue-600 text-white' : active ? 'bg-blue-600 text-white shadow shadow-blue-200' : 'border-2 border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500'}`}
+              >
+                {done ? <CheckCircle2 size={14} /> : i + 1}
+              </div>
+              <span
+                className={`mt-0.5 text-[9px] font-bold whitespace-nowrap ${active ? 'text-blue-600' : done ? 'text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
+              >
+                {label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`h-0.5 flex-1 mx-1.5 mb-3 rounded transition-all ${done ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════ */
 export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) => {
   const queryClient = useQueryClient();
+  const { user: currentUser, employee: currentEmployee } = useAuth();
+  const currentUserRole = currentEmployee?.role || 'Admin';
+
   const [formState, setFormState] = useState<EmployeeFormState>(initialFormState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [step, setStep] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [hubSearch, setHubSearch] = useState('');
 
-  const steps = ['Account', 'Personal', 'Employment'];
-  const isLastStep = step === steps.length - 1;
-
-  const goNext = () => setStep((prev) => Math.min(prev + 1, steps.length - 1));
-  const goBack = () => setStep((prev) => Math.max(prev - 1, 0));
-
-  const isStepValid = (currentStep: number) => {
-    if (currentStep === 0) {
-      return (
-        Boolean(formState.password) &&
-        Boolean(formState.confirmPassword) &&
-        formState.password === formState.confirmPassword
-      );
-    }
-    if (currentStep === 1) {
-      return Boolean(formState.firstName && formState.lastName && formState.email);
-    }
-    if (currentStep === 2) {
-      return Boolean(formState.position);
-    }
-    return true;
-  };
-
-  const canProceed = !loading && isStepValid(step);
-
-  // dynamic options fetched from backend (falls back to defaults)
+  // Dynamic options
   const [roles, setRoles] = useState<string[]>(['Employee', 'HR', 'Admin']);
-  const [employmentTypes, setEmploymentTypes] = useState<string[]>(['Full-time', 'Full Time', 'Part Time', 'Contract', 'Intern', 'OCW']);
-  const [statuses, setStatuses] = useState<string[]>(['Active', 'Resign', 'AWOL', 'Blacklist']);
-  const [genders] = useState<string[]>(['Male', 'Female', 'Other']);
-  const [positions, setPositions] = useState<string[]>([]);
-  const [hubs, setHubs] = useState<HubOption[]>([]);
+  const [employmentTypes, setEmploymentTypes] = useState<string[]>(['Full-time', 'OCW']);
+  const [positions, setPositions] = useState<string[]>(['Admin', 'HR', 'Rider', 'Sorter']);
+  const { data: hubsData } = useGetHubs();
+  const allHubs = useMemo(() => normalizeApiResponse(hubsData) as HubOption[], [hubsData]);
+  const genders = ['Male', 'Female', 'Other'];
+
+  const isAdminUser = currentUserRole !== 'HR';
+  const isCreatingHrRole = formState.role === 'HR' && isAdminUser;
+
+  const hrManagedHubIds = useMemo(() => {
+    if (currentUserRole !== 'HR') return null;
+    const perms = (currentEmployee as { hr_permissions?: { managed_hubs?: Array<number | { id: number }> } })?.hr_permissions;
+    const managed = perms?.managed_hubs;
+    if (Array.isArray(managed) && managed.length > 0) {
+      return managed
+        .map((h) => (typeof h === 'number' ? h : h?.id))
+        .filter((id): id is number => typeof id === 'number');
+    }
+    if (currentEmployee?.hub) return [Number(currentEmployee.hub)];
+    return [];
+  }, [currentUserRole, currentEmployee]);
+
+  const selectableHubs = useMemo(() => {
+    if (hrManagedHubIds === null) return allHubs;
+    return allHubs.filter((h) => hrManagedHubIds.includes(h.id));
+  }, [allHubs, hrManagedHubIds]);
+
+  const filteredAssignmentHubs = useMemo(() => {
+    const q = hubSearch.trim().toLowerCase();
+    if (!q) return allHubs;
+    return allHubs.filter((h) => h.name.toLowerCase().includes(q));
+  }, [allHubs, hubSearch]);
+
+  const availableRoles = useMemo(
+    () => roles.filter((r) => (currentUserRole === 'HR' ? r === 'Employee' : true)),
+    [roles, currentUserRole]
+  );
+
+  // Cascading location data using phil-reg-prov-mun-brgy
+  const regionsList = phil.regions.map(r => r.name);
+  const selectedRegionCode = phil.regions.find(r => r.name === formState.region)?.reg_code;
+  const availableProvinces = selectedRegionCode ? phil.getProvincesByRegion(selectedRegionCode).map(p => p.name) : [];
+  
+  const selectedProvinceCode = selectedRegionCode ? phil.getProvincesByRegion(selectedRegionCode).find(p => p.name === formState.province)?.prov_code : undefined;
+  const availableCities = selectedProvinceCode ? phil.getCityMunByProvince(selectedProvinceCode).map(c => c.name) : [];
+  
+  const selectedCityCode = selectedProvinceCode ? phil.getCityMunByProvince(selectedProvinceCode).find(c => c.name === formState.cityMunicipality)?.mun_code : undefined;
+  const availableBarangays = selectedCityCode ? phil.getBarangayByMun(selectedCityCode).map(b => b.name) : [];
 
   useEffect(() => {
     const loadMeta = async () => {
       try {
         const response = await apiClient.get(`${API_ENDPOINTS.META}`);
         const json = response.data;
-
         if (Array.isArray(json.roles)) setRoles(json.roles);
-        if (Array.isArray(json.positions)) setPositions(json.positions);
-        if (Array.isArray(json.hubs)) setHubs(json.hubs);
-        if (Array.isArray(json.statuses)) setStatuses(json.statuses);
-        if (Array.isArray(json.employmentTypes)) setEmploymentTypes(json.employmentTypes);
+        if (Array.isArray(json.positions) && json.positions.length > 0) {
+          // Merge backend positions with hardcoded ones and filter out demo entries
+          const merged = [...new Set(['Admin', 'HR', 'Rider', 'Sorter', ...json.positions])];
+          const filtered = merged.filter((p) => String(p).toLowerCase() !== 'demo');
+          setPositions(filtered);
+        }
+        if (Array.isArray(json.employmentTypes)) {
+          // ensure we only keep Full-time and OCW if the backend sends more
+          const filteredTypes = json.employmentTypes.filter((t: string) => ['Full-time', 'OCW'].includes(t));
+          if (filteredTypes.length > 0) setEmploymentTypes(filteredTypes);
+        }
       } catch {
-        // ignore, keep defaults
+        // keep defaults
       }
     };
-
     loadMeta();
   }, []);
 
-  const callClose = () => {
-    onClose?.();
-    onCancel?.();
-  };
+  useEffect(() => {
+    if (currentUserRole === 'HR') {
+      setFormState((prev) => {
+        if (prev.role === 'Employee') return prev;
+        return { ...prev, role: 'Employee', managedHubs: [], accessType: 'Single' };
+      });
+    }
+  }, [currentUserRole]);
+
+  const callClose = () => { onClose?.(); onCancel?.(); };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const target = e.target as HTMLInputElement;
     const { name, value, type } = target;
+
     if (type === 'checkbox') {
       setFormState((prev) => ({ ...prev, [name]: target.checked }));
       return;
     }
+
+    // Cascade reset for location fields
+    if (name === 'region') {
+      setFormState((prev) => ({ ...prev, region: value, province: '', cityMunicipality: '', barangay: '' }));
+      return;
+    }
+    if (name === 'province') {
+      setFormState((prev) => ({ ...prev, province: value, cityMunicipality: '', barangay: '' }));
+      return;
+    }
+    if (name === 'cityMunicipality') {
+      setFormState((prev) => ({ ...prev, cityMunicipality: value, barangay: '' }));
+      return;
+    }
+
+    if (name === 'role') {
+      setFormState((prev) => ({
+        ...prev,
+        role: value,
+        managedHubs: value === 'HR' ? prev.managedHubs : [],
+        accessType: 'Single',
+        hub: value === 'HR' ? prev.hub : prev.hub,
+      }));
+      return;
+    }
+
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleAccessTypeChange = (type: 'Single' | 'Multiple') => {
+    setFormState((prev) => ({
+      ...prev,
+      accessType: type,
+      managedHubs: type === 'Single' && prev.managedHubs.length > 1
+        ? prev.managedHubs.slice(0, 1)
+        : prev.managedHubs,
+      hub: type === 'Single' && prev.managedHubs.length > 1
+        ? String(prev.managedHubs[0])
+        : prev.hub,
+    }));
+  };
+
+  const handleCheckboxChange = (hubId: number) => {
+    setFormState((prev) => {
+      if (prev.accessType === 'Single') {
+        const next = prev.managedHubs.includes(hubId) ? [] : [hubId];
+        return { ...prev, managedHubs: next, hub: next[0] ? String(next[0]) : '' };
+      }
+      const isSelected = prev.managedHubs.includes(hubId);
+      const next = isSelected
+        ? prev.managedHubs.filter((id) => id !== hubId)
+        : [...prev.managedHubs, hubId];
+      return { ...prev, managedHubs: next };
+    });
+  };
+
+  const isStepValid = (s: number) => {
+    if (s === 0) {
+      return (
+        Boolean(formState.username) &&
+        Boolean(formState.password) &&
+        Boolean(formState.confirmPassword) &&
+        formState.password === formState.confirmPassword &&
+        Boolean(formState.role)
+      );
+    }
+    if (s === 1) {
+      const personalValid = Boolean(
+        formState.firstName && formState.lastName && formState.email &&
+        formState.phone && formState.gender && formState.dateOfBirth &&
+        formState.completeAddress && formState.region && formState.province &&
+        formState.cityMunicipality && formState.barangay &&
+        formState.emergencyContactName && formState.emergencyContactPhone
+      );
+      if (isCreatingHrRole) {
+        return personalValid && formState.managedHubs.length > 0;
+      }
+      return personalValid;
+    }
+    if (s === 2) {
+      const hubValue = isCreatingHrRole
+        ? (formState.managedHubs[0] ? String(formState.managedHubs[0]) : formState.hub)
+        : formState.hub;
+      return Boolean(formState.position && formState.employmentType && hubValue && formState.hireDate);
+    }
+    return true;
+  };
+
+  const canProceed = !loading && isStepValid(step);
+  const isLastStep = step === STEPS.length - 1;
+
+  const goNext = () => {
+    if (!isStepValid(step)) { setError('Please complete all required fields before continuing.'); return; }
+    setError(null);
+    setStep((p) => Math.min(p + 1, STEPS.length - 1));
+  };
+  const goBack = () => { setError(null); setStep((p) => Math.max(p - 1, 0)); };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    if (!isLastStep) {
-      if (!isStepValid(step)) {
-        setError('Please complete the required fields for this step before continuing.');
-        return;
-      }
-      goNext();
-      return;
-    }
+    if (!isLastStep) { goNext(); return; }
 
-    // basic validation only on final submission
     if (!formState.firstName || !formState.lastName || !formState.email || !formState.password || !formState.position) {
       setError('Please complete required fields (name, email, password, position).');
       return;
@@ -194,492 +400,564 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
     setLoading(true);
     try {
       const formData = new FormData();
-      const fieldMap: Record<string, string | null> = {
-        firstName: 'firstname',
-        lastName: 'lastname',
-        middleInitial: 'middle_initial',
-        placeOfBirth: 'place_of_birth',
-        dateOfBirth: 'date_of_birth',
-        maritalStatus: 'marital_status',
-        email: 'email_address',
-        phone: 'phone_number',
-        currentAddress: 'current_address',
-        permanentAddress: 'permanent_address',
-        employmentType: 'employment_type',
-        hireDate: 'hired_date',
-        jtpCode: 'jtp_code',
-        employeeId: 'employee_id',
-        emergencyContactName: 'emergency_contact_name',
-        emergencyContactPhone: 'emergency_contact_phone',
-        isActive: 'is_active',
+      const fieldMap: Record<string, string> = {
+        firstName: 'firstname', lastName: 'lastname', middleInitial: 'middle_initial',
+        placeOfBirth: 'place_of_birth', dateOfBirth: 'date_of_birth', maritalStatus: 'marital_status',
+        email: 'email_address', phone: 'phone_number', completeAddress: 'complete_address',
+        employmentType: 'employment_type', hireDate: 'hired_date', jtpCode: 'jtp_code',
+        employeeId: 'employee_id', emergencyContactName: 'emergency_contact_name',
+        emergencyContactPhone: 'emergency_contact_phone', isActive: 'is_active',
+        region: 'region', province: 'province', cityMunicipality: 'city_municipality',
+        barangay: 'barangay', zipCode: 'zip_code',
+        tin: 'tin', sss: 'sss', philHealth: 'philhealth', pagIbig: 'pagibig',
       };
 
-      const normalizeEmploymentType = (value: string) => {
-        if (value === 'Full Time') return 'Full-time';
-        if (value === 'Part Time' || value === 'Contract' || value === 'Intern') return value;
-        return value;
-      };
+      const skipKeys = new Set([
+        'confirmPassword', 'createdAt',
+      ]);
 
       Object.entries(formState).forEach(([key, val]) => {
-        if (key === 'confirmPassword' || key === 'createdAt') return;
-
+        if (skipKeys.has(key)) return;
         const backendKey = fieldMap[key] ?? key;
-        let value = val;
-
+        let value: string | boolean = val as string | boolean;
         if (backendKey === 'employment_type' && typeof value === 'string') {
-          value = normalizeEmploymentType(value);
+          if (value === 'Full Time') value = 'Full-time';
         }
-
-        if (typeof value === 'boolean') {
-          formData.append(backendKey, String(value));
-          return;
-        }
-
-        if (value === undefined || value === null || value === '') {
-          return;
-        }
-
+        if (typeof value === 'boolean') { formData.append(backendKey, String(value)); return; }
+        if (value === undefined || value === null || value === '') return;
         formData.append(backendKey, String(value));
       });
 
-      // POST to backend - endpoint expected: /api/employees
+      const fullAddress = [formState.completeAddress, formState.barangay, formState.cityMunicipality, formState.province, formState.region]
+        .filter(Boolean).join(', ');
+      formData.set('current_address', fullAddress);
+
+      if (formState.role === 'HR') {
+        const managed = formState.accessType === 'Single'
+          ? formState.managedHubs.slice(0, 1)
+          : formState.managedHubs;
+        formData.append('hr_permissions', JSON.stringify({
+          access_type: formState.accessType,
+          managed_hubs: managed,
+        }));
+        if (managed.length > 0) {
+          formData.set('hub', String(managed[0]));
+        }
+      }
+
+      if (currentUserRole === 'HR' && formState.role !== 'Employee') {
+        setError('HR accounts can only create Employee accounts.');
+        setLoading(false);
+        return;
+      }
+
       await apiClient.post(API_ENDPOINTS.EMPLOYEES, formData);
 
-      setSuccess('Employee created.');
+      setSuccess('Employee created successfully!');
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYEES });
       setFormState({ ...initialFormState, createdAt: new Date().toISOString() });
       onCreated?.();
-      setTimeout(callClose, 600);
+      setTimeout(callClose, 800);
     } catch (err) {
       const axiosError = err as any;
       const errorData = axiosError?.response?.data;
-      const message =
-        typeof errorData === 'string'
-          ? errorData
-          : errorData?.detail ||
-            errorData?.message ||
-            JSON.stringify(errorData, null, 2) ||
-            axiosError?.message ||
-            'Server error';
-      setError(message);
+      const acronyms = ['id', 'jtp', 'tin', 'sss', 'pagibig', 'philhealth'];
+      const formatFieldLabel = (key: string) => {
+        const map: Record<string, string> = { employee_id: 'Employee ID', jtp_code: 'JTP Code' };
+        const normalized = key.replace(/\[|\]/g, '').replace(/\./g, '_');
+        if (map[normalized]) return map[normalized];
+        return normalized.split('_').map((w) => (acronyms.includes(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(' ');
+      };
+      const formatServerErrors = (data: any): string => {
+        if (!data) return 'Server error';
+        if (typeof data === 'string') return data;
+        if (Array.isArray(data)) return data.join('\n');
+        if (typeof data === 'object') {
+          if (typeof data.detail === 'string') return data.detail;
+          if (typeof data.message === 'string') return data.message;
+          return Object.entries(data).map(([k, v]) => `${formatFieldLabel(k)}: ${Array.isArray(v) ? (v as string[]).join(', ') : String(v)}`).join('\n');
+        }
+        return String(data);
+      };
+      setError(formatServerErrors(errorData ?? axiosError?.message ?? 'Server error'));
     } finally {
       setLoading(false);
     }
   };
 
+  /* ─── render ─── */
   return (
-    <div className="mx-auto max-w-6xl rounded-3xl bg-slate-50 p-6 shadow-xl shadow-slate-200/40 dark:bg-slate-950 dark:shadow-none">
-      <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Add Employee</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">A cleaner multi-step flow for account, personal, and work information.</p>
-          </div>
-          <button
-            type="button"
-            onClick={callClose}
-            className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-          >
-            Cancel
-          </button>
+    <div className="w-full">
+
+        <button type="button" onClick={callClose}
+          className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200">
+          <ChevronLeft size={15} /> Back
+        </button>
+
+        <div className="mb-3 text-center">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Add Employee</h1>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">A cleaner multi-step flow for account, personal, and work information.</p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          {steps.map((label, index) => (
-            <div
-              key={label}
-              className={`rounded-2xl border px-4 py-3 text-center transition ${index === step ? 'border-blue-500 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'}`}
-            >
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Step {index + 1}</div>
-              <div className="mt-2 text-sm font-semibold">{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {error && <div className="mb-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/50 dark:text-red-200">{error}</div>}
-      {success && <div className="mb-4 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">{success}</div>}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {step === 0 && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Account creation</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Set user access, login details, and core account info.</p>
-              </div>
-              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-600 dark:bg-slate-800 dark:text-slate-300">Required</div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Username</span>
-                <input
-                  name="username"
-                  value={formState.username}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Password</span>
-                <input
-                  type="password"
-                  name="password"
-                  value={formState.password}
-                  onChange={handleChange}
-                  required
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Confirm password</span>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formState.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Role</span>
-                <select
-                  name="role"
-                  value={formState.role}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                >
-                  {roles.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Account status</span>
-                <label className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                  <span>Can login</span>
-                  <input type="checkbox" name="canLogin" checked={formState.canLogin} onChange={handleChange} className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                </label>
-                <label className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                  <span>Active employee</span>
-                  <input type="checkbox" name="isActive" checked={formState.isActive} onChange={handleChange} className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                </label>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {step === 1 && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-5">
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Personal & contact information</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Capture names, birth details, contact fields, and addresses.</p>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-3">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">First name</span>
-                <input
-                  name="firstName"
-                  value={formState.firstName}
-                  onChange={handleChange}
-                  required
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Last name</span>
-                <input
-                  name="lastName"
-                  value={formState.lastName}
-                  onChange={handleChange}
-                  required
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Middle initial</span>
-                <input
-                  name="middleInitial"
-                  value={formState.middleInitial}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-3">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Place of birth</span>
-                <input
-                  name="placeOfBirth"
-                  value={formState.placeOfBirth}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Date of birth</span>
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  value={formState.dateOfBirth}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Gender</span>
-                <select
-                  name="gender"
-                  value={formState.gender}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                >
-                  {genders.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Email</span>
-                <input
-                  type="email"
-                  name="email"
-                  value={formState.email}
-                  onChange={handleChange}
-                  required
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Phone</span>
-                <input
-                  name="phone"
-                  value={formState.phone}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Current address</span>
-                <textarea
-                  name="currentAddress"
-                  value={formState.currentAddress}
-                  onChange={handleChange}
-                  className="mt-2 h-28 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Permanent address</span>
-                <textarea
-                  name="permanentAddress"
-                  value={formState.permanentAddress}
-                  onChange={handleChange}
-                  className="mt-2 h-28 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Emergency contact name</span>
-                <input
-                  name="emergencyContactName"
-                  value={formState.emergencyContactName}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Emergency contact phone</span>
-                <input
-                  name="emergencyContactPhone"
-                  value={formState.emergencyContactPhone}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-            </div>
-          </section>
-        )}
-
-        {step === 2 && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-5">
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Employment & compliance</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Assign position, hub, IDs, and payroll details.</p>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-3">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Position</span>
-                <select
-                  name="position"
-                  value={formState.position}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                >
-                  <option value="">Select position</option>
-                  {positions.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Employment type</span>
-                <select
-                  name="employmentType"
-                  value={formState.employmentType}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                >
-                  {employmentTypes.map((e) => (
-                    <option key={e} value={e}>{e}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Status</span>
-                <select
-                  name="status"
-                  value={formState.status}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                >
-                  {statuses.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-3">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Hub</span>
-                <select
-                  name="hub"
-                  value={formState.hub}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                >
-                  <option value="">Select hub</option>
-                  {hubs.map((h) => (
-                    <option key={h.id} value={h.id}>{h.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Hired date</span>
-                <input
-                  type="date"
-                  name="hireDate"
-                  value={formState.hireDate}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Employee ID</span>
-                <input
-                  name="employeeId"
-                  value={formState.employeeId}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-4">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">JTP code</span>
-                <input
-                  name="jtpCode"
-                  value={formState.jtpCode}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">TIN</span>
-                <input
-                  name="tin"
-                  value={formState.tin}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">SSS</span>
-                <input
-                  name="sss"
-                  value={formState.sss}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">PhilHealth</span>
-                <input
-                  name="philHealth"
-                  value={formState.philHealth}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Pag-IBIG</span>
-                <input
-                  name="pagIbig"
-                  value={formState.pagIbig}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-500/20"
-                />
-              </label>
-            </div>
-          </section>
-        )}
-
-        <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold text-slate-900 dark:text-white">Step {step + 1} of {steps.length}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{step === 0 ? 'Start with account credentials.' : step === 1 ? 'Add contact, identity and address details.' : 'Finish work and payroll details.'}</p>
+        <div className="flex justify-center">
+          <div className="w-full max-w-3xl">
+            <StepIndicator step={step} />
           </div>
-          <div className="flex flex-wrap gap-3">
-            {step > 0 && (
-              <button
-                type="button"
-                onClick={goBack}
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                Back
-              </button>
+        </div>
+
+        {error && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800/40 dark:bg-red-900/30 dark:text-red-300">
+            <AlertCircle size={15} className="mt-0.5 shrink-0" />
+            <span className="whitespace-pre-line text-xs">{error}</span>
+          </div>
+        )}
+        {success && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-900/30 dark:emerald-300">
+            <CheckCircle2 size={15} className="shrink-0" /><span className="text-xs">{success}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+
+            {step === 0 && (
+              <>
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-blue-500">Step 1 of 3</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Account Details</h3>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Set user access, login details, and core account info.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelCls}>Username {redStar}</label>
+                    <div className="relative">
+                      <FieldIcon icon={User} />
+                      <input name="username" value={formState.username} onChange={handleChange} placeholder="Enter username" required className={iconInputCls} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Role {redStar}</label>
+                    <select name="role" value={formState.role} onChange={handleChange} required className={selectCls}>
+                      {availableRoles.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    {currentUserRole === 'HR' && (
+                      <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">HR can only create Employee accounts.</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Access Permission</label>
+                    <label className="mt-1 flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800">
+                      <input type="checkbox" name="canLogin" checked={formState.canLogin} onChange={handleChange} className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                      <div>
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Can login</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Password {redStar}</label>
+                    <div className="relative">
+                      <FieldIcon icon={Lock} />
+                      <input type={showPassword ? 'text' : 'password'} name="password" value={formState.password} onChange={handleChange} placeholder="Enter password" required className={iconInputCls + ' pr-9'} />
+                      <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        {showPassword ? <Eye size={14} /> : <EyeOff size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Confirm Password {redStar}</label>
+                    <div className="relative">
+                      <FieldIcon icon={Lock} />
+                      <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={formState.confirmPassword} onChange={handleChange} placeholder="Confirm password" required className={iconInputCls + ' pr-9'} />
+                      <button type="button" onClick={() => setShowConfirmPassword(s => !s)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        {showConfirmPassword ? <Eye size={14} /> : <EyeOff size={14} />}
+                      </button>
+                    </div>
+                    {formState.password && formState.confirmPassword && formState.password !== formState.confirmPassword && (
+                      <p className="mt-1 text-[11px] text-red-500">Passwords do not match.</p>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
-            <button
-              type="submit"
-              disabled={!canProceed}
-              className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isLastStep ? (loading ? 'Creating...' : 'Create Employee') : 'Next'}
-            </button>
+
+            {step === 1 && (
+              <>
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-blue-500">Step 2 of 3</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Personal Information</h3>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                  {isCreatingHrRole
+                    ? 'Provide personal details and assign which hub(s) this HR staff will manage.'
+                    : 'Please provide personal details and contact information.'}
+                </p>
+
+                <div className={isCreatingHrRole ? 'grid grid-cols-1 gap-4 lg:grid-cols-2' : ''}>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-1">
+                      <label className={labelCls}>First Name {redStar}</label>
+                      <div className="relative"><FieldIcon icon={User} />
+                        <input name="firstName" value={formState.firstName} onChange={handleChange} placeholder="First name" required className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Middle Initial</label>
+                      <input name="middleInitial" value={formState.middleInitial} onChange={handleChange} placeholder="MI" maxLength={3} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Last Name {redStar}</label>
+                      <div className="relative"><FieldIcon icon={User} />
+                        <input name="lastName" value={formState.lastName} onChange={handleChange} placeholder="Last name" required className={iconInputCls} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className={labelCls}>Date of Birth {redStar}</label>
+                      <div className="relative"><FieldIcon icon={Calendar} />
+                        <input type="date" name="dateOfBirth" value={formState.dateOfBirth} onChange={handleChange} required className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Place of Birth {redStar}</label>
+                      <div className="relative"><FieldIcon icon={MapPin} />
+                        <input name="placeOfBirth" value={formState.placeOfBirth} onChange={handleChange} placeholder="Place of birth" required className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Gender {redStar}</label>
+                      <select name="gender" value={formState.gender} onChange={handleChange} required className={selectCls}>
+                        <option value="">Select gender</option>
+                        {genders.map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={labelCls}>Email Address {redStar}</label>
+                      <div className="relative"><FieldIcon icon={Mail} />
+                        <input type="email" name="email" value={formState.email} onChange={handleChange} placeholder="Enter email" required className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Phone Number {redStar}</label>
+                      <div className="relative"><FieldIcon icon={Phone} />
+                        <input name="phone" value={formState.phone} onChange={handleChange} placeholder="Enter phone" required className={iconInputCls} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address heading */}
+                  <div className="border-t border-slate-100 pt-2.5 mt-3 dark:border-slate-800">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Address Information</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Please provide residential address details.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div className="md:col-span-3">
+                      <label className={labelCls}>Complete Address {redStar}</label>
+                      <div className="relative"><FieldIcon icon={MapPin} />
+                        <input name="completeAddress" value={formState.completeAddress} onChange={handleChange} placeholder="House/Block/Lot, Street name" required className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>ZIP / Postal Code</label>
+                      <div className="relative"><FieldIcon icon={Hash} />
+                        <input name="zipCode" value={formState.zipCode} onChange={handleChange} placeholder="Enter zip code" className={iconInputCls} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cascading dropdowns in 4 columns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                    <div>
+                      <label className={labelCls}>Region {redStar}</label>
+                      <select name="region" value={formState.region} onChange={handleChange} required className={selectCls}>
+                        <option value="">Select region</option>
+                        {regionsList.map((r: string) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Province {redStar}</label>
+                      <select name="province" value={formState.province} onChange={handleChange} required disabled={!formState.region} className={selectCls + (!formState.region ? ' opacity-50 cursor-not-allowed' : '')}>
+                        <option value="">Select province</option>
+                        {availableProvinces.map((p: string) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>City / Municipality {redStar}</label>
+                      <select name="cityMunicipality" value={formState.cityMunicipality} onChange={handleChange} required disabled={!formState.province} className={selectCls + (!formState.province ? ' opacity-50 cursor-not-allowed' : '')}>
+                        <option value="">Select city/municipality</option>
+                        {availableCities.map((c: string) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Barangay {redStar}</label>
+                      <select name="barangay" value={formState.barangay} onChange={handleChange} required disabled={!formState.cityMunicipality} className={selectCls + (!formState.cityMunicipality ? ' opacity-50 cursor-not-allowed' : '')}>
+                        <option value="">Select barangay</option>
+                        {availableBarangays.map((b: string) => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Emergency Contact heading */}
+                  <div className="border-t border-slate-100 pt-2.5 mt-3 dark:border-slate-800">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Emergency Contact</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Please provide emergency contact information.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={labelCls}>Contact Name {redStar}</label>
+                      <div className="relative"><FieldIcon icon={User} />
+                        <input name="emergencyContactName" value={formState.emergencyContactName} onChange={handleChange} placeholder="Contact name" required className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Contact Number {redStar}</label>
+                      <div className="relative"><FieldIcon icon={Phone} />
+                        <input name="emergencyContactPhone" value={formState.emergencyContactPhone} onChange={handleChange} placeholder="Contact number" required className={iconInputCls} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {isCreatingHrRole && (
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
+                    <div className="mb-3">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">Hub Assignment</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Assign the hub(s) this HR staff will manage.</p>
+                    </div>
+
+                    <div className="mb-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-100/50 px-3 py-2 dark:border-blue-800/50 dark:bg-blue-900/20">
+                      <Info size={14} className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
+                      <p className="text-[11px] text-blue-800 dark:text-blue-200">
+                        This determines which hub(s) the HR staff can access and manage. They will only manage employees registered under the selected hub(s).
+                      </p>
+                    </div>
+
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Access Type</p>
+                    <div className="mb-4 space-y-2">
+                      <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                        <input
+                          type="radio"
+                          name="accessType"
+                          checked={formState.accessType === 'Single'}
+                          onChange={() => handleAccessTypeChange('Single')}
+                          className="mt-0.5 h-3.5 w-3.5 border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div>
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Single Hub Access</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">HR can manage and access only the assigned hub.</p>
+                        </div>
+                      </label>
+                      <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                        <input
+                          type="radio"
+                          name="accessType"
+                          checked={formState.accessType === 'Multiple'}
+                          onChange={() => handleAccessTypeChange('Multiple')}
+                          className="mt-0.5 h-3.5 w-3.5 border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div>
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Multiple Hub Access</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">HR can manage and access multiple hubs.</p>
+                        </div>
+                      </label>
+                    </div>
+
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Select Hub {redStar}
+                    </p>
+                    <div className="relative mb-2">
+                      <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={hubSearch}
+                        onChange={(e) => setHubSearch(e.target.value)}
+                        placeholder="Search hub..."
+                        className={iconInputCls}
+                      />
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+                      {filteredAssignmentHubs.length > 0 ? (
+                        filteredAssignmentHubs.map((hub) => {
+                          const checked = formState.managedHubs.includes(hub.id);
+                          return (
+                            <label
+                              key={hub.id}
+                              className="flex cursor-pointer items-center gap-2.5 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700/40"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => handleCheckboxChange(hub.id)}
+                                className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <Building2 size={14} className="shrink-0 text-blue-500" />
+                              <span className="text-xs font-medium text-slate-800 dark:text-slate-200">{hub.name}</span>
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <p className="px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">No hubs found.</p>
+                      )}
+                    </div>
+
+                    <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
+                      {formState.accessType === 'Single'
+                        ? 'Select one hub for this HR staff.'
+                        : 'You can select multiple hubs if needed.'}
+                    </p>
+                    {formState.managedHubs.length === 0 && (
+                      <p className="mt-1 text-[10px] text-red-500">Please select at least one hub.</p>
+                    )}
+                  </div>
+                )}
+                </div>
+              </>
+            )}
+
+            {/* ════ STEP 2 – Employment ════ */}
+            {step === 2 && (
+              <>
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-blue-500">Step 3 of 3</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Employment Information</h3>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Assign position, hub, IDs, and payroll details.</p>
+
+                <div className="space-y-3">
+                  {/* Work Assignment in 4 columns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                    <div>
+                      <label className={labelCls}>Position {redStar}</label>
+                      <select name="position" value={formState.position} onChange={handleChange} required className={selectCls}>
+                        <option value="">Select position</option>
+                        {positions.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Employment Type {redStar}</label>
+                      <select name="employmentType" value={formState.employmentType} onChange={handleChange} required className={selectCls}>
+                        <option value="">Select employment type</option>
+                        {employmentTypes.map(e => <option key={e} value={e}>{e}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Hub {redStar}</label>
+                      <div className="relative"><FieldIcon icon={Building2} />
+                        <select
+                          name="hub"
+                          value={isCreatingHrRole && formState.managedHubs[0] ? String(formState.managedHubs[0]) : formState.hub}
+                          onChange={handleChange}
+                          required
+                          disabled={isCreatingHrRole}
+                          className={iconSelectCls + (isCreatingHrRole ? ' opacity-70 cursor-not-allowed' : '')}
+                        >
+                          <option value="">Select hub</option>
+                          {(isCreatingHrRole
+                            ? allHubs.filter((h) => formState.managedHubs.includes(h.id))
+                            : selectableHubs
+                          ).map((h: HubOption) => <option key={h.id} value={h.id}>{h.name}</option>)}
+                        </select>
+                      </div>
+                      {isCreatingHrRole && (
+                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Hub is set from Hub Assignment in Step 2.</p>
+                      )}
+                      {currentUserRole === 'HR' && (
+                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Only hubs you manage are available.</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className={labelCls}>Hire Date {redStar}</label>
+                      <div className="relative"><FieldIcon icon={Calendar} />
+                        <input type="date" name="hireDate" value={formState.hireDate} onChange={handleChange} required className={iconInputCls} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div>
+                      <label className={labelCls}>Employee ID</label>
+                      <div className="relative"><FieldIcon icon={User} />
+                        <input name="employeeId" value={formState.employeeId} onChange={handleChange} placeholder="Enter employee ID" className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>JTP Code</label>
+                      <div className="relative"><FieldIcon icon={Hash} />
+                        <input name="jtpCode" value={formState.jtpCode} onChange={handleChange} placeholder="Enter JTP code" className={iconInputCls} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Government Information heading */}
+                  <div className="border-t border-slate-100 pt-2.5 mt-3 dark:border-slate-800">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Government Information</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Provide government IDs and compliance details.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                    <div>
+                      <label className={labelCls}>TIN</label>
+                      <div className="relative"><FieldIcon icon={CreditCard} />
+                        <input name="tin" value={formState.tin} onChange={handleChange} placeholder="Enter TIN" className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>SSS</label>
+                      <div className="relative"><FieldIcon icon={ShieldCheck} />
+                        <input name="sss" value={formState.sss} onChange={handleChange} placeholder="Enter SSS" className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>PhilHealth</label>
+                      <div className="relative"><FieldIcon icon={ShieldCheck} />
+                        <input name="philHealth" value={formState.philHealth} onChange={handleChange} placeholder="Enter PhilHealth" className={iconInputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Pag-IBIG</label>
+                      <div className="relative"><FieldIcon icon={ShieldCheck} />
+                        <input name="pagIbig" value={formState.pagIbig} onChange={handleChange} placeholder="Enter Pag-IBIG" className={iconInputCls} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Navigation inside card */}
+            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              {step > 0 ? (
+                <button type="button" onClick={goBack}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                  <ChevronLeft size={14} /> Previous
+                </button>
+              ) : <div />}
+
+              <button type="submit" disabled={!canProceed}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                {isLastStep ? (
+                  loading ? (
+                    <><svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Creating…</>
+                  ) : (
+                    <><User size={13} /> Create Employee</>
+                  )
+                ) : (
+                  <>Continue <ArrowRight size={13} /></>
+                )}
+              </button>
+            </div>
+
           </div>
-        </div>
-      </form>
+        </form>
     </div>
   );
 };

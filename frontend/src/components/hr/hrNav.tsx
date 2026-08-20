@@ -25,7 +25,7 @@ export const hrNav: NavSection[] = [
     items: [
       {
         to: '/hr/edit-requests',
-        label: 'Edit Request',
+        label: 'Information Edit Request',
         icon: <Edit size={14} />,
       },
       {

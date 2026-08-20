@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2, User, Phone, Briefcase, Shield, AlertTriangle, Upload, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Employee, FieldDefinition } from '@/types';
-import { useCreateEditRequest, useUpdateEmployee, useGetHubs } from '@/hooks/useQueries';
+import { useCreateEditRequest, useUpdateEmployee, useGetHubs, useUploadDocument } from '@/hooks/useQueries';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 import { Modal } from './Modal';
+import * as phil from 'phil-reg-prov-mun-brgy';
 
 interface EmployeeEditModalProps {
   isOpen: boolean;
@@ -24,8 +25,7 @@ const FIELD_DEFINITIONS: FieldDefinition[] = [
   { name: 'marital_status', label: 'Marital Status', type: 'select', options: [{ value: 'Single', label: 'Single' }, { value: 'Married', label: 'Married' }, { value: 'Divorced', label: 'Divorced' }, { value: 'Widowed', label: 'Widowed' }] },
   { name: 'email_address', label: 'Email Address', type: 'email' },
   { name: 'phone_number', label: 'Phone Number', type: 'text' },
-  { name: 'current_address', label: 'Current Address', type: 'textarea' },
-  { name: 'permanent_address', label: 'Permanent Address', type: 'textarea' },
+  // Legacy free-text address fields removed. Use structured address UI below.
   { name: 'emergency_contact_name', label: 'Emergency Contact Name', type: 'text' },
   { name: 'emergency_contact_phone', label: 'Emergency Contact Phone', type: 'text' },
   { name: 'status', label: 'Employment Status', type: 'select', options: [{ value: 'Active', label: 'Active' }, { value: 'Resign', label: 'Resign' }, { value: 'AWOL', label: 'AWOL' }, { value: 'Blacklist', label: 'Blacklist' }] },
@@ -46,10 +46,23 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const regionsList = phil.regions.map(r => r.name);
+  const selectedRegionCode = phil.regions.find(r => r.name === formData.region)?.reg_code;
+  const availableProvinces = selectedRegionCode ? phil.getProvincesByRegion(selectedRegionCode).map(p => p.name) : [];
+  
+  const selectedProvinceCode = selectedRegionCode ? phil.getProvincesByRegion(selectedRegionCode).find(p => p.name === formData.province)?.prov_code : undefined;
+  const availableCities = selectedProvinceCode ? phil.getCityMunByProvince(selectedProvinceCode).map(c => c.name) : [];
+  
+  const selectedCityCode = selectedProvinceCode ? phil.getCityMunByProvince(selectedProvinceCode).find(c => c.name === formData.city_municipality)?.mun_code : undefined;
+  const availableBarangays = selectedCityCode ? phil.getBarangayByMun(selectedCityCode).map(b => b.name) : [];
   
   const createMutation = useCreateEditRequest();
   const updateMutation = useUpdateEmployee(employee?.id || 0);
   const { data: hubsData } = useGetHubs();
+  const uploadMutation = useUploadDocument();
+
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docUploading, setDocUploading] = useState(false);
   
   const hubsList = normalizeApiResponse(hubsData) || [];
   
@@ -64,6 +77,13 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
           initialData[field.name] = employee[field.name as keyof Employee] ?? '';
         }
       });
+      // initialize structured address fields (fallback to legacy current_address if present)
+      initialData['complete_address'] = (employee as any).complete_address ?? (employee as any).current_address ?? '';
+      initialData['region'] = (employee as any).region ?? '';
+      initialData['province'] = (employee as any).province ?? '';
+      initialData['city_municipality'] = (employee as any).city_municipality ?? '';
+      initialData['barangay'] = (employee as any).barangay ?? '';
+      initialData['zip_code'] = (employee as any).zip_code ?? '';
       setFormData(initialData);
       setErrors({});
       setProfileFile(null);
@@ -133,6 +153,10 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
   const handleSubmit = async () => {
     if (!employee || !validate()) return;
     try {
+      console.log('handleSubmit triggered. changedFields:', changedFields);
+      console.log('isCriticalChanged:', isCriticalChanged);
+      console.log('profileFile:', profileFile);
+
       if (Object.keys(changedFields).length === 0 && !profileFile) {
         toast('No changes to submit');
         return;
@@ -146,6 +170,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
           payload.append('uploaded_files', profileFile, profileFile.name);
         }
 
+        console.log('Submitting Critical Edit Request...');
         await createMutation.mutateAsync(payload as any);
         toast.success('Edit request submitted for approval');
       } else {
@@ -157,6 +182,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
           payload.append('profile_image', profileFile, profileFile.name);
         }
 
+        console.log('Submitting direct PATCH update...', Array.from((payload as any).entries()));
         await updateMutation.mutateAsync(payload as any);
         toast.success('Profile changes saved successfully');
       }
@@ -164,7 +190,9 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
       onSuccess?.();
       onClose();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to submit changes');
+      console.error('handleSubmit error:', error);
+      console.error('error response data:', error.response?.data);
+      toast.error(error.response?.data?.message || error.response?.data?.error || 'Failed to submit changes');
     }
   };
 
@@ -173,6 +201,44 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
     setProfileFile(file);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+  };
+
+  const handleDocFileChange = (file?: File) => {
+    setDocFile(file || null);
+  };
+
+  const handleDocUpload = async () => {
+    if (!employee) return;
+    if (!docFile) {
+      toast.error('Please choose a document to upload');
+      return;
+    }
+
+    if (docFile.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+
+    setDocUploading(true);
+    try {
+      // Submit as an edit request so admin/HR must approve it
+      const payload = new FormData();
+      payload.append('employee', String(employee.id));
+      payload.append('requested_data', JSON.stringify({
+        document_upload: true,
+        file_name: docFile.name,
+      }));
+      payload.append('uploaded_files', docFile, docFile.name);
+
+      await createMutation.mutateAsync(payload as any);
+      toast.success('Document upload request submitted for approval');
+      onSuccess?.();
+      setDocFile(null);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to submit document upload request');
+    } finally {
+      setDocUploading(false);
+    }
   };
   
   const renderField = (field: FieldDefinition) => {
@@ -195,7 +261,7 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
           options = hubsList.map((h: any) => ({ value: String(h.id), label: h.name }));
         }
         return (
-          <select value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass}>
+          <select aria-label={field.label} value={value} onChange={(e) => handleChange(field.name, e.target.value)} className={baseInputClass}>
             <option value="">Select {field.label}</option>
             {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
@@ -214,34 +280,52 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
   };
   
   const personalFields = ['firstname', 'lastname', 'middle_initial', 'date_of_birth', 'place_of_birth', 'gender', 'nationality', 'marital_status'];
-  const contactFields = ['email_address', 'phone_number', 'current_address', 'permanent_address'];
+  const contactFields = ['email_address', 'phone_number'];
   const emergencyFields = ['emergency_contact_name', 'emergency_contact_phone'];
   const employmentFields = ['status', 'employment_type', 'position', 'employee_id', 'hub'];
   const governmentFields = ['tin', 'sss', 'philhealth', 'pagibig'];
   
+  const profileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+
+  const sectionIcons: Record<string, React.ReactNode> = {
+    'Personal Information': <User size={18} />,
+    'Contact Information': <Phone size={18} />,
+    'Emergency Contact': <AlertTriangle size={18} />,
+    'Employment Details': <Briefcase size={18} />,
+    'Government IDs': <Shield size={18} />,
+  };
+
   const renderFieldSection = (title: string, fields: string[]) => (
-    <div className="mb-8">
-      <h4 className="text-sm sm:text-sm md:text-base font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-3">{title}</h4>
+    <div className="mb-6 rounded-2xl bg-white dark:bg-[#0F172A] border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
+      <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/5 dark:from-red-500/20 dark:to-red-600/10 border border-red-200/50 dark:border-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400">
+          {sectionIcons[title] || <User size={18} />}
+        </div>
+        <h4 className="text-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">{title}</h4>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
         {title === 'Personal Information' && (
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Profile Picture</label>
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-0.5">
-                {previewUrl ? (
-                  <img src={previewUrl} alt="preview" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">No image</div>
-                )}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Profile Picture</label>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-2 border-dashed border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="preview" className="w-full h-full object-cover rounded-2xl" />
+                  ) : (
+                    <User size={32} className="text-gray-300 dark:text-gray-500" />
+                  )}
+                </div>
               </div>
-
-              <div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e.target.files?.[0])}
-                />
-                <p className="text-xs text-gray-500 mt-1">Max size 5MB. JPG/PNG recommended.</p>
+              <div className="flex flex-col gap-2">
+                <input ref={profileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e.target.files?.[0])} />
+                <button type="button" onClick={() => profileInputRef.current?.click()} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-red-300 dark:hover:border-red-500/40 hover:shadow-sm transition-all cursor-pointer">
+                  <Upload size={15} className="text-red-500" />
+                  Choose Photo
+                </button>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Max 5MB · JPG or PNG</p>
+                {profileFile && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ {profileFile.name}</p>}
               </div>
             </div>
           </div>
@@ -253,6 +337,52 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
             {errors[field.name] && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors[field.name]}</p>}
           </div>
         ))}
+        {/* Address UI (structured) */}
+        {title === 'Contact Information' && (
+          <div className="sm:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Complete Address</label>
+                <input value={formData['complete_address'] ?? ''} onChange={(e) => handleChange('complete_address', e.target.value)} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm`} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">ZIP / Postal Code</label>
+                <input value={formData['zip_code'] ?? ''} onChange={(e) => handleChange('zip_code', e.target.value)} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm`} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Region</label>
+                <select aria-label="Region" value={formData['region'] ?? ''} onChange={(e) => { handleChange('region', e.target.value); handleChange('province', ''); handleChange('city_municipality', ''); handleChange('barangay',''); }} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm`}>
+                  <option value="">Select region</option>
+                  {regionsList.map((r: any) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Province</label>
+                <select aria-label="Province" value={formData['province'] ?? ''} onChange={(e) => { handleChange('province', e.target.value); handleChange('city_municipality',''); handleChange('barangay',''); }} disabled={!formData['region']} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm ${!formData['region'] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <option value="">Select province</option>
+                  {availableProvinces.map((p: any) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">City / Municipality</label>
+                <select aria-label="City / Municipality" value={formData['city_municipality'] ?? ''} onChange={(e) => { handleChange('city_municipality', e.target.value); handleChange('barangay',''); }} disabled={!formData['province']} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm ${!formData['province'] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <option value="">Select city/municipality</option>
+                  {availableCities.map((c: any) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Barangay</label>
+                <select aria-label="Barangay" value={formData['barangay'] ?? ''} onChange={(e) => handleChange('barangay', e.target.value)} disabled={!formData['city_municipality']} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm ${!formData['city_municipality'] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <option value="">Select barangay</option>
+                  {availableBarangays.map((b: any) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -267,12 +397,33 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
         {renderFieldSection('Emergency Contact', emergencyFields)}
         {renderFieldSection('Employment Details', employmentFields)}
         {renderFieldSection('Government IDs', governmentFields)}
+
+        <div className="mb-6 rounded-2xl bg-white dark:bg-[#0F172A] border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/5 dark:from-red-500/20 dark:to-red-600/10 border border-red-200/50 dark:border-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400">
+              <FileText size={18} />
+            </div>
+            <h4 className="text-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Documents</h4>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" onChange={(e) => handleDocFileChange(e.target.files?.[0])} />
+            <button type="button" onClick={() => docInputRef.current?.click()} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-red-300 dark:hover:border-red-500/40 hover:shadow-sm transition-all cursor-pointer">
+              <Upload size={15} className="text-red-500" />
+              Choose File
+            </button>
+            {docFile && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ {docFile.name}</span>}
+            <button onClick={handleDocUpload} disabled={docUploading || !docFile} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white text-sm font-semibold shadow-sm hover:shadow-md hover:from-[#7A0000] hover:to-[#5A0000] disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              {docUploading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+              {docUploading ? 'Submitting...' : 'Request Upload'}
+            </button>
+          </div>
+        </div>
       </div>
-      <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-        <button onClick={onClose} className="w-full sm:w-auto px-4 py-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium" disabled={isPending}>Cancel</button>
-        <button onClick={handleSubmit} disabled={isPending} className="w-full sm:w-auto px-4 py-3 rounded-lg bg-[#8B0000] text-white hover:bg-[#6B0000] transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+      <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8 pt-5 border-t border-gray-100 dark:border-gray-800">
+        <button onClick={onClose} className="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all text-sm font-semibold shadow-sm" disabled={isPending}>Cancel</button>
+        <button onClick={handleSubmit} disabled={isPending} className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white hover:from-[#7A0000] hover:to-[#5A0000] transition-all text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg ring-1 ring-red-900/20">
           {isPending && <Loader2 size={16} className="animate-spin" />}
-          {isPending ? 'Submitting...' : isCriticalChanged ? 'Send Edit Request' : 'Save changes'}
+          {isPending ? 'Submitting...' : isCriticalChanged ? 'Send Edit Request' : 'Save Changes'}
         </button>
       </div>
     </Modal>

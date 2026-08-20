@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGetPayroll, useGetDocuments } from '@/hooks/useQueries';
-import { EmployeeSidebar } from '@/components/EmployeeSidebar';
+
 // removed unused InfoCard imports
 import DocumentsSection from "@/components/DocumentsSection";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { EmployeeEditModal } from '@/components/EmployeeEditModal';
 import { PayslipDetailModal } from '@/components/PayslipViewforemployee';
 import { EmployeeLeaveRequestForm } from '@/components/EmployeeLeaveRequestForm';
-import { EmployeeLeaveHistoryModal } from '@/components/EmployeeLeaveHistoryModal';
+import { AttachmentPreviewModal } from '@/components/AttachmentPreviewModal';
+import EmployeeAttendanceAnalytics from '@/components/EmployeeAttendanceAnalytics';
+import { AttendanceHistoryScreen } from './AttendanceHistoryScreen';
+import { apiClient } from '@/api/apiService';
+import { LoadingSpinner } from '@/components/common';
 
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 import {
@@ -31,7 +36,10 @@ import {
   CreditCard,
   Heart,
   Home,
-  ArrowLeft,
+  Globe,
+  Mail,
+  Clock,
+  ChevronLeft,
 } from 'lucide-react';
 
 import logo from '@/images/3pl1.png';
@@ -41,9 +49,11 @@ type Section =
   | 'attendance'
   | 'payroll'
   | 'payslip_detail'
+  | 'payslip_history'
   | 'documents'
   | 'information'
-  | 'leave';
+  | 'leave'
+  | 'leave_history';
 
 const navigation = [
   {
@@ -58,7 +68,7 @@ const navigation = [
   },
   {
     key: 'payroll',
-    label: 'Payroll',
+    label: 'Payslip',
     icon: Wallet,
   },
   {
@@ -80,9 +90,38 @@ const navigation = [
 
 export const EmployeeDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // allow navigation to this page with a desired active section via location.state
+    const state: any = (location && (location.state as any)) || {};
+    if (state?.activeSection) {
+      setActiveSection(state.activeSection as Section);
+      // clear the navigation state so it doesn't persist on reloads
+      try {
+        window.history.replaceState({}, '', window.location.pathname + window.location.search);
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [location]);
 
   const { employee, logout } =
     useAuth();
+
+  const formatEmployeeAddress = (emp: any) => {
+    if (!emp) return 'N/A';
+    const parts = [
+      emp.complete_address,
+      emp.barangay,
+      emp.city_municipality,
+      emp.province,
+      emp.region,
+      emp.zip_code ? `ZIP: ${emp.zip_code}` : ''
+    ].filter(Boolean);
+    if (parts.length) return parts.join(', ');
+    return emp.current_address || 'N/A';
+  };
 
   const [activeSection, setActiveSection] =
     useState<Section>('overview');
@@ -93,10 +132,16 @@ export const EmployeeDashboard = () => {
   const [editOpen, setEditOpen] =
     useState(false);
 
-  const [leaveHistoryOpen, setLeaveHistoryOpen] = useState(false);
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [leaveItems, setLeaveItems] = useState<any[]>([]);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState<any | null>(null);
+  const [leaveCancelLoading, setLeaveCancelLoading] = useState(false);
+  const [leavePreviewFile, setLeavePreviewFile] = useState<{ url: string; type: 'image' | 'pdf' | 'other' } | null>(null);
 
   const [selectedPayslip, setSelectedPayslip] =
     useState<any>(null);
+  const [payslipOpenedFromHistory, setPayslipOpenedFromHistory] = useState(false);
 
   const [darkMode, setDarkMode] =
     useState<boolean>(() => {
@@ -124,6 +169,32 @@ export const EmployeeDashboard = () => {
       );
     }
   }, [darkMode]);
+
+  /* ===================================
+     LEAVE HISTORY DATA FETCH
+  =================================== */
+  useEffect(() => {
+    if (activeSection !== 'leave_history') return;
+    if (!employee?.id) return;
+    const fetchLeaveItems = async () => {
+      try {
+        setLeaveLoading(true);
+        const res = await apiClient.get('/leave-requests/', {
+          params: { employee_id: employee.id },
+        });
+        const data = res.data;
+        const list = Array.isArray(data) ? data : data?.results ?? [];
+        setLeaveItems(list);
+      } catch (e) {
+        console.error('Failed to load leave history', e);
+      } finally {
+        setLeaveLoading(false);
+      }
+    };
+    fetchLeaveItems();
+  }, [activeSection, employee?.id]);
+
+
 
   /* ===================================
      PAYROLL
@@ -203,7 +274,7 @@ export const EmployeeDashboard = () => {
                 </div>
 
                 {/* PROFILE DETAILS */}
-                <div className="flex-1 text-center sm:text-left space-y-3">
+                  <div className="flex-1 text-center sm:text-left space-y-3">
                   <div className="space-y-0.5">
                     <h1 className="text-lg md:text-xl font-bold text-white tracking-tight leading-tight">
                       {employee?.full_name}
@@ -231,16 +302,11 @@ export const EmployeeDashboard = () => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setEditOpen(true)}
-                    className="mt-1 px-4 py-1.5 bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 w-fit mx-auto sm:mx-0 shadow-sm"
-                  >
-                    <User size={13} className="opacity-80" />
-                    Edit Profile
-                  </button>
+                  {/* Edit Profile moved to Information tab; Payslip History moved to Payroll tab */}
                 </div>
               </div>
             </div>
+
 
             {/* EMPLOYEE INFO TITLE */}
             <div className="flex items-start gap-3 mt-8">
@@ -297,6 +363,12 @@ export const EmployeeDashboard = () => {
                 </div>
               </div>
             </div>
+        
+          {/* Attendance Analytics */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Attendance Analytics</h3>
+            <EmployeeAttendanceAnalytics employeeId={employee?.id} days={90} />
+          </div>
           </div>
         );
 
@@ -306,14 +378,7 @@ export const EmployeeDashboard = () => {
 
       case 'attendance':
         return (
-          <div>
-            <EmployeeSidebar
-              employeeId={
-                employee?.id || 0
-              }
-              employee={employee || {}}
-            />
-          </div>
+          <AttendanceHistoryScreen isEmbedded={true} />
         );
 
       /* ===================================
@@ -321,48 +386,108 @@ export const EmployeeDashboard = () => {
       =================================== */
 
       case 'payroll':
+        // Build merged chart data: per-payslip net_pay + avg per 15-day half, keyed by period label
+        const payrollChartData = (() => {
+          const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          // Build avgNet map by 15-day half key
+          const halfMap: Record<string, { net: number; count: number; name: string }> = {};
+          (payrolls || []).forEach((p: any) => {
+            const dateStr = p.period_start || p.period_end || p.created_at;
+            if (!dateStr) return;
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return;
+            const year = d.getFullYear();
+            const month = d.getMonth();
+            const half = d.getDate() <= 15 ? 1 : 2;
+            const key = `${year}-${month}-${half}`;
+            if (!halfMap[key]) halfMap[key] = { net: 0, count: 0, name: `${monthNames[month].slice(0,3)} ${year} H${half}` };
+            halfMap[key].net += Number(p.net_pay || 0);
+            halfMap[key].count += 1;
+          });
+          // Sort payrolls chronologically and map each to chart point with both values
+          const sorted = (payrolls || []).slice().sort((a: any, b: any) =>
+            new Date(a.period_end || a.period_start || 0).getTime() - new Date(b.period_end || b.period_start || 0).getTime()
+          );
+          return sorted.map((p: any) => {
+            const dateStr = p.period_start || p.period_end || p.created_at;
+            let avgNet: number | null = null;
+            if (dateStr) {
+              const d = new Date(dateStr);
+              if (!isNaN(d.getTime())) {
+                const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate() <= 15 ? 1 : 2}`;
+                const h = halfMap[key];
+                if (h && h.count) avgNet = h.net / h.count;
+              }
+            }
+            return {
+              name: p.payslip_period || p.period_end || p.period_start || 'N/A',
+              'Net Pay': Number(p.net_pay || 0),
+              'Avg Net (Half)': avgNet !== null ? Math.round(avgNet * 100) / 100 : undefined,
+            };
+          });
+        })();
+
         return (
           <div className="space-y-4">
-            {payrolls && payrolls.length > 0 ? (
-              payrolls.map(
-                (payroll: any) => (
-                  <div
-                    key={payroll.id}
-                    className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-5 md:p-6 shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
-                  >
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold">Payslip</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveSection('payslip_history')}
+                  className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold"
+                >
+                  Payslip History
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+              <div className="text-sm font-semibold mb-3">Salary Overview — Net Pay &amp; Average</div>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <LineChart data={payrollChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-gray-700" />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" tick={{ fontSize: 10 }} />
+                    <Tooltip formatter={(val: any) => `₱${Number(val).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`} />
+                    <Legend />
+                    <Line type="monotone" dataKey="Net Pay" stroke="#4F46E5" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" dataKey="Avg Net (Half)" stroke="#10B981" strokeWidth={2} strokeDasharray="5 4" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {(() => {
+              const latestPayslip = payrolls && payrolls.length > 0 ? payrolls[0] : null;
+              if (latestPayslip) {
+                return (
+                  <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-5 md:p-6 shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-bold">Current Payslip</span>
+                    </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="w-full sm:w-auto">
                         <p className="font-bold text-gray-900 dark:text-gray-100 text-lg md:text-xl">
-                          {
-                            payroll.pay_period
-                          }
+                          {latestPayslip.pay_period}
                         </p>
-
                         <p className="mt-2 text-2xl md:text-3xl font-bold text-green-600 dark:text-green-500">
-                          {formatCurrency(
-                            payroll.net_pay
-                          )}
+                          {formatCurrency(latestPayslip.net_pay)}
                         </p>
                       </div>
-
                       <span
                         className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap ${
-                          payroll.status ===
-                          'paid'
+                          latestPayslip.status === 'paid'
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         }`}
                       >
-                        {payroll.status.toUpperCase()}
+                        {latestPayslip.status.toUpperCase()}
                       </span>
                     </div>
-
                     <button
                       onClick={() => {
-                        setSelectedPayslip(
-                          payroll
-                        );
-
+                        setSelectedPayslip(latestPayslip);
                         setActiveSection('payslip_detail');
                       }}
                       className="mt-5 w-full rounded-2xl bg-[#4F7BFF] hover:bg-[#3d66ff] text-white py-3 font-semibold transition-colors"
@@ -370,14 +495,15 @@ export const EmployeeDashboard = () => {
                       View Payslip Details
                     </button>
                   </div>
-                )
-              )
-            ) : (
-              <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-8 text-center">
-                <Wallet size={40} className="mx-auto mb-3 text-gray-400" />
-                <p className="text-gray-600 dark:text-gray-400">No payroll records found</p>
-              </div>
-            )}
+                );
+              }
+              return (
+                <div className="rounded-3xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 p-8 text-center">
+                  <Wallet size={40} className="mx-auto mb-3 text-gray-400" />
+                  <p className="text-gray-600 dark:text-gray-400">No payroll records found</p>
+                </div>
+              );
+            })()}
           </div>
         );
 
@@ -391,33 +517,441 @@ export const EmployeeDashboard = () => {
             documents={documentsList}
             employeeId={employee?.id || 0}
             onUpdate={() => documentsQuery.refetch()}
+            readOnly={true}
           />
         );
 
       case 'leave':
         return (
           <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setActiveSection('overview')}
-                className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#090F1D] hover:bg-gray-100 dark:hover:bg-gray-800/60 text-slate-800 dark:text-slate-350 transition-colors flex items-center justify-center"
-                title="Back to Overview"
-              >
-                <ArrowLeft size={16} />
-              </button>
-              <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">Leave Request</h2>
-            </div>
-            <EmployeeLeaveRequestForm showHeader={false} onCancel={() => setActiveSection('overview')} />
+       
+            {/* Show intro card first; open the form when user clicks Submit Leave */}
+            {!showLeaveForm ? (
+              <div className="max-w-md mx-auto">
+                <div className="rounded-2xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800 p-6 shadow-sm text-center">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Leave Request</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Submit your leave request and monitor approval status through the portal.</p>
+                  </div>
+                  <div className="flex flex-col items-center gap-3">
+                    <button onClick={() => setShowLeaveForm(true)} className="w-full sm:w-3/4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">Submit Leave</button>
+                    <button onClick={() => setActiveSection('leave_history')} className="w-full sm:w-3/4 py-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 font-semibold transition-colors">View History</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <EmployeeLeaveRequestForm showHeader={false} onCancel={() => setShowLeaveForm(false)} />
+            )}
           </div>
         );
+
+      case 'payslip_history': {
+        // Full-page payslip history (no modal)
+        const historyPayrolls = (payrolls || []).filter((p: any) => {
+          if (employee?.id == null) return true;
+          const empId = p.employee ?? p.employee_id;
+          return empId == null || String(empId) === String(employee.id);
+        }).slice().sort((a: any, b: any) => {
+          const aT = new Date(a.period_end || a.created_at || 0).getTime();
+          const bT = new Date(b.period_end || b.created_at || 0).getTime();
+          return bT - aT;
+        });
+        const totalPs = historyPayrolls.length;
+        const approvedPs = historyPayrolls.filter((p: any) => String(p.status || '').toLowerCase() === 'approved').length;
+        const highestPs = historyPayrolls.reduce((best: any, cur: any) => {
+          const amt = Number(cur.net_pay || 0);
+          if (!best || amt > best.amount) return { amount: amt, payslip: cur };
+          return best;
+        }, null as any);
+        const formatPeriod = (p: any) => p.payslip_period ?? `${p.period_start || ''} - ${p.period_end || ''}`;
+        return (
+          <div className="space-y-5">
+            {/* Back header */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setActiveSection('payroll')}
+                className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/80 text-gray-700 dark:text-gray-300 shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                aria-label="Back"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Payslip History</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{totalPs} record{totalPs !== 1 ? 's' : ''} found</p>
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20 border border-blue-200/50 dark:border-blue-500/20 p-3.5">
+                <div className="flex justify-between items-start">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-blue-600/80 dark:text-blue-400/80">Total</p>
+                  <span className="text-blue-400 text-xs">📄</span>
+                </div>
+                <p className="text-xl font-black mt-1 text-gray-900 dark:text-white">{totalPs}</p>
+                <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">All records</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/10 dark:from-emerald-500/20 dark:to-green-500/20 border border-emerald-200/50 dark:border-emerald-500/20 p-3.5">
+                <div className="flex justify-between items-start">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80">Approved</p>
+                  <span className="text-emerald-400 text-xs">✓</span>
+                </div>
+                <p className="text-xl font-black mt-1 text-emerald-600 dark:text-emerald-400">{approvedPs}</p>
+                <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">{totalPs > 0 ? `${Math.round((approvedPs / totalPs) * 100)}% rate` : '—'}</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 border border-amber-200/50 dark:border-amber-500/20 p-3.5">
+                <div className="flex justify-between items-start">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-600/80 dark:text-amber-400/80">Highest Pay</p>
+                  <span className="text-amber-400 text-xs">₱</span>
+                </div>
+                <p className="text-xl font-black mt-1 text-gray-900 dark:text-white truncate">₱{(highestPs?.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">{highestPs?.payslip ? formatPeriod(highestPs.payslip) : '—'}</p>
+              </div>
+            </div>
+
+            {/* Payslip list */}
+            {historyPayrolls.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center rounded-2xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-800">
+                <p className="text-gray-500 dark:text-slate-400 font-medium">No payslip history available.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {historyPayrolls.map((p: any, idx: number) => (
+                  <div
+                    key={p.id ?? idx}
+                    className="flex items-center justify-between bg-white dark:bg-[#0f1a2e]/80 border border-gray-200/80 dark:border-slate-700/50 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 border border-indigo-200/40 dark:border-indigo-500/20 flex items-center justify-center text-indigo-500 dark:text-indigo-400 text-sm">
+                        📄
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{formatPeriod(p)}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                          Net Pay: <span className="font-bold text-gray-800 dark:text-slate-200">₱{Number(p.net_pay || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        p.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : p.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}>{p.status || 'N/A'}</span>
+                      <button
+                        onClick={() => { setSelectedPayslip(p); setPayslipOpenedFromHistory(true); setActiveSection('payslip_detail'); }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm hover:shadow-md hover:from-indigo-600 hover:to-purple-700 active:scale-[0.97] transition-all duration-150"
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
 
       case 'payslip_detail':
         return (
           <PayslipDetailModal
             payslip={selectedPayslip}
-            onBack={() => setActiveSection('payroll')}
+            onBack={() => {
+              if (payslipOpenedFromHistory) {
+                setPayslipOpenedFromHistory(false);
+                setActiveSection('payslip_history');
+              } else {
+                setActiveSection('payroll');
+              }
+            }}
           />
         );
+
+      /* ===================================
+         LEAVE HISTORY (inline page section)
+      =================================== */
+      case 'leave_history': {
+
+        const handleCancelLeave = async (id: number) => {
+          try {
+            setLeaveCancelLoading(true);
+            await apiClient.delete(`/leave-requests/${id}/`);
+            setLeaveItems(prev => prev.filter(i => i.id !== id));
+            setSelectedLeave(null);
+          } catch (e) {
+            console.error('Failed to cancel leave request', e);
+          } finally {
+            setLeaveCancelLoading(false);
+          }
+        };
+
+        const handleLeavePreview = (url: string) => {
+          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+          const isPdf = /\.pdf$/i.test(url);
+          if (isImage) {
+            setLeavePreviewFile({ url, type: 'image' });
+          } else if (isPdf) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = url.split('/').pop() || 'file.pdf';
+            link.click();
+          } else {
+            window.open(url, '_blank');
+          }
+        };
+
+        const getLeaveStatusColor = (status: string) => {
+          switch (status?.toLowerCase()) {
+            case 'approved': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+            case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+            default: return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+          }
+        };
+
+        const getLeaveStatusIcon = (status: string) => {
+          switch (status?.toLowerCase()) {
+            case 'approved': return '✓';
+            case 'rejected': return '✕';
+            default: return '⏳';
+          }
+        };
+
+        const getDaysCount = (start: string, end: string) => {
+          return Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        };
+
+        const totalLeaves = leaveItems.length;
+        const approvedLeaves = leaveItems.filter((l: any) => l.status?.toLowerCase() === 'approved').length;
+        const pendingLeaves = leaveItems.filter((l: any) => l.status?.toLowerCase() === 'pending').length;
+
+        // Detail view for selected leave
+        if (selectedLeave) {
+          return (
+            <div className="space-y-5">
+              {/* Back header */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedLeave(null)}
+                  className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/80 text-gray-700 dark:text-gray-300 shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                  aria-label="Back"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Leave Details</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{selectedLeave.leave_type}</p>
+                </div>
+              </div>
+
+              {/* Summary Hero */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1a0610] via-[#2a0a1a] to-[#0d0318] border border-red-900/30 p-5 shadow-xl">
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-red-600/20 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-red-300/70 uppercase tracking-wider mb-0.5">Leave Type</p>
+                      <h3 className="text-lg font-extrabold text-white leading-tight">{selectedLeave.leave_type}</h3>
+                    </div>
+                    <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase ${getLeaveStatusColor(selectedLeave.status)}`}>
+                      {getLeaveStatusIcon(selectedLeave.status)} {selectedLeave.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between bg-white/5 rounded-2xl px-4 py-3 border border-white/5">
+                    <div>
+                      <p className="text-[10px] text-red-300/60 font-bold uppercase tracking-wider mb-1">Period</p>
+                      <p className="text-sm font-bold text-white">
+                        {new Date(selectedLeave.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {' '}–{' '}
+                        {new Date(selectedLeave.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-red-300/60 font-bold uppercase tracking-wider mb-1">Duration</p>
+                      <p className="text-xl font-black text-white">{getDaysCount(selectedLeave.start_date, selectedLeave.end_date)}<span className="text-sm font-bold text-red-300/70 ml-1">days</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div className="space-y-2.5">
+                <h4 className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Reason for Leave</h4>
+                <div className="bg-white dark:bg-[#0d1527]/40 border border-slate-200 dark:border-slate-800/60 rounded-2xl p-4">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 italic font-semibold leading-relaxed">
+                    &ldquo;{selectedLeave.reason || 'No reason provided'}&rdquo;
+                  </p>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="space-y-2.5">
+                <h4 className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Request Timeline</h4>
+                <div className="bg-white dark:bg-[#0d1527]/40 border border-slate-200 dark:border-slate-800/60 rounded-2xl p-4 space-y-4 relative pl-9">
+                  <div className="absolute left-[27px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-red-400 via-red-400/50 to-slate-200 dark:to-slate-800 rounded-full" />
+                  <div className="relative">
+                    <div className="absolute -left-6 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#0d1527] shadow-[0_0_6px_rgba(239,68,68,0.5)] mt-1" />
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">Requested</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                      {new Date(selectedLeave.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(selectedLeave.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <div className={`absolute -left-6 w-3 h-3 rounded-full border-2 border-white dark:border-[#0d1527] mt-1 ${
+                      selectedLeave.status === 'pending' ? 'bg-slate-300 dark:bg-slate-600' :
+                      selectedLeave.status === 'approved' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' :
+                      'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
+                    }`} />
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">
+                      {selectedLeave.status === 'pending' ? 'Pending Approval' : selectedLeave.status === 'rejected' ? 'Rejected' : 'Approved'}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                      {selectedLeave.status === 'pending'
+                        ? 'Waiting for manager review'
+                        : selectedLeave.reviewed_at ? `Reviewed on ${new Date(selectedLeave.reviewed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Status updated'}
+                    </p>
+                    {selectedLeave.status === 'rejected' && selectedLeave.notes && (
+                      <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/30 rounded-xl text-xs text-red-700 dark:text-red-400 font-medium leading-relaxed">
+                        <span className="font-bold">Rejection Reason:</span> &ldquo;{selectedLeave.notes}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Attachments */}
+              {selectedLeave.attachments && selectedLeave.attachments.length > 0 && (
+                <div className="space-y-2.5">
+                  <h4 className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Attachments ({selectedLeave.attachments.length})</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedLeave.attachments.map((url: string, idx: number) => {
+                      const filename = url.split('/').pop()?.split('?')[0] || 'Document';
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleLeavePreview(url)}
+                          className="flex items-center gap-3 p-3.5 bg-white dark:bg-[#0d1527]/30 border border-slate-200 dark:border-slate-800/80 rounded-xl hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center justify-center flex-shrink-0 text-red-600 dark:text-red-400 text-xs font-black">
+                            📎
+                          </div>
+                          <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs truncate">{filename}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Cancel button */}
+              {selectedLeave.status === 'pending' && (
+                <button
+                  onClick={() => handleCancelLeave(selectedLeave.id)}
+                  disabled={leaveCancelLoading}
+                  className="w-full py-3 border border-red-300 dark:border-red-500/35 hover:border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  🗑️ {leaveCancelLoading ? 'Cancelling...' : 'Cancel Request'}
+                </button>
+              )}
+            </div>
+          );
+        }
+
+        // List view
+        return (
+          <div className="space-y-5">
+            {/* Back header */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setActiveSection('leave')}
+                className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/80 text-gray-700 dark:text-gray-300 shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                aria-label="Back"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Leave History</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{totalLeaves} record{totalLeaves !== 1 ? 's' : ''} found</p>
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20 border border-blue-200/50 dark:border-blue-500/20 p-3.5">
+                <div className="flex justify-between items-start">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-blue-600/80 dark:text-blue-400/80">Total</p>
+                  <span className="text-blue-400 text-xs">📋</span>
+                </div>
+                <p className="text-xl font-black mt-1 text-gray-900 dark:text-white">{totalLeaves}</p>
+                <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">All requests</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/10 dark:from-emerald-500/20 dark:to-green-500/20 border border-emerald-200/50 dark:border-emerald-500/20 p-3.5">
+                <div className="flex justify-between items-start">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80">Approved</p>
+                  <span className="text-emerald-400 text-xs">✓</span>
+                </div>
+                <p className="text-xl font-black mt-1 text-emerald-600 dark:text-emerald-400">{approvedLeaves}</p>
+                <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">{totalLeaves > 0 ? `${Math.round((approvedLeaves / totalLeaves) * 100)}% rate` : '—'}</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 border border-amber-200/50 dark:border-amber-500/20 p-3.5">
+                <div className="flex justify-between items-start">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-600/80 dark:text-amber-400/80">Pending</p>
+                  <span className="text-amber-400 text-xs">⏳</span>
+                </div>
+                <p className="text-xl font-black mt-1 text-amber-600 dark:text-amber-400">{pendingLeaves}</p>
+                <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">Awaiting review</p>
+              </div>
+            </div>
+
+            {/* Leave list */}
+            {leaveLoading ? (
+              <div className="flex items-center justify-center py-16 rounded-2xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-800">
+                <LoadingSpinner />
+              </div>
+            ) : leaveItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center rounded-2xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-800">
+                <p className="text-gray-500 dark:text-slate-400 font-medium">No leave history available.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {leaveItems.map((l: any, idx: number) => (
+                  <div
+                    key={l.id ?? idx}
+                    className="flex items-center justify-between bg-white dark:bg-[#0f1a2e]/80 border border-gray-200/80 dark:border-slate-700/50 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-red-300 dark:hover:border-red-500/40 transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm ${
+                        l.status?.toLowerCase() === 'approved' ? 'bg-gradient-to-br from-emerald-500/10 to-green-500/10 dark:from-emerald-500/20 dark:to-green-500/20 border border-emerald-200/40 dark:border-emerald-500/20 text-emerald-500 dark:text-emerald-400' :
+                        l.status?.toLowerCase() === 'rejected' ? 'bg-gradient-to-br from-red-500/10 to-pink-500/10 dark:from-red-500/20 dark:to-pink-500/20 border border-red-200/40 dark:border-red-500/20 text-red-500 dark:text-red-400' :
+                        'bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 border border-amber-200/40 dark:border-amber-500/20 text-amber-500 dark:text-amber-400'
+                      }`}>
+                        ✈
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{l.leave_type}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                          {new Date(l.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(l.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          <span className="ml-2 font-bold text-gray-800 dark:text-slate-200">({getDaysCount(l.start_date, l.end_date)} days)</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${getLeaveStatusColor(l.status)}`}>{l.status || 'N/A'}</span>
+                      <button
+                        onClick={() => setSelectedLeave(l)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-red-500 to-red-700 text-white shadow-sm hover:shadow-md hover:from-red-600 hover:to-red-800 active:scale-[0.97] transition-all duration-150"
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
 
       /* ===================================
          INFORMATION
@@ -427,220 +961,233 @@ export const EmployeeDashboard = () => {
         return (
           <div className="space-y-6">
             {/* Header Card */}
-            <div className="rounded-[24px] bg-gradient-to-br from-[#4A0000] via-[#8B0000] to-[#3B0000] p-6 md:p-8 text-white shadow-xl border border-red-900/30 flex items-center gap-4 transition-all">
-              <div className="w-12 h-12 rounded-2xl bg-red-950/60 border border-red-800/30 flex items-center justify-center flex-shrink-0">
-                <User size={24} className="text-red-400" />
+            <div className="rounded-[24px] bg-gradient-to-br from-[#4A0000] via-[#8B0000] to-[#3B0000] p-6 text-white shadow-xl border border-red-900/30 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between transition-all">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-950/60 border border-red-800/30 flex items-center justify-center flex-shrink-0">
+                  <User size={24} className="text-red-400" />
+                </div>
+                <div className="text-left">
+                  <h2 className="text-lg md:text-2xl font-bold text-white leading-tight">
+                    Employee Information
+                  </h2>
+                  <p className="mt-1 text-slate-300 text-xs md:text-sm">
+                    Personal details, emergency contact, and government information.
+                  </p>
+                </div>
               </div>
-              <div className="text-left">
-                <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
-                  Employee Information
-                </h2>
-                <p className="mt-1 text-slate-300 text-xs md:text-sm">
-                  Personal details, emergency contact, and government information.
-                </p>
-              </div>
+              <button 
+                onClick={() => setEditOpen(true)} 
+                className="w-full sm:w-36 px-6 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl text-sm font-bold flex items-center justify-center transition-all shadow-md active:scale-95"
+              >
+                Edit Profile
+              </button>
             </div>
 
-            <div className="space-y-5">
-              {/* Employment Information Card */}
-              <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
-                    <Briefcase size={20} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Employment Information Card */}
+                <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
+                      <Briefcase size={18} />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Employment Information</h3>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Employment Information</h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Briefcase size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Position</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.position || 'N/A'}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Clock size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Employment Type</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.employment_type || 'N/A'}</span>
+                    </div>
+
+                    <div className="sm:col-span-2 flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <MapPin size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Hub</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.hub_name || 'N/A'}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <User size={14} />
+                {/* Government IDs Card */}
+                <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
+                      <Shield size={18} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Position</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.position || 'N/A'}</span>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Government IDs</h3>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <MapPin size={14} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <CreditCard size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">TIN</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.tin || 'N/A'}</span>
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Hub</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white text-right max-w-[55%]">{employee?.hub_name || 'N/A'}</span>
-                  </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Briefcase size={14} />
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Shield size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">SSS</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.sss || 'N/A'}</span>
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Employment Type</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.employment_type || 'N/A'}</span>
+
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Heart size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">PhilHealth</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.philhealth || 'N/A'}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Home size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Pag-IBIG</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.pagibig || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Government IDs Card */}
-              <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
-                    <Shield size={20} />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Government IDs</h3>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <CreditCard size={14} />
+                {/* Emergency Contact Card */}
+                <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
+                      <User size={18} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">TIN</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.tin || 'N/A'}</span>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Emergency Contact</h3>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Shield size={14} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <User size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Contact Name</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.emergency_contact_name || 'N/A'}</span>
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">SSS</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.sss || 'N/A'}</span>
-                  </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Heart size={14} />
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Users size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Relationship</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.emergency_contact_relationship || 'N/A'}</span>
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">PhilHealth</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.philhealth || 'N/A'}</span>
-                  </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Home size={14} />
+                    <div className="sm:col-span-2 flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Phone size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Phone Number</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.emergency_contact_phone || 'N/A'}</span>
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Pag-IBIG</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.pagibig || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Emergency Contact Card */}
-              <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
-                    <User size={20} />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Emergency Contact</h3>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Users size={14} />
-                    </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Contact Name</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.emergency_contact_name || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Users size={14} />
-                    </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Relationship</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.emergency_contact_relationship || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Phone size={14} />
-                    </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Phone Number</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.emergency_contact_phone || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Information Card */}
-              <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
-                    <User size={20} />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Personal Information</h3>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <User size={14} />
-                    </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Full Name</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.full_name || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <User size={14} />
-                    </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Gender</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.gender || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <MapPin size={14} />
-                    </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Nationality</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.nationality || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Users size={14} />
-                    </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Marital Status</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.marital_status || 'N/A'}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Contact Details Card */}
-              <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl transition-all">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
-                    <User size={20} />
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Personal Information Card */}
+                <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
+                      <User size={18} />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Personal Information</h3>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Contact Details</h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <User size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Full Name</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.full_name || 'N/A'}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <User size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Gender</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.gender || 'N/A'}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Globe size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Nationality</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.nationality || 'N/A'}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Users size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Marital Status</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.marital_status || 'N/A'}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <User size={14} />
+                {/* Contact Details Card */}
+                <div className="rounded-3xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/80 p-5 md:p-6 shadow-sm dark:shadow-xl hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-150 dark:border-red-500/20 text-red-650 dark:text-red-500 flex items-center justify-center">
+                      <User size={18} />
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Email</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-[55%]">{employee?.email_address || 'N/A'}</span>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Contact Details</h3>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <Phone size={14} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Mail size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Email</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-all">{employee?.email_address || 'N/A'}</span>
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Phone</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{employee?.phone_number || 'N/A'}</span>
-                  </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 rounded-2xl px-4 py-3">
-                    <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/60 flex-shrink-0">
-                      <MapPin size={14} />
+                    <div className="flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Phone size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Phone</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.phone_number || 'N/A'}</span>
                     </div>
-                    <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold flex-1">Address</span>
-                    <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-[55%]">{employee?.current_address || 'N/A'}</span>
+
+                    <div className="sm:col-span-2 flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <MapPin size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Address</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{formatEmployeeAddress(employee)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         );
-
 
       default:
         return null;
@@ -827,19 +1374,21 @@ export const EmployeeDashboard = () => {
       {/* EDIT MODAL */}
       <EmployeeEditModal
         isOpen={editOpen}
-        onClose={() =>
-          setEditOpen(false)
-        }
+        onClose={() => setEditOpen(false)}
         employee={employee}
-        onSuccess={() =>
-          window.location.reload()
-        }
+        onSuccess={() => setEditOpen(false)}
       />
 
 
+      {/* LEAVE ATTACHMENT PREVIEW */}
+      {leavePreviewFile && (
+        <AttachmentPreviewModal
+          url={leavePreviewFile.url}
+          type={leavePreviewFile.type}
+          onClose={() => setLeavePreviewFile(null)}
+        />
+      )}
 
-      {/* LEAVE HISTORY */}
-      <EmployeeLeaveHistoryModal isOpen={leaveHistoryOpen} onClose={() => setLeaveHistoryOpen(false)} />
     </div>
   );
 };

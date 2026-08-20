@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Loader2, History, Camera, Fingerprint, ChevronRight, Calendar, LogIn, LogOut, AlertCircle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useGetAttendance, useClockIn, useClockOut } from '@/hooks/useQueries';
+import { useGetAttendance, useClockIn, useClockOut, useGetHubs } from '@/hooks/useQueries';
+import { useAuth } from '@/hooks/useAuth';
+import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 
 interface AttendanceSidebarProps {
   employeeId: number;
   onViewHistory?: () => void;
+  hideHeader?: boolean;
 }
 
 const formatAttendanceTime = (timeStr: string | undefined | null) => {
@@ -32,12 +35,49 @@ const formatAttendanceTime = (timeStr: string | undefined | null) => {
   }
 };
 
-export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSidebarProps) => {
+export const AttendanceSidebar = ({ employeeId, onViewHistory, hideHeader }: AttendanceSidebarProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [file, setFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [showPhotoRequired, setShowPhotoRequired] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { employee } = useAuth();
+  const { data: hubsData } = useGetHubs();
+  const hubs = normalizeApiResponse(hubsData) || [];
+  
+  const hubId = typeof employee?.hub === 'object' ? employee.hub.id : employee?.hub;
+  const assignedHub = hubs.find((h: any) => h.id === hubId);
+
+  // Haversine formula to compute distance in meters
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // Earth radius in meters
+    const phi1 = (lat1 * Math.PI) / 180;
+    const phi2 = (lat2 * Math.PI) / 180;
+    const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+    const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+      Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+  };
+
+  const getCurrentLocation = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by your browser'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
+    });
+  };
   
   const today = new Date().toISOString().split('T')[0];
   const attendanceQuery = useGetAttendance({ employee_id: employeeId, date: today });
@@ -75,10 +115,35 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
       toast.error('Please take a photo first before clocking in!');
       return;
     }
+
+    let userLat: number;
+    let userLng: number;
+    try {
+      const position = await getCurrentLocation();
+      userLat = position.coords.latitude;
+      userLng = position.coords.longitude;
+    } catch (err: any) {
+      toast.error('Location/GPS access is required to clock in.');
+      return;
+    }
+
+    if (!assignedHub) {
+      toast.error('No assigned hub found for your profile. Please contact HR.');
+      return;
+    }
+
+    const distance = getDistance(userLat, userLng, assignedHub.latitude, assignedHub.longitude);
+    if (distance > 10) {
+      toast.error(`You are too far from your assigned hub (${assignedHub.name}). You are currently ${distance.toFixed(1)}m away. Allowed distance: 10m.`);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('employee', employeeId.toString());
     formData.append('date', today);
     formData.append('clock_in_image', file);
+    formData.append('clock_in_latitude', userLat.toString());
+    formData.append('clock_in_longitude', userLng.toString());
     try {
       await clockInMutation.mutateAsync(formData);
       toast.success('Clocked in successfully');
@@ -95,10 +160,35 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
       toast.error('Please take a photo first before clocking out!');
       return;
     }
+
+    let userLat: number;
+    let userLng: number;
+    try {
+      const position = await getCurrentLocation();
+      userLat = position.coords.latitude;
+      userLng = position.coords.longitude;
+    } catch (err: any) {
+      toast.error('Location/GPS access is required to clock out.');
+      return;
+    }
+
+    if (!assignedHub) {
+      toast.error('No assigned hub found for your profile. Please contact HR.');
+      return;
+    }
+
+    const distance = getDistance(userLat, userLng, assignedHub.latitude, assignedHub.longitude);
+    if (distance > 10) {
+      toast.error(`You are too far from your assigned hub (${assignedHub.name}). You are currently ${distance.toFixed(1)}m away. Allowed distance: 10m.`);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('employee', employeeId.toString());
     formData.append('date', today);
     formData.append('clock_out_image', file);
+    formData.append('clock_out_latitude', userLat.toString());
+    formData.append('clock_out_longitude', userLng.toString());
     try {
       await clockOutMutation.mutateAsync(formData);
       toast.success('Clocked out successfully');
@@ -138,19 +228,23 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory }: AttendanceSideb
   
   return (
     <div className="w-full space-y-4 rounded-[32px] p-5 bg-gradient-to-b from-[#F8FAFC] to-[#EEF2F7] dark:from-[#050B16] dark:via-[#071220] dark:to-[#030814]">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Attendance Records
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            View and track your attendance
-          </p>
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Attendance Records
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              View and track your attendance
+            </p>
+          </div>
+          {onViewHistory && (
+            <button onClick={onViewHistory} className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-[#4C0E16]/80 hover:bg-red-100 dark:hover:bg-[#4C0E16] border border-red-200 dark:border-[#70101B] text-red-600 dark:text-[#EF4444] flex items-center justify-center transition-all shadow-sm">
+              <Calendar size={20} />
+            </button>
+          )}
         </div>
-        <button className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-[#4C0E16]/80 hover:bg-red-100 dark:hover:bg-[#4C0E16] border border-red-200 dark:border-[#70101B] text-red-600 dark:text-[#EF4444] flex items-center justify-center transition-all shadow-sm">
-          <Calendar size={20} />
-        </button>
-      </div>
+      )}
 
       <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#FFF5F5] via-[#FFF8F8] to-[#FFF0F2] dark:from-[#4c0711] dark:via-[#1a080d] dark:to-[#0c101a] p-5 shadow-xl dark:shadow-2xl border border-red-200/50 dark:border-red-900/30 transition-all">
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-red-500/5 dark:bg-red-500/10 rounded-full blur-3xl pointer-events-none" />

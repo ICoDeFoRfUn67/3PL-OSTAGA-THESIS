@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, Badge, LoadingSpinner, EmptyState } from '@/components/common';
 import { EmployeeAccessControlModal } from '@/components/EmployeeAccessControlModal';
 import { useGetEmployees, useGetActivityLogs, useGetSecurityAlerts } from '@/hooks/useQueries';
-import { Search } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 import { Sidebar } from '@/components/Sidebar';
 import AdminMobileProfile from '@/components/AdminMobileProfile';
@@ -16,7 +16,9 @@ export const AccessControlPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   // Fetch data
   const { data: employeesData, isLoading, refetch: refetchEmployees } = useGetEmployees();
   const { data: activityLogsData } = useGetActivityLogs({ limit: 10 });
@@ -100,6 +102,17 @@ export const AccessControlPage = () => {
       return matchesSearch && matchesRole && matchesStatus && matchesHub;
     });
   }, [employees, searchTerm, roleFilter, statusFilter, hubFilter]);
+  
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, statusFilter, hubFilter]);
+
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const paginatedEmployees = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredEmployees.slice(start, start + itemsPerPage);
+  }, [filteredEmployees, currentPage]);
 
   if (isLoading) {
     return (
@@ -127,6 +140,11 @@ export const AccessControlPage = () => {
         <AdminMobileProfile />
 
         <div className="p-4 lg:p-6 space-y-6 pb-32 lg:pb-6 max-md:p-3 max-md:space-y-4 max-md:pb-32">
+        
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">Access Control</h1>
+          <p className="text-gray-600 dark:text-gray-400">Roles and Permissions</p>
+        </div>
       
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-md:gap-3">
@@ -240,7 +258,7 @@ export const AccessControlPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredEmployees.map((emp: any) => (
+                    {paginatedEmployees.map((emp: any) => (
                       <tr
                         key={emp.id}
                         className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -282,7 +300,7 @@ export const AccessControlPage = () => {
 
               {/* MOBILE CARDS */}
               <div className="hidden max-md:flex flex-col gap-3">
-                {filteredEmployees.map((emp: any) => (
+                {paginatedEmployees.map((emp: any) => (
                   <div key={emp.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-3">
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 min-w-0">
@@ -318,6 +336,35 @@ export const AccessControlPage = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 mt-6 mb-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    title="Previous page"
+                    className="h-10 w-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <span className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white">
+                      {currentPage}
+                    </span>
+                    <span>of</span>
+                    <span>{totalPages}</span>
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    title="Next page"
+                    className="h-10 w-10 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <EmptyState title="No users found" description="Try adjusting your filters" />

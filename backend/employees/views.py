@@ -12,18 +12,68 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
 from django.db import models
+from django.db.models import Count, Prefetch
 from django.http import HttpResponse, Http404
 import os
 import json
 from .models import Hub, Employee, EditRequest, LeaveRequest, Attendance, LiveLocation, Payroll, EmployeeDocument, ActivityLog, SecurityAlert, HRPermission, SavedImage
+
+def apply_hr_hub_filter(queryset, user, hub_field='hub'):
+    """Filter queryset by managed hubs if user is HR."""
+    if not user.is_authenticated:
+        return queryset
+    emp = getattr(user, 'employee', None)
+    if emp and emp.role == 'HR':
+        try:
+            hr_perms = emp.hr_permissions
+            managed_hubs = hr_perms.managed_hubs.all()
+            if hr_perms.access_type == 'Single' and not managed_hubs.exists() and emp.hub:
+                return queryset.filter(**{f"{hub_field}": emp.hub})
+            elif managed_hubs.exists():
+                return queryset.filter(**{f"{hub_field}__in": managed_hubs})
+            else:
+                return queryset.none()
+        except Exception:
+            return queryset.none()
+    return queryset
+
+
+def get_managed_hub_ids(user):
+    """Return hub IDs an HR user manages, [] if HR has none, None for non-HR."""
+    emp = getattr(user, 'employee', None)
+    if not emp or emp.role != 'HR':
+        return None
+    try:
+        hr_perms = emp.hr_permissions
+        hub_ids = list(hr_perms.managed_hubs.values_list('id', flat=True))
+        if not hub_ids and emp.hub_id:
+            hub_ids = [emp.hub_id]
+        return hub_ids
+    except Exception:
+        return [emp.hub_id] if emp.hub_id else []
+
 from .serializers import (
-    HubSerializer, EmployeeSerializer, EmployeeCreateSerializer, EmployeeDocumentSerializer,
+    HubSerializer, EmployeeSerializer, EmployeeListSerializer, EmployeeCreateSerializer, EmployeeDocumentSerializer,
     EditRequestSerializer, LeaveRequestSerializer, LoginSerializer, AttendanceSerializer, 
     LiveLocationSerializer, PayrollSerializer, ActivityLogSerializer, SecurityAlertSerializer, HRPermissionSerializer
 )
 
 from datetime import timedelta
-from django.contrib.sessions.models import Session
+import csv
+import io
+from datetime import date as date_cls, datetime
+try:
+    import openpyxl
+except Exception:
+    openpyxl = None
+
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+except Exception:
+    # reportlab optional
+    letter = None
+    canvas = None
 
 def _client_ip(request):
     xff = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -48,6 +98,11 @@ class HubViewSet(viewsets.ModelViewSet):
     queryset = Hub.objects.all().order_by('name')
     serializer_class = HubSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = Hub.objects.annotate(_employee_count=Count('employees')).order_by('name')
+        return apply_hr_hub_filter(qs, self.request.user, hub_field='id')
 
 class MetaView(APIView):
     """Meta endpoint for frontend form option data."""
@@ -60,21 +115,37 @@ class MetaView(APIView):
             'employmentTypes': [choice[0] for choice in Employee.EMPLOYMENT_TYPE_CHOICES],
             'positions': list(Employee.objects.order_by('position').values_list('position', flat=True).distinct()),
             'hubs': HubSerializer(
-                Hub.objects.order_by('name'),
+                apply_hr_hub_filter(Hub.objects.order_by('name'), request.user, hub_field='id'),
                 many=True,
                 context={'request': request}
             ).data,
         }
 
+        # Attempt to load a philippine locations JSON file from project root.
+        # File path: <BASE_DIR>/philippine_locations.json
+        try:
+            locations_path = os.path.join(settings.BASE_DIR, 'philippine_locations.json')
+            if os.path.exists(locations_path):
+                with open(locations_path, 'r', encoding='utf-8') as f:
+                    try:
+                        loc_data = json.load(f)
+                        meta_data['locations'] = loc_data
+                    except Exception:
+                        meta_data['locations'] = {}
+            else:
+                meta_data['locations'] = {}
+        except Exception:
+            meta_data['locations'] = {}
+
         if key:
             if key not in meta_data:
                 return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
             if key == 'positions' and not meta_data['positions']:
-                meta_data['positions'] = ['Sorter', 'Admin', 'HR', 'Rider']
+                meta_data['positions'] = ['Sorter', 'Admin', 'HR', 'Rider' ,'Courier']
             return Response(meta_data[key])
 
         if not meta_data['positions']:
-            meta_data['positions'] = ['Sorter', 'Admin', 'HR', 'Rider']
+            meta_data['positions'] = ['Sorter', 'Admin', 'HR', 'Rider' ,'Courier']
         return Response(meta_data)
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -82,21 +153,36 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     permission_classes = [IsAuthenticated]  # Require login for updates
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    pagination_class = None
     
     def get_serializer_class(self):
         if self.action == 'create':
             return EmployeeCreateSerializer
+        if self.action == 'list':
+            return EmployeeListSerializer
         return EmployeeSerializer
     
     def update(self, request, *args, **kwargs):
-        """Handle full update with activity logging"""
+        """Handle full update with activity logging.
+
+        Uses EmployeeCreateSerializer for input normalization (handles multipart
+        QueryDicts and camelCase -> snake_case mappings) then returns the
+        canonical EmployeeSerializer representation.
+        """
         employee = self.get_object()
-        old_data = EmployeeSerializer(employee).data
-        
-        response = super().update(request, *args, **kwargs)
-        
+        old_data = EmployeeSerializer(employee, context={'request': request}).data
+
+        # Use create serializer for input normalization (to_internal_value)
+        input_serializer = EmployeeCreateSerializer(instance=employee, data=request.data, partial=False, context={'request': request})
+        input_serializer.is_valid(raise_exception=True)
+        input_serializer.save()
+
+        # Re-serialize with the full EmployeeSerializer for consistent response
+        output_serializer = EmployeeSerializer(employee, context={'request': request})
+        response_data = output_serializer.data
+
         # Log the update
-        changes = self._get_field_changes(old_data, response.data)
+        changes = self._get_field_changes(old_data, response_data)
         if changes:
             ActivityLog.objects.create(
                 user=request.user,
@@ -106,18 +192,28 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 details=f'Updated {employee.full_name}: {changes}',
                 ip_address=self.get_client_ip(request)
             )
-        
-        return response
+
+        return Response(response_data)
     
     def partial_update(self, request, *args, **kwargs):
-        """Handle partial update with activity logging"""
+        """Handle partial update with activity logging.
+
+        Uses EmployeeCreateSerializer for input normalization (handles multipart
+        QueryDicts and camelCase -> snake_case mappings) then returns the
+        canonical EmployeeSerializer representation.
+        """
         employee = self.get_object()
-        old_data = EmployeeSerializer(employee).data
-        
-        response = super().partial_update(request, *args, **kwargs)
-        
+        old_data = EmployeeSerializer(employee, context={'request': request}).data
+
+        input_serializer = EmployeeCreateSerializer(instance=employee, data=request.data, partial=True, context={'request': request})
+        input_serializer.is_valid(raise_exception=True)
+        input_serializer.save()
+
+        output_serializer = EmployeeSerializer(employee, context={'request': request})
+        response_data = output_serializer.data
+
         # Log the update
-        changes = self._get_field_changes(old_data, response.data)
+        changes = self._get_field_changes(old_data, response_data)
         if changes:
             ActivityLog.objects.create(
                 user=request.user,
@@ -127,8 +223,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 details=f'Updated {employee.full_name}: {changes}',
                 ip_address=self.get_client_ip(request)
             )
-        
-        return response
+
+        return Response(response_data)
     
     def _get_field_changes(self, old_data: dict, new_data: dict) -> str:
         """Compare old and new data and return formatted changes"""
@@ -145,6 +241,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """Handle employee creation with activity logging"""
+        requester = getattr(request.user, 'employee', None) if hasattr(request.user, 'employee') else None
+        request_role = requester.role if requester else ('Admin' if request.user.is_superuser else 'Employee')
+        if request_role == 'HR':
+            target_role = request.data.get('role', 'Employee')
+            if target_role in ['Admin', 'HR']:
+                return Response({'error': 'HR cannot create Admin or HR accounts.'}, status=status.HTTP_403_FORBIDDEN)
+
         response = super().create(request, *args, **kwargs)
 
         try:
@@ -188,6 +291,14 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Employee.objects.all().select_related('hub', 'user')
+        if getattr(self, 'action', None) == 'list':
+            queryset = queryset.prefetch_related(
+                Prefetch(
+                    'saved_images',
+                    queryset=SavedImage.objects.filter(image_type='profile').order_by('-id').only('id', 'employee_id'),
+                )
+            )
+        queryset = apply_hr_hub_filter(queryset, self.request.user, hub_field='hub')
         hub_id = self.request.query_params.get('hub_id')
         if hub_id:
             try:
@@ -356,54 +467,44 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return request.META.get('REMOTE_ADDR')
 
 
+def _get_online_employee_ids(window_minutes=5):
+    """Return employee IDs considered online based on recent heartbeat or live location."""
+    threshold = timezone.now() - timedelta(minutes=window_minutes)
+
+    recent_location_emp_ids = LiveLocation.objects.filter(
+        timestamp__gte=threshold
+    ).values_list('employee_id', flat=True).distinct()
+
+    try:
+        recent_activity_emp_ids = Employee.objects.filter(
+            last_activity__gte=threshold
+        ).values_list('id', flat=True).distinct()
+    except Exception:
+        recent_activity_emp_ids = []
+
+    return set(list(recent_location_emp_ids) + list(recent_activity_emp_ids))
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def online_employees(request):
     """Return employees considered online.
 
     Heuristic: an employee is online if they have a LiveLocation timestamp within
-    the last 5 minutes OR their linked Django User `last_login` is within 5 minutes.
+    the last 5 minutes or a recent heartbeat (last_activity).
     """
     try:
         window_minutes = int(request.query_params.get('minutes', 5))
     except (TypeError, ValueError):
         window_minutes = 5
 
-    threshold = timezone.now() - timedelta(minutes=window_minutes)
+    online_ids = _get_online_employee_ids(window_minutes=window_minutes)
 
-    # Employees with recent live location
-    recent_location_emp_ids = LiveLocation.objects.filter(timestamp__gte=threshold).values_list('employee_id', flat=True).distinct()
-
-    # Employees with active sessions (logged in via Django auth session)
-    session_user_ids = set()
-    try:
-        active_sessions = Session.objects.filter(expire_date__gte=timezone.now())
-        for sess in active_sessions:
-            try:
-                data = sess.get_decoded()
-                uid = data.get('_auth_user_id') or data.get('user_id')
-                if uid:
-                    try:
-                        session_user_ids.add(int(uid))
-                    except Exception:
-                        pass
-            except Exception:
-                continue
-    except Exception:
-        session_user_ids = set()
-
-    # Map session user ids to Employee ids (if user has an Employee record)
-    recent_session_emp_ids = Employee.objects.filter(user_id__in=session_user_ids).values_list('id', flat=True)
-
-    # Employees with recent heartbeat/last_activity
-    try:
-        recent_activity_emp_ids = Employee.objects.filter(last_activity__gte=threshold).values_list('id', flat=True).distinct()
-    except Exception:
-        recent_activity_emp_ids = []
-
-    online_ids = set(list(recent_location_emp_ids) + list(recent_session_emp_ids) + list(recent_activity_emp_ids))
-
-    employees = Employee.objects.filter(id__in=online_ids)
+    employees = apply_hr_hub_filter(
+        Employee.objects.filter(id__in=online_ids),
+        request.user,
+        hub_field='hub',
+    )
     serializer = EmployeeSerializer(employees, many=True, context={'request': request})
 
     return Response({'count': employees.count(), 'employees': serializer.data, 'ids': list(online_ids)})
@@ -420,6 +521,28 @@ def heartbeat(request):
         return Response({'status': 'ok', 'updated': True})
     except Employee.DoesNotExist:
         return Response({'status': 'no_employee'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    """Clear online presence when the user logs out."""
+    client_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0] or request.META.get('REMOTE_ADDR')
+    try:
+        emp = Employee.objects.get(user=request.user)
+        emp.last_activity = None
+        emp.save(update_fields=['last_activity'])
+        ActivityLog.objects.create(
+            user=request.user,
+            employee=emp,
+            role=emp.role,
+            action='logout',
+            details=f'{request.user.username} logged out from {client_ip}',
+            ip_address=client_ip,
+        )
+    except Employee.DoesNotExist:
+        pass
+    return Response({'status': 'ok'})
 
 
 # Helper: compute government deductions based on hub-specific rates or defaults
@@ -698,7 +821,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = Attendance.objects.all().select_related('employee', 'employee__hub').order_by('-date')
+        queryset = Attendance.objects.exclude(employee__role__in=['Admin', 'HR']).select_related('employee', 'employee__hub').order_by('-date', '-clock_in_time')
+        queryset = apply_hr_hub_filter(queryset, self.request.user, hub_field='employee__hub')
         hub_id = self.request.query_params.get('hub_id')
         employee_id = self.request.query_params.get('employee_id')
         date = self.request.query_params.get('date')
@@ -762,6 +886,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             
             attendance.clock_in_time = timezone.now()
             attendance.status = 'Present'
+            lat = request.data.get('clock_in_latitude') or request.data.get('latitude')
+            lng = request.data.get('clock_in_longitude') or request.data.get('longitude')
+            if lat is not None:
+                attendance.clock_in_latitude = lat
+            if lng is not None:
+                attendance.clock_in_longitude = lng
             attendance.save()
 
             try:
@@ -835,6 +965,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     print(f"[clock_out] Error saving to SavedImage: {e}")
             
             attendance.clock_out_time = timezone.now()
+            lat = request.data.get('clock_out_latitude') or request.data.get('latitude')
+            lng = request.data.get('clock_out_longitude') or request.data.get('longitude')
+            if lat is not None:
+                attendance.clock_out_latitude = lat
+            if lng is not None:
+                attendance.clock_out_longitude = lng
             attendance.save()
 
             try:
@@ -928,6 +1064,333 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         ]
         return Response(result)
 
+    @action(detail=False, methods=['get'])
+    def aggregate(self, request):
+        """Aggregate attendance stats for a given period (start_date, end_date).
+
+        Returns counts: present, absent, late, overtime_hours, total_hours and
+        breakdowns for last 7 days, last 15 days and last 30 days relative to end_date.
+        """
+        # Parse dates
+        end_date_str = request.query_params.get('end_date')
+        start_date_str = request.query_params.get('start_date')
+        employee_id = request.query_params.get('employee_id')
+
+        try:
+            if end_date_str:
+                end_date = date_cls.fromisoformat(end_date_str)
+            else:
+                end_date = timezone.localdate()
+        except Exception:
+            end_date = timezone.localdate()
+
+        try:
+            if start_date_str:
+                start_date = date_cls.fromisoformat(start_date_str)
+            else:
+                # default to first day of current month
+                start_date = date_cls(end_date.year, end_date.month, 1)
+        except Exception:
+            start_date = date_cls(end_date.year, end_date.month, 1)
+
+        def compute_range(s: date_cls, e: date_cls):
+            qs = Attendance.objects.filter(date__gte=s, date__lte=e)
+            if employee_id:
+                try:
+                    qs = qs.filter(employee_id=int(employee_id))
+                except Exception:
+                    pass
+
+            total_seconds = 0.0
+            overtime_seconds = 0.0
+            present_days = set()
+            late_days = set()
+
+            STANDARD_DAY_HOURS = 8
+            LATE_HOUR = 10
+
+            for a in qs:
+                if a.clock_in_time:
+                    present_days.add(a.date)
+                    if getattr(a.clock_in_time, 'hour', None) is not None and a.clock_in_time.hour >= LATE_HOUR:
+                        late_days.add(a.date)
+
+                if a.clock_in_time and a.clock_out_time:
+                    diff = (a.clock_out_time - a.clock_in_time).total_seconds()
+                    if diff > 0:
+                        total_seconds += diff
+                        hours = diff / 3600.0
+                        if hours > STANDARD_DAY_HOURS:
+                            overtime_seconds += (hours - STANDARD_DAY_HOURS) * 3600.0
+                elif a.clock_in_time and not a.clock_out_time:
+                    # approximate until end of day
+                    try:
+                        from django.utils import timezone as djtz
+                        if a.date == djtz.now().date():
+                            diff = (djtz.now() - a.clock_in_time).total_seconds()
+                            if diff > 0:
+                                total_seconds += diff
+                                hours = diff / 3600.0
+                                if hours > STANDARD_DAY_HOURS:
+                                    overtime_seconds += (hours - STANDARD_DAY_HOURS) * 3600.0
+                    except Exception:
+                        pass
+
+            total_hours = round(total_seconds / 3600.0, 2)
+            overtime_hours = round(overtime_seconds / 3600.0, 2)
+
+            # working weekdays count
+            def count_weekdays(s_date, e_date):
+                days = 0
+                cur = s_date
+                while cur <= e_date:
+                    if cur.weekday() < 5:
+                        days += 1
+                    cur = cur + timedelta(days=1)
+                return days
+
+            working_days = count_weekdays(s, e)
+
+            # approved leave days overlapping
+            leave_days = 0
+            approved_leaves = LeaveRequest.objects.filter(status='approved')
+            for lr in approved_leaves:
+                ls = lr.start_date
+                le = lr.end_date
+                overlap_start = max(ls, s)
+                overlap_end = min(le, e)
+                if overlap_start <= overlap_end:
+                    # count weekdays in overlap
+                    leave_days += count_weekdays(overlap_start, overlap_end)
+
+            present = len(present_days)
+            late = len(late_days)
+            absences = max(0, working_days - present - leave_days)
+
+            return {
+                'present': present,
+                'late': late,
+                'absent': absences,
+                'total_hours': total_hours,
+                'overtime_hours': overtime_hours,
+                'working_days': working_days,
+            }
+
+        # Overall for requested range
+        overall = compute_range(start_date, end_date)
+
+        # weekly (last 7 days ending end_date)
+        weekly_start = end_date - timedelta(days=6)
+        weekly = compute_range(weekly_start, end_date)
+
+        # last 15 days
+        fortnight_start = end_date - timedelta(days=14)
+        fortnight = compute_range(fortnight_start, end_date)
+
+        # last 30 days
+        monthly_start = end_date - timedelta(days=29)
+        monthly = compute_range(monthly_start, end_date)
+
+        return Response({
+            'requested_start': start_date,
+            'requested_end': end_date,
+            'overall': overall,
+            'weekly': weekly,
+            'fortnight': fortnight,
+            'monthly': monthly,
+        })
+
+    @action(detail=False, methods=['get'])
+    def download(self, request):
+        """Download attendance records for a period in CSV/XLSX/PDF format.
+
+        Query params: start_date, end_date, employee_id, format (csv|xlsx|pdf)
+        """
+        fmt = (request.query_params.get('format') or 'csv').lower()
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+        employee_id = request.query_params.get('employee_id')
+
+        try:
+            if end_date_str:
+                end_date = date_cls.fromisoformat(end_date_str)
+            else:
+                end_date = timezone.localdate()
+        except Exception:
+            end_date = timezone.localdate()
+
+        try:
+            if start_date_str:
+                start_date = date_cls.fromisoformat(start_date_str)
+            else:
+                start_date = date_cls(end_date.year, end_date.month, 1)
+        except Exception:
+            start_date = date_cls(end_date.year, end_date.month, 1)
+
+        qs = Attendance.objects.filter(date__gte=start_date, date__lte=end_date).select_related('employee').order_by('date')
+        if employee_id:
+            try:
+                qs = qs.filter(employee_id=int(employee_id))
+            except Exception:
+                pass
+
+        # Build rows
+        rows = []
+        for a in qs:
+            rows.append({
+                'id': a.id,
+                'employee_name': getattr(a.employee, 'full_name', ''),
+                'jtp_code': getattr(a.employee, 'jtp_code', ''),
+                'hub_name': getattr(a.employee.hub, 'name', '') if getattr(a.employee, 'hub', None) else '',
+                'city': getattr(a.employee.hub, 'city', '') if getattr(a.employee, 'hub', None) else '',
+                'date': a.date.isoformat() if a.date else '',
+                'clock_in_time': a.clock_in_time.isoformat() if a.clock_in_time else '',
+                'clock_out_time': a.clock_out_time.isoformat() if a.clock_out_time else '',
+                'clock_in_image': a.clock_in_image.url if a.clock_in_image else '',
+                'clock_out_image': a.clock_out_image.url if a.clock_out_image else '',
+                'clock_in_latitude': a.clock_in_latitude,
+                'clock_in_longitude': a.clock_in_longitude,
+                'clock_out_latitude': a.clock_out_latitude,
+                'clock_out_longitude': a.clock_out_longitude,
+                'status': a.status,
+                'total_hours': getattr(a, 'total_hours', ''),
+                'overtime_hours': getattr(a, 'overtime_hours', ''),
+            })
+
+        filename_base = 'attendance-report-monthly'
+
+        if fmt == 'csv':
+            si = io.StringIO()
+            writer = csv.writer(si)
+            header = list(rows[0].keys()) if rows else ['id','employee_name','jtp_code','hub_name','city','date','clock_in_time','clock_out_time','clock_in_image','clock_out_image','clock_in_latitude','clock_in_longitude','clock_out_latitude','clock_out_longitude','status','total_hours','overtime_hours']
+            writer.writerow(header)
+            for r in rows:
+                writer.writerow([r.get(h, '') for h in header])
+            resp = HttpResponse(si.getvalue(), content_type='text/csv')
+            resp['Content-Disposition'] = f'attachment; filename="{filename_base}.csv"'
+            return resp
+
+        if fmt == 'xlsx' and openpyxl is not None:
+            from openpyxl import Workbook
+            wb = Workbook()
+            ws = wb.active
+            header = list(rows[0].keys()) if rows else ['id','employee_name','jtp_code','hub_name','city','date','clock_in_time','clock_out_time','clock_in_image','clock_out_image','clock_in_latitude','clock_in_longitude','clock_out_latitude','clock_out_longitude','status','total_hours','overtime_hours']
+            ws.append(header)
+            for r in rows:
+                ws.append([r.get(h, '') for h in header])
+            bio = io.BytesIO()
+            wb.save(bio)
+            bio.seek(0)
+            resp = HttpResponse(bio.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            resp['Content-Disposition'] = f'attachment; filename="{filename_base}.xlsx"'
+            return resp
+
+        # PDF fallback (simple table) if reportlab available
+        if fmt == 'pdf' and canvas is not None and letter is not None:
+            bio = io.BytesIO()
+            c = canvas.Canvas(bio, pagesize=letter)
+            width, height = letter
+            y = height - 40
+            # Simple header
+            c.setFont('Helvetica-Bold', 12)
+            c.drawString(40, y, 'Attendance Report')
+            y -= 24
+            c.setFont('Helvetica', 10)
+            for r in rows:
+                line = f"{r.get('date','')} - {r.get('employee_name','')} - {r.get('clock_in_time','')} - {r.get('clock_out_time','')} - {r.get('status','')}"
+                c.drawString(40, y, line[:1000])
+                y -= 14
+                if y < 60:
+                    c.showPage()
+                    y = height - 40
+            c.save()
+            bio.seek(0)
+            resp = HttpResponse(bio.read(), content_type='application/pdf')
+            resp['Content-Disposition'] = f'attachment; filename="{filename_base}.pdf"'
+            return resp
+
+        # Default: CSV
+        si = io.StringIO()
+        writer = csv.writer(si)
+        header = list(rows[0].keys()) if rows else ['id','employee_name','jtp_code','hub_name','city','date','clock_in_time','clock_out_time','clock_in_image','clock_out_image','clock_in_latitude','clock_in_longitude','clock_out_latitude','clock_out_longitude','status','total_hours','overtime_hours']
+        writer.writerow(header)
+        for r in rows:
+            writer.writerow([r.get(h, '') for h in header])
+        resp = HttpResponse(si.getvalue(), content_type='text/csv')
+        resp['Content-Disposition'] = f'attachment; filename="{filename_base}.csv"'
+        return resp
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Admin: Approve an attendance entry. Per user request, approving leaves recorded hours unchanged."""
+        try:
+            # Only allow HR or Admin users to approve attendance
+            try:
+                actor = Employee.objects.get(user=request.user)
+            except Employee.DoesNotExist:
+                actor = None
+            if not actor or getattr(actor, 'role', '').lower() not in ['hr', 'admin']:
+                raise PermissionDenied('Only HR or Admin users may approve attendance')
+
+            attendance = self.get_object()
+            # Persist approval state
+            attendance.is_approved = True
+            attendance.approved_by = request.user
+            attendance.approved_at = timezone.now()
+            attendance.save()
+
+            ActivityLog.objects.create(
+                user=request.user,
+                employee=attendance.employee,
+                role=_request_actor_role(request),
+                action='attendance_approved',
+                details=f'Attendance {attendance.id} approved by {getattr(request.user, "username", "")}',
+                ip_address=_client_ip(request),
+            )
+
+            serializer = AttendanceSerializer(attendance, context={'request': request})
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
+    @action(detail=True, methods=['post'])
+    def disapprove(self, request, pk=None):
+        """Admin: Disapprove an attendance entry. This will remove recorded hours for the day (clear clock in/out)."""
+        try:
+            # Only allow HR or Admin users to disapprove attendance
+            try:
+                actor = Employee.objects.get(user=request.user)
+            except Employee.DoesNotExist:
+                actor = None
+            if not actor or getattr(actor, 'role', '').lower() not in ['hr', 'admin']:
+                raise PermissionDenied('Only HR or Admin users may disapprove attendance')
+
+            attendance = self.get_object()
+
+            # remove recorded times so the day contributes no hours
+            attendance.clock_in_time = None
+            attendance.clock_out_time = None
+            attendance.status = 'Absent'
+            # clear approval state as well
+            attendance.is_approved = False
+            attendance.approved_by = None
+            attendance.approved_at = None
+            attendance.save()
+
+            ActivityLog.objects.create(
+                user=request.user,
+                employee=attendance.employee,
+                role=_request_actor_role(request),
+                action='attendance_disapproved',
+                details=f'Attendance {attendance.id} disapproved by {getattr(request.user, "username", "")}; hours removed',
+                ip_address=_client_ip(request),
+            )
+
+            serializer = AttendanceSerializer(attendance, context={'request': request})
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
 class LeaveRequestViewSet(viewsets.ModelViewSet):
     queryset = LeaveRequest.objects.all()
     serializer_class = LeaveRequestSerializer
@@ -986,10 +1449,26 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             files = self.request.FILES.getlist('attachments') if hasattr(self.request.FILES, 'getlist') else []
             from .models import LeaveAttachment
             for f in files:
+                # Avoid creating duplicate attachments for the same leave request
+                try:
+                    basename = os.path.basename(f.name)
+                except Exception:
+                    basename = getattr(f, 'name', None) or None
+
+                # If an attachment with the same basename already exists for this request, skip it
+                if basename:
+                    existing = LeaveAttachment.objects.filter(leave_request=instance, file__icontains=basename).first()
+                    if existing:
+                        continue
+
                 # create LeaveAttachment pointing to this leave request
                 att = LeaveAttachment.objects.create(leave_request=instance, file=f)
                 try:
-                    # persist permanently in SavedImage
+                    # persist permanently in SavedImage, but avoid duplicate SavedImage entries
+                    existing_saved = SavedImage.objects.filter(employee=instance.employee, image__icontains=att.file.name, leave_attachment__leave_request=instance).first()
+                    if existing_saved:
+                        continue
+
                     SavedImage.objects.create(
                         employee=instance.employee,
                         image=att.file,
@@ -1133,11 +1612,32 @@ class EditRequestViewSet(viewsets.ModelViewSet):
         # Validate uploaded file (if present)
         if uploaded:
             MAX_SIZE = 5 * 1024 * 1024  # 5 MB
-            allowed_prefix = 'image/'
             if uploaded.size > MAX_SIZE:
                 return Response({'error': 'Uploaded file is too large. Max 5MB.'}, status=status.HTTP_400_BAD_REQUEST)
-            if not (uploaded.content_type and uploaded.content_type.startswith(allowed_prefix)):
-                return Response({'error': 'Invalid file type. Only images are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            is_doc_upload = isinstance(requested_data, dict) and requested_data.get('document_upload')
+
+            if is_doc_upload:
+                # For document uploads, allow PDF, text/csv, images, Word, Excel, ZIP files, etc.
+                allowed_types = [
+                    'image/',
+                    'application/pdf',
+                    'text/',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/zip',
+                    'application/x-zip-compressed',
+                ]
+                content_type = uploaded.content_type or ''
+                if not any(content_type.startswith(p) for p in allowed_types):
+                    return Response({'error': 'Invalid file type for document. Allowed formats: PDF, Images, Word, Excel, CSV, Text, ZIP.'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # Regular edit requests (profile pictures etc.) only allow images
+                allowed_prefix = 'image/'
+                if not (uploaded.content_type and uploaded.content_type.startswith(allowed_prefix)):
+                    return Response({'error': 'Invalid file type. Only images are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Build serializer data. If we can determine the employee from request.user,
         # include it so the serializer doesn't reject the payload as missing `employee`.
@@ -1202,47 +1702,58 @@ class EditRequestViewSet(viewsets.ModelViewSet):
         }
         
         try:
-            # 1. Handle Profile Picture Update
-            if instance.uploaded_files:
-                # Read bytes directly from the file to ensure they land in DB
-                image_bytes = None
-                try:
-                    instance.uploaded_files.seek(0)
-                    image_bytes = instance.uploaded_files.read()
-                    instance.uploaded_files.seek(0)
-                except Exception as e:
-                    print(f"Warning: Could not read bytes for approved edit request image: {e}")
-
-                # Save to SavedImage as 'profile' type for permanent storage
-                saved_image = SavedImage(
-                    employee=instance.employee,
-                    image=instance.uploaded_files,
-                    image_type='profile',
-                    edit_request=instance,
-                    is_approved=True,
-                    description=f'Profile picture update from Request #{instance.id}'
-                )
-                if image_bytes:
-                    saved_image.image_data = image_bytes
-                saved_image.save()
-                
-                # Update employee's profile image to point to this new file
-                instance.employee.profile_image = instance.uploaded_files
-            
-            # 2. Apply requested_data fields (handling mapping)
             requested_data = instance.requested_data or {}
-            for field, value in requested_data.items():
-                if field == 'profile_image':
-                    continue
+
+            # Check if this is a document upload request
+            if requested_data.get('document_upload') and instance.uploaded_files:
+                # Create an EmployeeDocument from the uploaded file
+                doc = EmployeeDocument(
+                    employee=instance.employee,
+                    file=instance.uploaded_files,
+                    document_type='other',
+                )
+                doc.save()
+            else:
+                # 1. Handle Profile Picture Update
+                if instance.uploaded_files:
+                    # Read bytes directly from the file to ensure they land in DB
+                    image_bytes = None
+                    try:
+                        instance.uploaded_files.seek(0)
+                        image_bytes = instance.uploaded_files.read()
+                        instance.uploaded_files.seek(0)
+                    except Exception as e:
+                        print(f"Warning: Could not read bytes for approved edit request image: {e}")
+
+                    # Save to SavedImage as 'profile' type for permanent storage
+                    saved_image = SavedImage(
+                        employee=instance.employee,
+                        image=instance.uploaded_files,
+                        image_type='profile',
+                        edit_request=instance,
+                        is_approved=True,
+                        description=f'Profile picture update from Request #{instance.id}'
+                    )
+                    if image_bytes:
+                        saved_image.image_data = image_bytes
+                    saved_image.save()
+                    
+                    # Update employee's profile image to point to this new file
+                    instance.employee.profile_image = instance.uploaded_files
                 
-                # Map camelCase to snake_case if necessary
-                target_field = FIELD_MAP.get(field, field)
-                
-                if hasattr(instance.employee, target_field):
-                    # Handle empty strings for dates/emails
-                    if value in ('', 'null', None):
-                        value = None
-                    setattr(instance.employee, target_field, value)
+                # 2. Apply requested_data fields (handling mapping)
+                for field, value in requested_data.items():
+                    if field in ('profile_image', 'document_upload', 'file_name'):
+                        continue
+                    
+                    # Map camelCase to snake_case if necessary
+                    target_field = FIELD_MAP.get(field, field)
+                    
+                    if hasattr(instance.employee, target_field):
+                        # Handle empty strings for dates/emails
+                        if value in ('', 'null', None):
+                            value = None
+                        setattr(instance.employee, target_field, value)
             
             instance.employee.save()
         except Exception as e:
@@ -1369,7 +1880,8 @@ class PayrollViewSet(viewsets.ModelViewSet):
         year = self.request.query_params.get('year')
 
         # Existing payroll rows
-        queryset = Payroll.objects.select_related('employee', 'employee__hub').order_by('-period_end')
+        queryset = Payroll.objects.exclude(employee__role__in=['Admin', 'HR']).select_related('employee', 'employee__hub').order_by('-period_end')
+        queryset = apply_hr_hub_filter(queryset, self.request.user, hub_field='employee__hub')
 
         if getattr(self, 'action', None) != 'list':
             return queryset
@@ -1400,7 +1912,7 @@ class PayrollViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(employee_id=employee_id)
 
         # Build list of employees for the hub (or all)
-        employees_qs = Employee.objects.all().select_related('hub')
+        employees_qs = Employee.objects.exclude(role__in=['Admin', 'HR']).select_related('hub')
         if hub:
             employees_qs = employees_qs.filter(hub__name=hub)
 
@@ -1419,7 +1931,12 @@ class PayrollViewSet(viewsets.ModelViewSet):
 
         employees = list(employees_qs)
         payroll_by_employee_id = {p.employee_id: p for p in queryset}
-        missing_employees = [e for e in employees if e.id not in payroll_by_employee_id]
+        
+        # Only add missing employees as drafts if the user isn't strictly filtering for another status
+        if status_filter and status_filter.lower() not in ['all', 'draft']:
+            missing_employees = []
+        else:
+            missing_employees = [e for e in employees if e.id not in payroll_by_employee_id]
 
         # Determine date range for placeholders
         from datetime import date as _date
@@ -1660,6 +2177,18 @@ class PayrollViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         """When updating a Payroll, recompute derived fields from the newest values and persist them."""
         old_status = getattr(serializer.instance, 'status', None)
+
+        # Prevent HR users from modifying a payslip that is already approved.
+        try:
+            actor_role = _request_actor_role(self.request)
+            if str(old_status or '').lower() == 'approved' and str(actor_role or '').lower() == 'hr':
+                raise PermissionDenied('Approved payslip cannot be modified by HR')
+        except PermissionDenied:
+            raise
+        except Exception:
+            # If role determination fails, be conservative and allow superusers only
+            if not (self.request.user.is_superuser or self.request.user.is_staff):
+                raise PermissionDenied('Not authorized to modify this payslip')
         try:
             # Determine effective values (use existing instance values for missing fields)
             instance = serializer.instance
@@ -2257,6 +2786,8 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = ActivityLog.objects.all().select_related('employee', 'user').order_by('-created_at')
+        # Apply HR hub filter so HR only sees logs for their managed hubs' employees
+        queryset = apply_hr_hub_filter(queryset, self.request.user, hub_field='employee__hub')
         
         # Filter by role
         role = self.request.query_params.get('role')
@@ -2670,3 +3201,411 @@ class ServeSavedImageView(APIView):
 
         print(f"[ServeSavedImage] Image {pk} has no data in DB and no file on disk")
         raise Http404("Image data not available in DB or on disk")
+
+
+class DashboardAnalyticsView(APIView):
+    """Single endpoint returning all analytics data for the admin dashboard."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from datetime import date as date_cls, timedelta
+        from collections import defaultdict
+
+        today = timezone.localdate()
+        thirty_days_ago = today - timedelta(days=29)
+
+        # --- Apply hub filter for HR users ---
+        managed_hub_ids = get_managed_hub_ids(request.user)
+        is_hr = managed_hub_ids is not None
+
+        def filter_employees(qs):
+            if managed_hub_ids is not None:
+                return qs.filter(hub_id__in=managed_hub_ids)
+            return qs
+
+        def filter_hubs(qs):
+            if managed_hub_ids is not None:
+                return qs.filter(id__in=managed_hub_ids)
+            return qs
+
+        # ── 1. Attendance Trend last 30 days (daily present/late/absent) ──
+        attendance_trend = []
+        base_emp_qs = filter_employees(Employee.objects.all())
+        all_active = base_emp_qs.filter(status='Active')
+        active_count = all_active.count()
+        total_employees_count = base_emp_qs.count()
+        total_hubs_count = filter_hubs(Hub.objects.all()).count()
+
+        employee_status_counts = {
+            'Active': active_count,
+            'Resign': base_emp_qs.filter(status='Resign').count(),
+            'AWOL': base_emp_qs.filter(status='AWOL').count(),
+            'Blacklist': base_emp_qs.filter(status='Blacklist').count(),
+        }
+
+        employment_type_counts = {
+            'Full-time': all_active.filter(employment_type='Full-time').count(),
+            'OCW': all_active.filter(employment_type='OCW').count(),
+        }
+
+        # Get attendance records for last 30 days
+        att_qs = Attendance.objects.filter(
+            date__gte=thirty_days_ago,
+            date__lte=today
+        )
+        if managed_hub_ids is not None:
+            att_qs = att_qs.filter(employee__hub_id__in=managed_hub_ids)
+
+        # Group by date
+        att_by_date = defaultdict(lambda: {'present': 0, 'late': 0, 'on_leave': 0})
+        for a in att_qs.select_related('employee'):
+            key = str(a.date)
+            if a.clock_in_time:
+                if a.clock_in_time.hour >= 10:
+                    att_by_date[key]['late'] += 1
+                else:
+                    att_by_date[key]['present'] += 1
+
+        # Get approved leave per day
+        leave_qs = LeaveRequest.objects.filter(
+            status='approved',
+            start_date__lte=today,
+            end_date__gte=thirty_days_ago
+        )
+        if managed_hub_ids is not None:
+            leave_qs = leave_qs.filter(employee__hub_id__in=managed_hub_ids)
+
+        leave_by_date = defaultdict(int)
+        for lr in leave_qs:
+            cur = lr.start_date
+            while cur <= lr.end_date:
+                if thirty_days_ago <= cur <= today:
+                    leave_by_date[str(cur)] += 1
+                cur += timedelta(days=1)
+
+        # Build 30-day trend list
+        cur_date = thirty_days_ago
+        while cur_date <= today:
+            key = str(cur_date)
+            day_data = att_by_date.get(key, {'present': 0, 'late': 0})
+            present = day_data.get('present', 0)
+            late = day_data.get('late', 0)
+            on_leave = leave_by_date.get(key, 0)
+            absent = max(0, active_count - present - late - on_leave)
+            attendance_trend.append({
+                'date': key,
+                'present': present,
+                'late': late,
+                'absent': absent,
+                'on_leave': on_leave,
+            })
+            cur_date += timedelta(days=1)
+
+        # ── 2. Top Hubs by Active Employee Count ──
+        hubs_qs = filter_hubs(Hub.objects.all())
+        hub_active_counts = []
+        for hub in hubs_qs:
+            count = filter_employees(Employee.objects.filter(hub=hub, status='Active')).count()
+            hub_active_counts.append({'hub_name': hub.name, 'active_count': count})
+        hub_active_counts.sort(key=lambda x: x['active_count'], reverse=True)
+
+        # ── 3. AWOL / Resign / Blacklist by Hub ──
+        awol_resign_blacklist = []
+        for hub in hubs_qs:
+            awol = filter_employees(Employee.objects.filter(hub=hub, status='AWOL')).count()
+            resign = filter_employees(Employee.objects.filter(hub=hub, status='Resign')).count()
+            blacklist = filter_employees(Employee.objects.filter(hub=hub, status='Blacklist')).count()
+            if awol + resign + blacklist > 0:
+                awol_resign_blacklist.append({
+                    'hub_name': hub.name,
+                    'awol': awol,
+                    'resign': resign,
+                    'blacklist': blacklist,
+                })
+        awol_resign_blacklist.sort(key=lambda x: x['awol'] + x['resign'] + x['blacklist'], reverse=True)
+
+        # ── 4. Attendance Approval Status (today) ──
+        att_today_qs = Attendance.objects.filter(date=today)
+        if managed_hub_ids is not None:
+            att_today_qs = att_today_qs.filter(employee__hub_id__in=managed_hub_ids)
+        att_approved = att_today_qs.filter(is_approved=True).count()
+        att_pending = att_today_qs.filter(is_approved=False).count()
+        att_total = att_today_qs.count()
+        attendance_approval = {
+            'approved': att_approved,
+            'pending': att_pending,
+            'total': att_total,
+        }
+
+        # ── 5. Top Employees by Attendance Rate (best hub = most active) ──
+        # Find hub with most active employees
+        top_hub = None
+        top_hub_name = 'All Hubs'
+        if hub_active_counts:
+            top_hub_name = hub_active_counts[0]['hub_name']
+            top_hub = hubs_qs.filter(name=top_hub_name).first()
+
+        # Calculate attendance rates for employees in the top hub
+        top_employees = []
+        if top_hub:
+            hub_employees = filter_employees(Employee.objects.filter(hub=top_hub, status='Active'))
+        else:
+            hub_employees = filter_employees(Employee.objects.filter(status='Active'))
+
+        # Count working days in last 30 days (weekdays only)
+        working_days = 0
+        cur = thirty_days_ago
+        while cur <= today:
+            if cur.weekday() < 5:  # Monday=0 ... Friday=4
+                working_days += 1
+            cur += timedelta(days=1)
+        working_days = max(1, working_days)
+
+        for emp_obj in hub_employees[:20]:  # limit to avoid N+1 slowness
+            att_count = Attendance.objects.filter(
+                employee=emp_obj,
+                date__gte=thirty_days_ago,
+                date__lte=today,
+                clock_in_time__isnull=False
+            ).count()
+            late_count = Attendance.objects.filter(
+                employee=emp_obj,
+                date__gte=thirty_days_ago,
+                date__lte=today,
+                clock_in_time__hour__gte=10
+            ).count()
+            absent_count = max(0, working_days - att_count)
+            rate = round((att_count / working_days) * 100, 1)
+            top_employees.append({
+                'name': emp_obj.full_name,
+                'position': emp_obj.position or 'N/A',
+                'attendance_rate': f'{rate}%',
+                'late_count': late_count,
+                'absent_count': absent_count,
+                'hub_name': emp_obj.hub.name if emp_obj.hub else 'N/A',
+            })
+        top_employees.sort(key=lambda x: float(x['attendance_rate'].replace('%', '')), reverse=True)
+        top_employees = top_employees[:10]
+
+        # ── 6. Top Hubs by Overtime Hours (this month) ──
+        month_start = date_cls(today.year, today.month, 1)
+        hub_overtime = []
+        STANDARD_DAY_HOURS = 8
+        for hub in hubs_qs:
+            hub_att_qs = Attendance.objects.filter(
+                employee__hub=hub,
+                date__gte=month_start,
+                date__lte=today,
+                clock_in_time__isnull=False,
+                clock_out_time__isnull=False
+            )
+            overtime_seconds = 0.0
+            for a in hub_att_qs:
+                diff = (a.clock_out_time - a.clock_in_time).total_seconds()
+                if diff > 0:
+                    hours = diff / 3600.0
+                    if hours > STANDARD_DAY_HOURS:
+                        overtime_seconds += (hours - STANDARD_DAY_HOURS) * 3600.0
+            overtime_hours = round(overtime_seconds / 3600.0, 1)
+            if overtime_hours > 0:
+                hub_overtime.append({'hub_name': hub.name, 'overtime_hours': overtime_hours})
+        hub_overtime.sort(key=lambda x: x['overtime_hours'], reverse=True)
+
+        # ── 7. Leave Requests Overview ──
+        leave_all_qs = LeaveRequest.objects.all()
+        if managed_hub_ids is not None:
+            leave_all_qs = leave_all_qs.filter(employee__hub_id__in=managed_hub_ids)
+        leave_overview = {
+            'approved': leave_all_qs.filter(status='approved').count(),
+            'pending': leave_all_qs.filter(status='pending').count(),
+            'rejected': leave_all_qs.filter(status='rejected').count(),
+            'cancelled': leave_all_qs.filter(status='cancelled').count(),
+            'total': leave_all_qs.count(),
+        }
+
+        # ── 8. Security Alerts Summary ──
+        alerts_qs = SecurityAlert.objects.all().order_by('-created_at')
+        if is_hr:
+            alerts_qs = alerts_qs.exclude(employee__role='Admin')
+            if managed_hub_ids is not None:
+                alerts_qs = alerts_qs.filter(
+                    models.Q(employee__hub_id__in=managed_hub_ids) | models.Q(employee__isnull=True)
+                )
+        
+        recent_alerts = []
+        for alert in alerts_qs[:5]:
+            recent_alerts.append({
+                'id': alert.id,
+                'severity': alert.severity,
+                'alert_type': alert.alert_type,
+                'details': alert.details if isinstance(alert.details, str) else str(alert.details),
+                'created_at': alert.created_at.isoformat() if alert.created_at else None,
+                'is_resolved': alert.is_resolved,
+            })
+
+        alert_counts = {
+            'high': alerts_qs.filter(severity='high').count(),
+            'medium': alerts_qs.filter(severity='medium').count(),
+            'low': alerts_qs.filter(severity='low').count(),
+            'critical': alerts_qs.filter(severity='critical').count(),
+            'total': alerts_qs.count(),
+            'unresolved': alerts_qs.filter(is_resolved=False).count(),
+        }
+
+        # ── 9. Online employees (same detection as /employees/online/) ──
+        online_ids = _get_online_employee_ids(window_minutes=5)
+        online_qs = filter_employees(Employee.objects.filter(id__in=online_ids))
+        online_count = online_qs.count()
+
+        # ── 10. Payroll / Payslip Analytics per 15 days ──
+        from django.db.models import Sum
+        payroll_qs = Payroll.objects.all()
+        if managed_hub_ids is not None:
+            payroll_qs = payroll_qs.filter(employee__hub_id__in=managed_hub_ids)
+
+        period_totals = payroll_qs.values('period_start', 'period_end').annotate(
+            total_net_pay=Sum('net_pay')
+        ).order_by('period_start')
+
+        payslip_trend = []
+        for pt in list(period_totals)[-12:]:  # last 12 periods
+            start_str = pt['period_start'].strftime('%b %d')
+            end_str = pt['period_end'].strftime('%b %d, %Y')
+            label = f"{start_str} - {end_str}"
+            payslip_trend.append({
+                'label': label,
+                'total_pay': float(pt['total_net_pay'] or 0),
+            })
+
+        # ── 11. Highest Paid Employee per Hub ──
+        highest_paid_employees = []
+        for hub in hubs_qs:
+            top_payroll = Payroll.objects.filter(employee__hub=hub).order_by('-net_pay').first()
+            if top_payroll:
+                highest_paid_employees.append({
+                    'hub_name': hub.name,
+                    'employee_name': top_payroll.employee.full_name,
+                    'amount': float(top_payroll.net_pay),
+                })
+            else:
+                highest_paid_employees.append({
+                    'hub_name': hub.name,
+                    'employee_name': 'N/A',
+                    'amount': 0.0,
+                })
+        highest_paid_employees.sort(key=lambda x: x['amount'], reverse=True)
+
+        # ── 12. Total Payroll Pay per Hub ──
+        hub_total_pay = []
+        for hub in hubs_qs:
+            total_pay = Payroll.objects.filter(employee__hub=hub).aggregate(total=Sum('net_pay'))['total'] or 0
+            hub_total_pay.append({
+                'hub_name': hub.name,
+                'total_pay': float(total_pay),
+            })
+        hub_total_pay.sort(key=lambda x: x['total_pay'], reverse=True)
+
+        return Response({
+            'attendance_trend': attendance_trend,
+            'top_hubs_active': hub_active_counts,
+            'awol_resign_blacklist': awol_resign_blacklist,
+            'attendance_approval': attendance_approval,
+            'top_employees': top_employees,
+            'top_hub_name': top_hub_name,
+            'top_hubs_overtime': hub_overtime,
+            'leave_overview': leave_overview,
+            'security_alerts': recent_alerts,
+            'security_alert_counts': alert_counts,
+            'online_count': online_count,
+            'total_employees': total_employees_count,
+            'active_employees': active_count,
+            'total_hubs': total_hubs_count,
+            'employee_status_counts': employee_status_counts,
+            'employment_type_counts': employment_type_counts,
+            'payslip_trend': payslip_trend,
+            'highest_paid_employees': highest_paid_employees,
+            'hub_total_pay': hub_total_pay,
+        })
+
+
+class TopEmployeesByHubView(APIView):
+    """Return top 10 employees ranked by attendance rate for a specific hub."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from datetime import date as date_cls, timedelta
+
+        today = timezone.localdate()
+        thirty_days_ago = today - timedelta(days=29)
+
+        hub_id = request.query_params.get('hub_id')
+        managed_hub_ids = get_managed_hub_ids(request.user)
+
+        # Count working days (weekdays) in last 30 days
+        working_days = 0
+        cur = thirty_days_ago
+        while cur <= today:
+            if cur.weekday() < 5:
+                working_days += 1
+            cur += timedelta(days=1)
+        working_days = max(1, working_days)
+
+        # Filter employees by hub (scoped to HR-managed hubs)
+        if hub_id:
+            try:
+                hub_id_int = int(hub_id)
+            except (TypeError, ValueError):
+                return Response({'top_employees': [], 'hub_name': 'Invalid Hub', 'working_days': working_days})
+            if managed_hub_ids is not None and hub_id_int not in managed_hub_ids:
+                return Response({'top_employees': [], 'hub_name': 'Access Denied', 'working_days': working_days})
+            hub_employees = Employee.objects.filter(hub_id=hub_id_int, status='Active').select_related('hub')
+            hub_name = Hub.objects.filter(id=hub_id_int).values_list('name', flat=True).first() or 'Unknown Hub'
+        else:
+            hubs_qs = Hub.objects.all()
+            if managed_hub_ids is not None:
+                hubs_qs = hubs_qs.filter(id__in=managed_hub_ids)
+            top_hub = hubs_qs.annotate(
+                active_count=models.Count('employees', filter=models.Q(employees__status='Active'))
+            ).order_by('-active_count').first()
+            if top_hub:
+                hub_employees = Employee.objects.filter(hub=top_hub, status='Active').select_related('hub')
+                hub_name = top_hub.name
+            else:
+                return Response({'top_employees': [], 'hub_name': 'N/A', 'working_days': working_days})
+
+        # Build ranked list
+        results = []
+        for emp_obj in hub_employees[:50]:  # cap to avoid slowness
+            att_count = Attendance.objects.filter(
+                employee=emp_obj,
+                date__gte=thirty_days_ago,
+                date__lte=today,
+                clock_in_time__isnull=False,
+            ).count()
+            late_count = Attendance.objects.filter(
+                employee=emp_obj,
+                date__gte=thirty_days_ago,
+                date__lte=today,
+                clock_in_time__hour__gte=10,
+            ).count()
+            absent_count = max(0, working_days - att_count)
+            rate = round((att_count / working_days) * 100, 1)
+            results.append({
+                'name': emp_obj.full_name,
+                'position': emp_obj.position or 'N/A',
+                'attendance_rate': rate,
+                'attendance_rate_display': f'{rate}%',
+                'late_count': late_count,
+                'absent_count': absent_count,
+                'hub_name': emp_obj.hub.name if emp_obj.hub else 'N/A',
+            })
+
+        results.sort(key=lambda x: x['attendance_rate'], reverse=True)
+        top_10 = results[:10]
+
+        return Response({
+            'top_employees': top_10,
+            'hub_name': hub_name,
+            'working_days': working_days,
+        })
+

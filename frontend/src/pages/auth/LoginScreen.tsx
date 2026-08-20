@@ -442,6 +442,7 @@ export const LoginScreen = () => {
                             )
                           }
                           placeholder="Enter your username"
+                          autoComplete="username"
                           className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none"
                         />
                       </div>
@@ -468,6 +469,7 @@ export const LoginScreen = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Enter your password"
+                          autoComplete="current-password"
                           className="h-full w-full bg-transparent text-lg text-white placeholder:text-red-100 outline-none"
                         />
                       </div>
@@ -603,6 +605,7 @@ export const LoginScreen = () => {
                             )
                           }
                           placeholder="Enter your username"
+                          autoComplete="username"
                           className="h-full w-full bg-white px-4 text-[14px] font-medium text-[#222] placeholder:text-gray-400 outline-none"
                         />
                       </div>
@@ -637,6 +640,7 @@ export const LoginScreen = () => {
                             )
                           }
                           placeholder="Enter your password"
+                          autoComplete="current-password"
                           className="h-full w-full bg-white px-4 text-[14px] font-medium text-[#222] placeholder:text-gray-400 outline-none"
                         />
 

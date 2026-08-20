@@ -224,7 +224,7 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
                         </td>
                         <td className="px-4 py-3 text-sm space-x-2 flex">
                           <Button
-                            variant="ghost"
+                            variant="primary"
                             size="sm"
                             onClick={() => {
                               const rawRole = (user?.role || '').toString().trim().toLowerCase();
@@ -233,7 +233,7 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
                               navigate(`${base}/employees/${emp.id}`);
                             }}
                           >
-                            <Eye size={16} />
+                            View
                           </Button>
                           {canDeleteEmployees && (
                             <Button
@@ -293,18 +293,18 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
                     </div>
                     
                     <div className="flex items-center gap-2 mt-2 pt-3 border-t border-gray-50 dark:border-gray-700/50">
-                      <Button
-                        variant="secondary"
-                        className="flex-1 text-xs py-1.5 h-auto"
-                        onClick={() => {
-                          const rawRole = (user?.role || '').toString().trim().toLowerCase();
-                          const normalizedRole = rawRole.includes('admin') ? 'admin' : rawRole.includes('hr') ? 'hr' : rawRole;
-                          const base = normalizedRole === 'hr' ? '/hr' : normalizedRole === 'admin' ? '/admin' : '/employee';
-                          navigate(`${base}/employees/${emp.id}`);
-                        }}
-                      >
-                        <Eye size={14} className="mr-1.5" /> View Profile
-                      </Button>
+                       <Button
+                         variant="primary"
+                         className="flex-1 text-xs py-1.5 h-auto"
+                         onClick={() => {
+                           const rawRole = (user?.role || '').toString().trim().toLowerCase();
+                           const normalizedRole = rawRole.includes('admin') ? 'admin' : rawRole.includes('hr') ? 'hr' : rawRole;
+                           const base = normalizedRole === 'hr' ? '/hr' : normalizedRole === 'admin' ? '/admin' : '/employee';
+                           navigate(`${base}/employees/${emp.id}`);
+                         }}
+                       >
+                         View
+                       </Button>
                       {canDeleteEmployees && (
                         <Button
                           variant="danger"

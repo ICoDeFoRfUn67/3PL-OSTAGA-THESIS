@@ -15,12 +15,15 @@ class Command(BaseCommand):
                 'is_staff': True,
                 'is_superuser': True,
                 'is_active': True,
-                'password': 'pbkdf2_sha256$390000$salt$hash123'  # Use make_password in shell
             }
         )
         
+        user.set_password('admin123')
+        user.save()
         if created:
             self.stdout.write(self.style.SUCCESS('Admin created - password: admin123'))
+        else:
+            self.stdout.write(self.style.SUCCESS('Admin password reset to: admin123'))
         
         # Link Employee
         employee, created = Employee.objects.get_or_create(

@@ -70,6 +70,7 @@ export const Button = ({
 
   return (
     <button
+      type={props.type || "button"}
       className={`${base} ${sizes[size as ButtonSize]} ${variants[variant as ButtonVariant]} ${className}`}
       disabled={disabled || isLoading}
       {...props}

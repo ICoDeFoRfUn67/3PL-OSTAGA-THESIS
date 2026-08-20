@@ -1,3 +1,4 @@
+import json
 import time
 from django.db import transaction
 from django.utils.text import slugify
@@ -9,25 +10,80 @@ from django.http import QueryDict
 
 from .media_urls import absolute_media_url
 
+
+def managed_hub_ids_for_hr(employee):
+    """Return hub IDs an HR user is allowed to manage, or None for non-HR (unrestricted)."""
+    if not employee or employee.role != 'HR':
+        return None
+    try:
+        perms = employee.hr_permissions
+        hub_ids = list(perms.managed_hubs.values_list('id', flat=True))
+        if perms.access_type == 'Single' and not hub_ids and employee.hub_id:
+            return [employee.hub_id]
+        return hub_ids
+    except HRPermission.DoesNotExist:
+        return [employee.hub_id] if employee.hub_id else []
+
+
 class HRPermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = HRPermission
         fields = [
             'id', 'hr_employee', 'can_view_employees', 'can_edit_employee_info',
             'can_edit_payslip', 'can_delete_employees', 'can_reset_password',
-            'can_enable_employee_edit', 'created_at', 'updated_at'
+            'can_enable_employee_edit', 'access_type', 'managed_hubs', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 class HubSerializer(serializers.ModelSerializer):
     employee_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Hub
         fields = ['id', 'name', 'location', 'address', 'latitude', 'longitude', 'city', 'company', 'employee_count']
-    
+
     def get_employee_count(self, obj):
+        annotated = getattr(obj, '_employee_count', None)
+        if annotated is not None:
+            return annotated
         return obj.employees.count()
+
+    def validate(self, attrs):
+        # Set default values if not sent in payload or empty
+        if not attrs.get('company'):
+            attrs['company'] = 'J&T Express'
+        if not attrs.get('city'):
+            attrs['city'] = 'Quezon'
+        if not attrs.get('location'):
+            attrs['location'] = attrs.get('city') or 'Quezon'
+        if not attrs.get('address'):
+            attrs['address'] = attrs.get('city') or 'Default Address'
+        if attrs.get('latitude') in [None, '']:
+            attrs['latitude'] = 14.5995
+        if attrs.get('longitude') in [None, '']:
+            attrs['longitude'] = 120.9842
+
+        # Hub has required model fields without defaults (latitude/longitude in particular).
+        # Frontend payloads may send strings; DRF will raise 400 if types are invalid.
+        required = ['name', 'location', 'address', 'latitude', 'longitude', 'city', 'company']
+        errors = {}
+        for f in required:
+            if attrs.get(f, None) in [None, '']:
+                errors[f] = 'This field is required.'
+
+        # Coerce lat/lng to float (accept numbers or numeric strings)
+        for key in ['latitude', 'longitude']:
+            if key in attrs and attrs[key] not in [None, '']:
+                try:
+                    attrs[key] = float(attrs[key])
+                except (TypeError, ValueError):
+                    errors[key] = 'Must be a valid number.'
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,59 +95,167 @@ class AttendanceSerializer(serializers.ModelSerializer):
     jtp_code = serializers.CharField(source='employee.jtp_code', read_only=True)
     hub_name = serializers.CharField(source='employee.hub.name', read_only=True)
     city = serializers.CharField(source='employee.hub.city', read_only=True)
+
     clock_in_image = serializers.SerializerMethodField()
     clock_out_image = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Attendance
-        fields = [
-            'id', 'employee', 'employee_name', 'jtp_code', 'hub_name', 'city', 'date',
-            'clock_in_time', 'clock_out_time', 'clock_in_image', 'clock_out_image',
-            'permanent_clock_in_image_url', 'permanent_clock_out_image_url',
-            'status',
-        ]
-    
+
     permanent_clock_in_image_url = serializers.SerializerMethodField()
     permanent_clock_out_image_url = serializers.SerializerMethodField()
 
+    # NEW FIELDS FOR MOBILE DTR
+    total_hours = serializers.SerializerMethodField()
+    clock_in_location = serializers.SerializerMethodField()
+    clock_out_location = serializers.SerializerMethodField()
+    is_approved = serializers.BooleanField(read_only=True)
+    approved_by = serializers.SerializerMethodField()
+    approved_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = Attendance
+        fields = [
+            'id',
+            'employee',
+            'employee_name',
+            'jtp_code',
+            'hub_name',
+            'city',
+
+            'date',
+            'status',
+
+            'clock_in_time',
+            'clock_out_time',
+
+            'clock_in_image',
+            'clock_out_image',
+
+            'permanent_clock_in_image_url',
+            'permanent_clock_out_image_url',
+
+            # GPS
+            'clock_in_latitude',
+            'clock_in_longitude',
+            'clock_out_latitude',
+            'clock_out_longitude',
+
+            # Calculated
+            'clock_in_location',
+            'clock_out_location',
+            'total_hours',
+            'is_approved',
+            'approved_by',
+            'approved_at',
+        ]
+
     def get_permanent_clock_in_image_url(self, obj):
         from .models import SavedImage
-        saved_image = SavedImage.objects.filter(attendance=obj, image_type='clock_in').first()
+
+        saved_image = SavedImage.objects.filter(
+            attendance=obj,
+            image_type='clock_in'
+        ).first()
+
         if saved_image:
-            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved_image.id}/")
+            return absolute_media_url(
+                self.context.get('request'),
+                f"/api/saved-images/{saved_image.id}/"
+            )
+
         return None
 
     def get_permanent_clock_out_image_url(self, obj):
         from .models import SavedImage
-        saved_image = SavedImage.objects.filter(attendance=obj, image_type='clock_out').first()
+
+        saved_image = SavedImage.objects.filter(
+            attendance=obj,
+            image_type='clock_out'
+        ).first()
+
         if saved_image:
-            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved_image.id}/")
+            return absolute_media_url(
+                self.context.get('request'),
+                f"/api/saved-images/{saved_image.id}/"
+            )
+
         return None
-    
+
     def get_clock_in_image(self, obj):
-        # 1. Try permanent DB-backed URL first
         from .models import SavedImage
-        saved = SavedImage.objects.filter(attendance=obj, image_type='clock_in').first()
+
+        saved = SavedImage.objects.filter(
+            attendance=obj,
+            image_type='clock_in'
+        ).first()
+
         if saved and saved.image_data:
-            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
-            
-        # 2. Fallback to filesystem URL
+            return absolute_media_url(
+                self.context.get('request'),
+                f"/api/saved-images/{saved.id}/"
+            )
+
         if obj.clock_in_image:
-            return absolute_media_url(self.context.get('request'), obj.clock_in_image.url)
+            return absolute_media_url(
+                self.context.get('request'),
+                obj.clock_in_image.url
+            )
+
         return None
 
     def get_clock_out_image(self, obj):
-        # 1. Try permanent DB-backed URL first
         from .models import SavedImage
-        saved = SavedImage.objects.filter(attendance=obj, image_type='clock_out').first()
+
+        saved = SavedImage.objects.filter(
+            attendance=obj,
+            image_type='clock_out'
+        ).first()
+
         if saved and saved.image_data:
-            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
-            
-        # 2. Fallback to filesystem URL
+            return absolute_media_url(
+                self.context.get('request'),
+                f"/api/saved-images/{saved.id}/"
+            )
+
         if obj.clock_out_image:
-            return absolute_media_url(self.context.get('request'), obj.clock_out_image.url)
+            return absolute_media_url(
+                self.context.get('request'),
+                obj.clock_out_image.url
+            )
+
         return None
 
+    # =====================================
+    # NEW METHODS
+    # =====================================
+
+    def get_total_hours(self, obj):
+        if obj.clock_in_time and obj.clock_out_time:
+            diff = obj.clock_out_time - obj.clock_in_time
+            return round(diff.total_seconds() / 3600, 2)
+        return 0
+
+    def get_approved_by(self, obj):
+        if getattr(obj, 'approved_by', None):
+            try:
+                return obj.approved_by.username
+            except Exception:
+                return None
+        return None
+
+    def get_clock_in_location(self, obj):
+        if obj.clock_in_latitude and obj.clock_in_longitude:
+            return {
+                "latitude": float(obj.clock_in_latitude),
+                "longitude": float(obj.clock_in_longitude)
+            }
+        return None
+
+    def get_clock_out_location(self, obj):
+        if obj.clock_out_latitude and obj.clock_out_longitude:
+            return {
+                "latitude": float(obj.clock_out_latitude),
+                "longitude": float(obj.clock_out_longitude)
+            }
+        return None
 # ✅ DEFINE THIS FIRST
 class EmployeeDocumentSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
@@ -121,6 +285,51 @@ class EmployeeDocumentSerializer(serializers.ModelSerializer):
             return absolute_media_url(self.context.get('request'), obj.file.url)
         return None
 
+
+
+class EmployeeListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for list endpoints — avoids nested attendance/documents."""
+
+    hub_name = serializers.CharField(source='hub.name', read_only=True)
+    full_name = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
+    profile_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Employee
+        fields = [
+            'id', 'user', 'firstname', 'lastname', 'middle_initial',
+            'place_of_birth', 'date_of_birth', 'gender', 'nationality', 'marital_status',
+            'email_address', 'phone_number', 'complete_address', 'region', 'province',
+            'city_municipality', 'barangay', 'zip_code', 'position', 'employment_type',
+            'status', 'role', 'hub', 'hub_name', 'hired_date', 'jtp_code', 'employee_id',
+            'emergency_contact_name', 'emergency_contact_phone', 'tin', 'sss', 'philhealth',
+            'pagibig', 'can_login', 'can_edit_info', 'is_active', 'created_at', 'updated_at',
+            'last_activity', 'full_name', 'profile_image', 'profile_image_url',
+        ]
+
+    def get_full_name(self, obj):
+        return f"{obj.firstname} {obj.middle_initial} {obj.lastname}".strip()
+
+    def _get_profile_saved(self, obj):
+        prefetched = getattr(obj, '_prefetched_objects_cache', {}).get('saved_images')
+        if prefetched is not None:
+            return prefetched[0] if prefetched else None
+        return obj.saved_images.filter(image_type='profile').order_by('-id').only('id').first()
+
+    def _profile_url(self, obj):
+        saved = self._get_profile_saved(obj)
+        if saved:
+            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
+        if obj.profile_image:
+            return absolute_media_url(self.context.get('request'), obj.profile_image.url)
+        return None
+
+    def get_profile_image_url(self, obj):
+        return self._profile_url(obj)
+
+    def get_profile_image(self, obj):
+        return self._profile_url(obj)
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -173,7 +382,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_profile_image_url(self, obj):
         # 1. Try permanent DB-backed URL first
         from .models import SavedImage
-        saved = obj.saved_images.filter(image_type='profile').first()
+        saved = obj.saved_images.filter(image_type='profile').order_by('-id').first()
         if saved and saved.image_data:
             return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
             
@@ -184,7 +393,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     def get_permanent_profile_image_url(self, obj):
         from .models import SavedImage
-        saved_image = obj.saved_images.filter(image_type='profile').first()
+        saved_image = obj.saved_images.filter(image_type='profile').order_by('-id').first()
         if saved_image:
             return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved_image.id}/")
         return None
@@ -195,7 +404,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
         
         # Prioritize permanent DB-backed URL for the main profile_image field too
         from .models import SavedImage
-        saved = instance.saved_images.filter(image_type='profile').first()
+        saved = instance.saved_images.filter(image_type='profile').order_by('-id').first()
         if saved and saved.image_data:
             data['profile_image'] = absolute_media_url(req, f"/api/saved-images/{saved.id}/")
         else:
@@ -208,6 +417,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 class EmployeeCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True, required=False)
     password = serializers.CharField(write_only=True, required=False)
+    hr_permissions = serializers.JSONField(write_only=True, required=False)
     
     FIELD_NAME_MAP = {
         'firstName': 'firstname',
@@ -218,8 +428,15 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
         'maritalStatus': 'marital_status',
         'email': 'email_address',
         'phone': 'phone_number',
-        'currentAddress': 'current_address',
-        'permanentAddress': 'permanent_address',
+        # Support old free-text keys and new structured keys
+        'currentAddress': 'complete_address',
+        'permanentAddress': 'complete_address',
+        'completeAddress': 'complete_address',
+        'region': 'region',
+        'province': 'province',
+        'cityMunicipality': 'city_municipality',
+        'barangay': 'barangay',
+        'zipCode': 'zip_code',
         'employmentType': 'employment_type',
         'hireDate': 'hired_date',
         'jtpCode': 'jtp_code',
@@ -269,7 +486,8 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
         if mutable_data.get('phone_number') in ('', None, 'null'):
             mutable_data['phone_number'] = None
 
-        date_fields = ['date_of_birth', 'drivers_license_expiry', 'hired_date']
+        # Note: 'drivers_license_expiry' was removed from the model; keep only existing date fields
+        date_fields = ['date_of_birth', 'hired_date']
         for field in date_fields:
             if mutable_data.get(field) in ('', None, 'null'):
                 mutable_data[field] = None
@@ -280,12 +498,49 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
             elif mutable_data.get(boolean_field) in ('false', '0', 0, False, ''):
                 mutable_data[boolean_field] = False
 
+        if 'hr_permissions' in mutable_data and isinstance(mutable_data['hr_permissions'], str):
+            try:
+                mutable_data['hr_permissions'] = json.loads(mutable_data['hr_permissions'])
+            except (json.JSONDecodeError, TypeError):
+                pass
+
         return super().to_internal_value(mutable_data)
+
+    def validate(self, data):
+        request = self.context.get('request')
+        role = data.get('role', 'Employee')
+        requester = getattr(getattr(request, 'user', None), 'employee', None) if request else None
+
+        if requester and requester.role == 'HR':
+            if role in ['Admin', 'HR']:
+                raise serializers.ValidationError({'role': 'HR cannot create Admin or HR accounts.'})
+            hub = data.get('hub')
+            allowed = managed_hub_ids_for_hr(requester)
+            if allowed is not None and hub:
+                hub_id = hub.id if hasattr(hub, 'id') else hub
+                if hub_id not in allowed:
+                    raise serializers.ValidationError({'hub': 'You can only assign employees to hubs you manage.'})
+
+        if role == 'HR':
+            # Only require hr_permissions when CREATING a new HR employee (no instance).
+            # When updating an existing HR employee the permissions may already exist.
+            is_update = self.instance is not None
+            hr_perms = self.initial_data.get('hr_permissions')
+            if isinstance(hr_perms, str):
+                try:
+                    hr_perms = json.loads(hr_perms)
+                except (json.JSONDecodeError, TypeError):
+                    hr_perms = None
+            if not is_update and (not hr_perms or not hr_perms.get('managed_hubs')):
+                raise serializers.ValidationError({'hr_permissions': 'Select at least one hub for HR staff to manage.'})
+
+        return data
     
     def create(self, validated_data):
         print("VALIDATED DATA:", validated_data)
         username = validated_data.pop('username', None)
         password = validated_data.pop('password', None)
+        hr_perms_data = validated_data.pop('hr_permissions', None)
         role = validated_data.get('role', 'Employee')
         is_staff = role in ['HR', 'Admin']
 
@@ -318,7 +573,72 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
                 employee.user = user
                 employee.save()
 
+            if role == 'HR' and hr_perms_data:
+                access_type = hr_perms_data.get('access_type', 'Single')
+                managed_hubs_ids = hr_perms_data.get('managed_hubs', [])
+                
+                hr_perm, created = HRPermission.objects.get_or_create(hr_employee=employee)
+                hr_perm.access_type = access_type
+                hr_perm.save()
+                
+                if managed_hubs_ids:
+                    hr_perm.managed_hubs.set(managed_hubs_ids)
+
         return employee
+
+    def update(self, instance, validated_data):
+        """Handle partial/full updates.  Pops non-model fields before saving."""
+        # Pop serializer-only fields that are not model attributes
+        username = validated_data.pop('username', None)
+        password = validated_data.pop('password', None)
+        hr_perms_data = validated_data.pop('hr_permissions', None)
+
+        # Apply all validated model fields to the instance
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update the linked User account if it exists
+        linked_user = getattr(instance, 'user', None)
+        if linked_user:
+            changed = False
+            if password:
+                linked_user.set_password(password)
+                changed = True
+            if username and linked_user.username != username:
+                linked_user.username = username
+                changed = True
+            # Keep first/last name in sync
+            if linked_user.first_name != instance.firstname:
+                linked_user.first_name = instance.firstname
+                changed = True
+            if linked_user.last_name != instance.lastname:
+                linked_user.last_name = instance.lastname
+                changed = True
+            # Sync is_staff / is_superuser based on role
+            role = instance.role
+            is_staff = role in ['HR', 'Admin']
+            is_superuser = role == 'Admin'
+            if linked_user.is_staff != is_staff:
+                linked_user.is_staff = is_staff
+                changed = True
+            if linked_user.is_superuser != is_superuser:
+                linked_user.is_superuser = is_superuser
+                changed = True
+            if changed:
+                linked_user.save()
+
+        # Update HRPermission if provided
+        if instance.role == 'HR' and hr_perms_data:
+            access_type = hr_perms_data.get('access_type', 'Single')
+            managed_hubs_ids = hr_perms_data.get('managed_hubs', [])
+            hr_perm, _ = HRPermission.objects.get_or_create(hr_employee=instance)
+            hr_perm.access_type = access_type
+            hr_perm.save()
+            if managed_hubs_ids:
+                hr_perm.managed_hubs.set(managed_hubs_ids)
+
+        return instance
 
 
 class PayrollSerializer(serializers.ModelSerializer):
@@ -403,7 +723,7 @@ class PayrollSerializer(serializers.ModelSerializer):
             return None
         
         from .models import SavedImage
-        saved = obj.employee.saved_images.filter(image_type='profile').first()
+        saved = obj.employee.saved_images.filter(image_type='profile').order_by('-id').first()
         if saved and saved.image_data:
             return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
             
@@ -731,15 +1051,29 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             # Prefer SavedImage (DB-persistent) URLs
             saved_images = SavedImage.objects.filter(leave_attachment__leave_request=obj, image_type='leave_attachment')
             if saved_images.exists():
+                seen = set()
                 for si in saved_images:
                     filename = si.original_filename or f"file-{si.id}.jpg"
-                    items.append(absolute_media_url(request, f"/api/saved-images/{si.id}/{filename}"))
+                    url = absolute_media_url(request, f"/api/saved-images/{si.id}/{filename}")
+                    if url in seen:
+                        continue
+                    seen.add(url)
+                    items.append(url)
                 return items
             
             # Fallback to filesystem URLs
+            seen = set()
             for att in obj.attachments.all():
-                if att.file:
-                    items.append(absolute_media_url(request, att.file.url))
+                try:
+                    if att.file:
+                        url = absolute_media_url(request, att.file.url)
+                        if url in seen:
+                            continue
+                        seen.add(url)
+                        items.append(url)
+                except Exception:
+                    # Skip problematic attachments but continue
+                    continue
             return items
         except Exception as e:
             print(f"[LeaveRequestSerializer] Error: {e}")
@@ -854,7 +1188,8 @@ class CreateEmployeeSerializer(serializers.ModelSerializer):
         model = Employee
         fields = [
             'firstname', 'lastname', 'middle_initial', 'position',  'employment_type', 'role', 
-            'hub', 'employee_id', 'jtp_code', 'phone_number', 'email_address', 'current_address',
+            'hub', 'employee_id', 'jtp_code', 'phone_number', 'email_address',
+            'complete_address', 'region', 'province', 'city_municipality', 'barangay', 'zip_code',
             'username', 'password', 'can_login'
         ]
     

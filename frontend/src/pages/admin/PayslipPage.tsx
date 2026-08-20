@@ -3,13 +3,15 @@ import { Card, Badge, LoadingSpinner, EmptyState } from '@/components/common';
 import { Sidebar } from '@/components/Sidebar';
 import { PayslipDetailModal } from '@/components/PayslipDetailModal';
 import { useGetPayroll, useGetHubs, useGetEmployees } from '@/hooks/useQueries';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, History } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import AdminMobileProfile from '@/components/AdminMobileProfile';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
+import { useNavigate } from 'react-router-dom';
 
 export const PayslipPage = () => {
-  const { isAdmin } = useAuth();
+  const { employee, isAdmin, isHR } = useAuth();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
 
@@ -44,6 +46,7 @@ export const PayslipPage = () => {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedPayslip, setSelectedPayslip] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pageByHub, setPageByHub] = useState<Record<string, number>>({});
 
   // Debounce search input for better performance
   const handleSearchChange = useCallback((value: string) => {
@@ -84,32 +87,85 @@ export const PayslipPage = () => {
   // This is much faster than fetching all records and filtering on frontend
   const payrollParams = useMemo(() => {
     const params: Record<string, any> = {
-      period_start__gte: startDate,
-      period_end__lte: endDate,
+      period_start: startDate,
+      period_end: endDate,
     };
     if (statusFilter !== 'All') {
       params.status = statusFilter;
     }
     if (hubFilter !== 'All') {
-      params.hub__name = hubFilter;
+      params.hub = hubFilter;
     }
     if (debouncedSearchTerm) {
-      params.fullname__icontains = debouncedSearchTerm;
+      params.search = debouncedSearchTerm;
+    }
+    if (year !== 'All') {
+      params.year = year;
     }
     return params;
-  }, [startDate, endDate, statusFilter, hubFilter, debouncedSearchTerm]);
+  }, [startDate, endDate, statusFilter, hubFilter, debouncedSearchTerm, year]);
 
   const { data: payrollData, isLoading: payrollLoading } = useGetPayroll(payrollParams);
   const { data: hubsData, isLoading: hubsLoading } = useGetHubs();
   // Only fetch employees if we have payroll data (for display purposes)
   const { data: employeesData, isLoading: employeesLoading } = useGetEmployees();
+  // Fetch all payroll records as well for history view (unfiltered)
+  const { data: allPayrollData } = useGetPayroll();
   
 
-  const payroll = normalizeApiResponse(payrollData);
+  const payrollRaw = normalizeApiResponse(payrollData) || [];
+  const hubs = normalizeApiResponse(hubsData) || [];
+  const allEmployees = normalizeApiResponse(employeesData) || [];
 
-  
-  const hubs = normalizeApiResponse(hubsData);
-  const employees = normalizeApiResponse(employeesData);
+  // Exclude HR and Admin users from payroll counts and tables
+  const NON_EMPLOYEE_ROLES = ['hr', 'admin'];
+  const employees = allEmployees.filter((e: any) => {
+    try { return !NON_EMPLOYEE_ROLES.includes((e.role || '').toString().toLowerCase()); }
+    catch { return true; }
+  });
+
+  // Build a set of excluded IDs (HR + Admin) to filter payroll records
+  const excludedIds = useMemo(() => new Set(
+    allEmployees
+      .filter((e: any) => NON_EMPLOYEE_ROLES.includes((e.role || '').toString().toLowerCase()))
+      .map((e: any) => e.id)
+  ), [allEmployees]);
+
+  const managedHubIds = useMemo(() => {
+    if (!isHR || !employee?.hr_permissions?.managed_hubs) return null;
+    return employee.hr_permissions.managed_hubs.map((h: any) => typeof h === 'number' ? h : h.id);
+  }, [isHR, employee]);
+
+  const filteredHubs = useMemo(() => {
+    if (isHR && managedHubIds) {
+      return hubs.filter((hub: any) => managedHubIds.includes(hub.id));
+    }
+    return hubs;
+  }, [hubs, isHR, managedHubIds]);
+
+  const payroll = useMemo(() => {
+    let filtered = payrollRaw.filter((p: any) => !excludedIds.has(p.employee));
+    if (isHR && managedHubIds) {
+      filtered = filtered.filter((p: any) => {
+        const emp = allEmployees.find((e: any) => e.id === p.employee);
+        const hubId = emp ? (typeof emp.hub === 'object' ? emp.hub?.id : emp.hub) : null;
+        return managedHubIds.includes(hubId);
+      });
+    }
+    return filtered;
+  }, [payrollRaw, excludedIds, isHR, managedHubIds, allEmployees]);
+
+  const allPayroll = useMemo(() => {
+    let filtered = (normalizeApiResponse(allPayrollData) || []).filter((p: any) => !excludedIds.has(p.employee));
+    if (isHR && managedHubIds) {
+      filtered = filtered.filter((p: any) => {
+        const emp = allEmployees.find((e: any) => e.id === p.employee);
+        const hubId = emp ? (typeof emp.hub === 'object' ? emp.hub?.id : emp.hub) : null;
+        return managedHubIds.includes(hubId);
+      });
+    }
+    return filtered;
+  }, [allPayrollData, excludedIds, isHR, managedHubIds, allEmployees]);
 
 
 
@@ -359,7 +415,7 @@ export const PayslipPage = () => {
         </div>
 
         <Card className="max-md:p-3">
-          <div className="flex flex-col lg:flex-row gap-3 items-end">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div className="flex-1 w-full">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
               <input type="date" title="Select payroll start date" placeholder="Start date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="input-field w-full" />
@@ -378,7 +434,7 @@ export const PayslipPage = () => {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Hub Name</label>
               <select value={hubFilter} onChange={(e) => setHubFilter(e.target.value)} aria-label="Filter by hub name" className="input-field w-full">
                 <option value="All">All Hubs</option>
-                {hubs.map((hub: any) => <option key={hub.id} value={hub.name}>{hub.name}</option>)}
+                {filteredHubs.map((hub: any) => <option key={hub.id} value={hub.name}>{hub.name}</option>)}
               </select>
             </div>
             <div className="flex-1 w-full">
@@ -392,7 +448,7 @@ export const PayslipPage = () => {
                 )}
               </select>
             </div>
-            <div className="flex-1 w-full">
+            <div className="flex-1 w-full lg:col-span-1">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Search Name</label>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
@@ -423,58 +479,115 @@ export const PayslipPage = () => {
                           <th className="px-4 py-3 text-left font-semibold">Fullname</th>
                           <th className="px-4 py-3 text-left font-semibold">JTP Code</th>
                           <th className="px-4 py-3 text-left font-semibold">Hub</th>
+                          <th className="px-4 py-3 text-left font-semibold">Period</th>
                           <th className="px-4 py-3 text-left font-semibold">Net Pay</th>
                           <th className="px-4 py-3 text-left font-semibold">Status</th>
                           <th className="px-4 py-3 text-center font-semibold">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {records.map((record: any, idx: number) => (
-                          <tr key={idx} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="px-4 py-3 font-medium">{record.fullname || 'N/A'}</td>
-                            <td className="px-4 py-3">{record.jtp_code || 'N/A'}</td>
-                            <td className="px-4 py-3">{record.hub || hubName}</td>
-                            <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">₱{parseFloat(record.net_pay || '0').toFixed(2)}</td>
-                            <td className="px-4 py-3">
-                              <Badge variant={getStatusBadgeVariant(record.status)}>{record.status || 'N/A'}</Badge>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-row flex-wrap gap-2 justify-center items-center">
-                                <button onClick={() => { setSelectedPayslip(record); setIsModalOpen(true); }} className="btn btn-primary !py-1.5 !px-3 text-xs">View</button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                        {(() => {
+                          const currentPage = pageByHub[hubName] || 1;
+                          const itemsPerPage = 10;
+                          const currentRecords = records.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+                          
+                          return currentRecords.map((record: any, idx: number) => (
+                            <tr key={idx} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                              <td className="px-4 py-3 font-medium">{record.fullname || 'N/A'}</td>
+                              <td className="px-4 py-3">{record.jtp_code || 'N/A'}</td>
+                              <td className="px-4 py-3">{record.hub || hubName}</td>
+                              <td className="px-4 py-3 text-xs text-gray-500">{record.period_start} to {record.period_end}</td>
+                              <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">₱{parseFloat(record.net_pay || '0').toFixed(2)}</td>
+                              <td className="px-4 py-3">
+                                <Badge variant={getStatusBadgeVariant(record.status)}>{record.status || 'N/A'}</Badge>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => { setSelectedPayslip(record); setIsModalOpen(true); }}
+                                    className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap"
+                                  >
+                                    View Payslip
+                                  </button>
+                                  <button
+                                    onClick={() => { const empId = record.employee || record.employee_id; if (empId) navigate(`${isAdmin ? '/admin' : '/hr'}/payslip/employee/${empId}`); }}
+                                    className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap flex items-center gap-1"
+                                  >
+                                    <History size={12} />
+                                    History
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ));
+                        })()}
                       </tbody>
                     </table>
                   </div>
-
                   {/* MOBILE CARDS */}
                   <div className="hidden max-md:flex flex-col gap-3">
-                    {records.map((record: any, idx: number) => (
-                      <div key={idx} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-3">
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-gray-900 dark:text-white truncate">{record.fullname || 'N/A'}</h4>
-                            <p className="text-[10px] font-mono text-gray-400 uppercase mt-0.5">{record.jtp_code || 'N/A'}</p>
+                    {(() => {
+                      const currentPage = pageByHub[hubName] || 1;
+                      const itemsPerPage = 10;
+                      const currentRecords = records.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+                      
+                      return currentRecords.map((record: any, idx: number) => (
+                        <div key={idx} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-3">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-gray-900 dark:text-white truncate">{record.fullname || 'N/A'}</h4>
+                              <p className="text-[10px] font-mono text-gray-400 uppercase mt-0.5">{record.jtp_code || 'N/A'}</p>
+                              <p className="text-[10px] text-gray-500 mt-1">{record.period_start} to {record.period_end}</p>
+                            </div>
+                            <Badge variant={getStatusBadgeVariant(record.status)}>
+                              {record.status || 'N/A'}
+                            </Badge>
                           </div>
-                          <Badge variant={getStatusBadgeVariant(record.status)}>
-                            {record.status || 'N/A'}
-                          </Badge>
+                          <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-700/50">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Net Pay</span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">₱{parseFloat(record.net_pay || '0').toFixed(2)}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 mt-1">
+                            <button onClick={() => { setSelectedPayslip(record); setIsModalOpen(true); }} className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold py-2 px-4 rounded-lg text-xs transition-colors">
+                              View Payslip
+                            </button>
+                            <button onClick={() => { const empId = record.employee || record.employee_id; if (empId) navigate(`${isAdmin ? '/admin' : '/hr'}/payslip/employee/${empId}`); }} className="w-full bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold py-2 px-4 rounded-lg text-xs transition-colors flex items-center justify-center gap-1">
+                              <History size={12} /> History
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-700/50">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Net Pay</span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">₱{parseFloat(record.net_pay || '0').toFixed(2)}</span>
-                        </div>
-                        <div className="grid grid-cols-1 gap-2 mt-1">
-                          <button onClick={() => { setSelectedPayslip(record); setIsModalOpen(true); }} className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold py-2 px-4 rounded-lg text-xs transition-colors">
-                            View Payslip
+                      ));
+                    })()}
+                  </div>
+                  
+                  {/* PAGINATION */}
+                  {records.length > 10 && (() => {
+                    const currentPage = pageByHub[hubName] || 1;
+                    const totalPages = Math.ceil(records.length / 10);
+                    return (
+                      <div className="flex items-center justify-between mt-4 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                        <span className="text-xs text-gray-500">
+                          Showing {(currentPage - 1) * 10 + 1} to {Math.min(currentPage * 10, records.length)} of {records.length} entries
+                        </span>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => setPageByHub(prev => ({ ...prev, [hubName]: Math.max(1, currentPage - 1) }))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 rounded border border-gray-200 dark:border-gray-700 text-sm disabled:opacity-50"
+                          >
+                            Prev
+                          </button>
+                          <button
+                            onClick={() => setPageByHub(prev => ({ ...prev, [hubName]: Math.min(totalPages, currentPage + 1) }))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 rounded border border-gray-200 dark:border-gray-700 text-sm disabled:opacity-50"
+                          >
+                            Next
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-
+                    );
+                  })()}
                 </>
               ) : (
                 <div className="text-center py-6 text-gray-500">
@@ -500,7 +613,7 @@ export const PayslipPage = () => {
             setSelectedPayslip(null);
           }}
           payslip={selectedPayslip}
-          allPayroll={payroll}
+          allPayroll={allPayroll}
           onSave={(updatedPayslip: any) => {
             console.log('Updated Payslip:', updatedPayslip);
             // Add logic to update the payslip in the backend or state
@@ -512,3 +625,4 @@ export const PayslipPage = () => {
   );
 };
 
+  

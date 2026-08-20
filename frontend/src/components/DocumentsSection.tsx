@@ -154,27 +154,11 @@ const DocumentsSection = ({
   };
 
   return (
-    <div className="bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800/85 rounded-[32px] p-6 shadow-md dark:shadow-xl space-y-6 transition-all">
+    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4 transition-all">
       {/* Header Card */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800/60">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-500 flex items-center justify-center">
-            <FileText size={20} />
-          </div>
-          <div className="text-left">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">Your Documents</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage and view your employee documents</p>
-          </div>
-        </div>
-
-        {/* 3D Folder Overlap SVG Graphic */}
-        <svg className="w-16 h-16 text-red-600 dark:text-red-500/90 filter drop-shadow-[0_2px_8px_rgba(239,68,68,0.15)] hidden sm:block flex-shrink-0" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="12" y="16" width="36" height="28" rx="6" fill="#fecaca" className="dark:fill-[#450a0a]" stroke="#C41E3A" strokeWidth="2" />
-          <rect x="16" y="20" width="36" height="28" rx="6" fill="#fee2e2" className="dark:fill-[#7f1d1d]" stroke="#EF4444" strokeWidth="2" opacity="0.8" />
-          <rect x="20" y="24" width="36" height="28" rx="6" fill="#ef4444" className="dark:fill-[#991b1b]" stroke="#F87171" strokeWidth="2" />
-          <path d="M38 34L38 42M38 34L35 37M38 34L41 37" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M34 44H42" stroke="white" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+      <div className="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
+        <FileText size={18} className="text-red-600 dark:text-red-500" />
+        <h3 className="text-sm font-black uppercase tracking-wider text-gray-800 dark:text-white">Documents</h3>
       </div>
 
       {/* Hidden File Input */}
@@ -251,7 +235,7 @@ const DocumentsSection = ({
       )}
 
       {/* Documents Grid List */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-3">
         {documents?.length ? (
           documents.map((doc, index) => {
             const filename = doc.file_name || '';
@@ -288,7 +272,7 @@ const DocumentsSection = ({
                   flex
                   items-center
                   justify-between
-                  p-4
+                  p-3
                   bg-slate-50
                   dark:bg-[#0d1527]/30
                   border
@@ -375,23 +359,10 @@ const DocumentsSection = ({
         ) : (
           <div className="col-span-full py-12 text-center bg-slate-50 dark:bg-slate-900/15 border border-dashed border-slate-200 dark:border-slate-800/80 rounded-2xl">
             <p className="text-slate-500 text-sm font-semibold">
-              No documents uploaded yet.
+              {readOnly ? 'No documents available.' : 'No documents uploaded yet.'}
             </p>
           </div>
         )}
-      </div>
-
-      {/* Secure Storage Info */}
-      <div className="rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/30 p-5 flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-650 dark:text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <Shield size={18} />
-        </div>
-        <div className="space-y-0.5 text-left">
-          <h4 className="text-sm font-bold text-slate-900 dark:text-white">Secure Storage</h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-            Your documents are securely stored and only visible to authorized personnel.
-          </p>
-        </div>
       </div>
 
       {previewFile && (

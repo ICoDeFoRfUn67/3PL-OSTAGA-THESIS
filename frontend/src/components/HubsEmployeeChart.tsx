@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { Hub, Employee } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
- 
 
 interface Props {
   hubsData?: Hub[];
@@ -11,6 +10,22 @@ interface Props {
 
 export default function HubsEmployeeChart({ hubsData = [], employees = [] }: Props) {
   const { isDarkMode } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(800);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width && width > 0) setContainerWidth(width);
+    });
+    observer.observe(el);
+    setContainerWidth(el.clientWidth || 800);
+
+    return () => observer.disconnect();
+  }, []);
 
   const dataset = useMemo(() => {
     return hubsData.map((hub) => {
@@ -25,7 +40,6 @@ export default function HubsEmployeeChart({ hubsData = [], employees = [] }: Pro
 
       return {
         product: hub.name,
-
         active: countByStatus('active'),
         awol: countByStatus('awol'),
         resign: countByStatus('resign'),
@@ -46,46 +60,47 @@ export default function HubsEmployeeChart({ hubsData = [], employees = [] }: Pro
   const gridColor = isDarkMode ? '#4B5563' : '#E5E7EB';
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const chartHeight = isMobile ? 200 : 450;
-  const itemWidth = isMobile ? 55 : 130;
-  const chartWidth = Math.max(isMobile ? 280 : 800, filteredDataset.length * itemWidth);
-  const legendFontSize = isMobile ? 6 : 12;
-  const tickFontSize = isMobile ? 6 : 11;
-  const marginConfig = isMobile 
-    ? { top: 5, left: 30, bottom: 20, right: 10 } 
-    : { top: 5, left: 60 };
+  const chartHeight = isMobile ? 220 : 380;
+  const barsPerHub = 4;
+  const minBarWidth = isMobile ? 56 : 90;
+  const minScrollWidth = filteredDataset.length * minBarWidth * barsPerHub + 80;
+  const chartWidth = Math.max(containerWidth, minScrollWidth);
+  const tickFontSize = isMobile ? 8 : 11;
+  const marginConfig = isMobile
+    ? { top: 8, left: 36, bottom: 56, right: 12 }
+    : { top: 8, left: 52, bottom: 72, right: 16 };
 
   return (
-    <div className="w-full overflow-x-auto overflow-y-hidden thin-scrollbar pb-2">
+    <div ref={containerRef} className="w-full overflow-x-auto overflow-y-hidden thin-scrollbar pb-2">
       <BarChart
         dataset={filteredDataset}
-
         xAxis={[
           {
             dataKey: 'product',
             scaleType: 'band',
             tickLabelStyle: {
-              angle: -40,
+              angle: -35,
               textAnchor: 'end',
-              fontSize: isMobile ? 0 : tickFontSize,
-              fill: isMobile ? 'transparent' : textColor,
+              fontSize: tickFontSize,
+              fill: textColor,
             },
           },
         ]}
-
         series={[
           { dataKey: 'active', label: 'Active', color: '#22C55E' },
           { dataKey: 'awol', label: 'AWOL', color: '#F59E0B' },
           { dataKey: 'resign', label: 'Resign', color: '#6B7280' },
           { dataKey: 'blacklist', label: 'Blacklist', color: '#EF4444' },
         ]}
-
+        slotProps={{
+          bar: { rx: 3 },
+        }}
         yAxis={[
           {
             label: isMobile ? '' : 'Employee Count',
             labelStyle: {
               fill: textColor,
-              fontSize: legendFontSize,
+              fontSize: 11,
             },
             tickLabelStyle: {
               fill: textColor,
@@ -94,55 +109,21 @@ export default function HubsEmployeeChart({ hubsData = [], employees = [] }: Pro
             tickMinStep: 1,
           },
         ]}
-
         height={chartHeight}
         width={chartWidth}
-
         margin={marginConfig}
-
-        slotProps={{
-          legend: {
-            direction: 'horizontal',
-            position: { vertical: 'top', horizontal: 'center' },
-          },
-        }}
-
         sx={{
-          // Axis lines & ticks
-          '& .MuiChartsAxis-line': {
-            stroke: gridColor,
-          },
-          '& .MuiChartsAxis-tick': {
-            stroke: gridColor,
-          },
-          // Tick labels (fallbacks)
+          '& .MuiChartsAxis-line': { stroke: gridColor },
+          '& .MuiChartsAxis-tick': { stroke: gridColor },
           '& .MuiChartsAxis-tickLabel': {
             fill: `${textColor} !important`,
             fontSize: `${tickFontSize}px !important`,
           },
-          '& .MuiChartsAxis-bottom .MuiChartsAxis-tickLabel': {
-            display: isMobile ? 'none !important' : 'block !important',
-          },
-          // Axis title/label (fallbacks)
           '& .MuiChartsAxis-label': {
             fill: `${textColor} !important`,
-            fontSize: `${legendFontSize}px !important`,
+            fontSize: '11px !important',
           },
-          // Legend layout & text
-          '& .MuiChartsLegend-root': {
-            display: 'none !important',
-          },
-          '& .MuiChartsLegend-series': {
-            gap: isMobile ? '2px !important' : '8px !important',
-          },
-          '& .MuiChartsLegend-mark': {
-            width: isMobile ? '6px !important' : '14px !important',
-            height: isMobile ? '6px !important' : '14px !important',
-          },
-          '& .MuiChartsLegend-label': {
-            fontSize: isMobile ? '6px !important' : '12px !important',
-            color: `${textColor} !important`,
-          },
+          '& .MuiChartsLegend-root': { display: 'none !important' },
         }}
       />
     </div>

@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/context/authStore';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
+import { authAPI } from '@/api/apiService';
 
 export const useAuth = () => {
   const store = useAuthStore();
@@ -38,6 +39,18 @@ export const useAuth = () => {
   const isAdmin = store.employee?.role?.toLowerCase() === 'admin' || store.user?.role?.toLowerCase() === 'admin';
   const permissions = store.employee?.hr_permissions || {};
 
+  const logout = useCallback(async () => {
+    try {
+      await authAPI.logout();
+    } catch {
+      // proceed with local cleanup even if API call fails
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('currentEmployee');
+    store.logout();
+  }, [store]);
+
   return {
     user: store.user,
     employee: store.employee,
@@ -57,7 +70,7 @@ export const useAuth = () => {
     setEmployee: store.setEmployee,
     setToken: store.setToken,
     setIsAuthenticated: store.setIsAuthenticated,
-    logout: store.logout,
+    logout,
   };
 };
 

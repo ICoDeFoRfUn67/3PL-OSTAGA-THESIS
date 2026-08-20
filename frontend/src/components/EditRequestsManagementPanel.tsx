@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Badge, LoadingSpinner } from '@/components/common';
 import { useToast } from '@/hooks/useToast';
-import { Check, X, Clock, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
-import { useClearAllEditRequests } from '@/hooks/useQueries';
+import { Check, X, Clock, ChevronDown, ChevronUp, FileText, Download } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import AdminMobileProfile from '@/components/AdminMobileProfile';
 
@@ -32,7 +31,7 @@ export const EditRequestsPanel = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [rejectNotes, setRejectNotes] = useState<Record<number, string>>({});
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
-  const clearAllMutation = useClearAllEditRequests();
+  // Clear-all edit requests UI removed per design
 
   const fetchEditRequests = async () => {
     try {
@@ -60,23 +59,7 @@ export const EditRequestsPanel = () => {
     
   }, [filterStatus]);
 
-  const handleClearAll = async () => {
-    if (
-      !window.confirm(
-        'Are you sure you want to clear all edit requests shown? This action cannot be undone.',
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await clearAllMutation.mutateAsync();
-      success('All edit requests cleared successfully.');
-      fetchEditRequests();
-    } catch {
-      error('Failed to clear edit requests.');
-    }
-  };
+  // Clear-all edit requests removed — use individual actions instead.
 
   const handleApprove = async (requestId: number) => {
     try {
@@ -174,26 +157,11 @@ export const EditRequestsPanel = () => {
         <div className="p-4 lg:p-6 space-y-6 pb-32 lg:pb-6 max-md:p-3 max-md:space-y-4 max-md:pb-32">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="hidden md:block">
-              <h1 className="text-3xl max-md:text-2xl font-bold mb-2 max-md:mb-1">Edit Requests</h1>
-              <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">Review and approve/reject employee edit requests</p>
+              <h1 className="text-3xl max-md:text-2xl font-bold mb-2 max-md:mb-1">Information Edit Requests</h1>
+              <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">Review and approve/reject employee information edit requests</p>
             </div>
 
-          {editRequests.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              disabled={clearAllMutation.isPending}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
-            >
-              {clearAllMutation.isPending ? (
-                <LoadingSpinner size="sm" />
-              ) : (
-                <>
-                  <Trash2 size={16} />
-                  Clear All Requests
-                </>
-              )}
-            </button>
-          )}
+          {/* Clear all edit requests button removed per request */}
         </div>
 
         {/* Filter Buttons */}
@@ -214,7 +182,7 @@ export const EditRequestsPanel = () => {
         {editRequests.length === 0 ? (
           <Card>
             <div className="text-center py-8">
-              <p className="text-gray-500">No edit requests found</p>
+              <p className="text-gray-500">No information edit requests found</p>
             </div>
           </Card>
         ) : (
@@ -262,24 +230,53 @@ export const EditRequestsPanel = () => {
 
                     {request.image_url && (
                       <div>
-                        <h4 className="font-semibold mb-2">Attached Image:</h4>
-                        <div className="relative group max-w-xs">
-                          <img
-                            src={request.image_url}
-                            alt="Attached"
-                            className="rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
-                          />
-                          <a
-                            href={request.image_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
-                          >
-                            <span className="text-white text-xs font-bold uppercase tracking-widest bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full">
-                              View Full Image
-                            </span>
-                          </a>
-                        </div>
+                        {request.requested_data?.document_upload === true ? (
+                          <>
+                            <h4 className="font-semibold mb-2">Attached Document:</h4>
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-150 dark:border-gray-800 max-w-sm">
+                              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+                                <FileText size={20} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Document</p>
+                                <p className="text-sm font-bold text-gray-900 dark:text-white truncate" title={String(request.requested_data.file_name || 'Document')}>
+                                  {String(request.requested_data.file_name || 'Document')}
+                                </p>
+                              </div>
+                              <a
+                                href={request.image_url}
+                                download={String(request.requested_data.file_name || 'document')}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-md transition-all active:scale-[0.97]"
+                                title="Download Document"
+                              >
+                                <Download size={16} />
+                              </a>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <h4 className="font-semibold mb-2">Attached Image:</h4>
+                            <div className="relative group max-w-xs">
+                              <img
+                                src={request.image_url}
+                                alt="Attached"
+                                className="rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
+                              />
+                              <a
+                                href={request.image_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
+                              >
+                                <span className="text-white text-xs font-bold uppercase tracking-widest bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full">
+                                  View Full Image
+                                </span>
+                              </a>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 
@@ -350,37 +347,7 @@ export const EditRequestsPanel = () => {
         )}
       </div>
       
-      {/* MOBILE FLOATING CLEAR BUTTON */}
-      {editRequests.length > 0 && (
-        <button
-          onClick={handleClearAll}
-          disabled={clearAllMutation.isPending}
-          className="
-            md:hidden
-            fixed
-            bottom-28
-            right-4
-            z-50
-            w-12
-            h-12
-            rounded-full
-            bg-red-600
-            hover:bg-red-700
-            text-white
-            shadow-xl
-            flex
-            items-center
-            justify-center
-            disabled:opacity-50
-          "
-        >
-          {clearAllMutation.isPending ? (
-            <LoadingSpinner size="sm" />
-          ) : (
-            <Trash2 size={20} />
-          )}
-        </button>
-      )}
+      {/* Mobile clear button removed */}
       </div>
     </div>
   );

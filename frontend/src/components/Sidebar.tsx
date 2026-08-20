@@ -27,7 +27,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: SidebarProps) => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, employee, logout } = useAuth();
   const { isDarkMode } = useTheme();
 
   const [employeeRequestOpen, setEmployeeRequestOpen] = useState(
@@ -37,8 +37,8 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
       window.location.pathname === '/hr/leave-requests'
   );
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -83,7 +83,7 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
       roles: ['admin', 'hr'],
       children: [
         {
-          label: 'Edit Request',
+          label: 'Information Edit Request',
           path:
             normalizedRole === 'admin'
               ? '/admin/edit-requests'
@@ -286,6 +286,11 @@ onClick={() => {
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {user?.role}
                 </p>
+                {employee?.hub_name && (
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate font-semibold mt-0.5">
+                    Hub: {employee.hub_name}
+                  </p>
+                )}
               </div>
             </div>
 
