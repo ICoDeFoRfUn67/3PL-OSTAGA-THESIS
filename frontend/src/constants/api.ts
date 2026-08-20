@@ -27,7 +27,7 @@ function resolveApiBaseUrl(): string {
 
   if (prod) {
     // In production, always use the backend directly with CORS
-    return 'https://threepl-backend-wf79.onrender.com/api';
+    return 'https://three-pl-company.onrender.com/api';
   }
 
   if (raw) {

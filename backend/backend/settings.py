@@ -53,6 +53,7 @@ if _ALLOWED_HOSTS_ENV:
     ALLOWED_HOSTS = [host.strip() for host in _ALLOWED_HOSTS_ENV.split(',')]
 else:
     ALLOWED_HOSTS = [
+    "three-pl-company.onrender.com",
     "threepl-backend-wf79.onrender.com",
     ".vercel.app",
     "localhost",
@@ -146,6 +147,7 @@ else:
 CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",
     "https://threepl-backend-wf79.onrender.com",
+    "https://three-pl-company.onrender.com",
 ]
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
