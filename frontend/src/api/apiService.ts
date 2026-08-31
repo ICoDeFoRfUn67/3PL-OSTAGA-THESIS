@@ -303,8 +303,16 @@ export const editRequestAPI = {
    LIVE LOCATION API
 ========================= */
 export const liveLocationAPI = {
+  getAll: async (params?: Record<string, unknown>) => {
+    const response = await apiClient.get(API_ENDPOINTS.LIVE_LOCATIONS, { params });
+    return response.data;
+  },
   getLiveLocations: async (params?: Record<string, unknown>) => {
     const response = await apiClient.get(API_ENDPOINTS.LIVE_LOCATIONS, { params });
+    return response.data;
+  },
+  update: async (data: { latitude: number; longitude: number; employee?: number }) => {
+    const response = await apiClient.post(API_ENDPOINTS.LIVE_LOCATIONS, data);
     return response.data;
   },
 };
@@ -363,11 +371,14 @@ export const documentAPI = {
     return response.data;
   },
 
-  uploadDocument: async (employeeId: number, file: File, fileName: string) => {
+  uploadDocument: async (employeeId: number, file: File, fileName: string, documentType?: string) => {
     const formData = new FormData();
     formData.append('employee', employeeId.toString());
     formData.append('file', file);
     formData.append('file_name', fileName);
+    if (documentType) {
+      formData.append('document_type', documentType);
+    }
     
     const response = await apiClient.post(API_ENDPOINTS.EMPLOYEE_DOCUMENTS_LIST, formData);
     return response.data;
@@ -412,5 +423,40 @@ export const dashboardAPI = {
   },
 };
 
-// ? ALSO KEEP DEFAULT EXPORT
+/* =========================
+   PAYMENT ACCOUNTS API
+========================= */
+export const paymentAccountAPI = {
+  getAll: async (params?: Record<string, any>) => {
+    const response = await apiClient.get(API_ENDPOINTS.PAYMENT_ACCOUNTS, { params });
+    return response.data;
+  },
+
+  getById: async (id: number) => {
+    const response = await apiClient.get(API_ENDPOINTS.PAYMENT_ACCOUNT_DETAIL(id));
+    return response.data;
+  },
+
+  create: async (formData: FormData) => {
+    const response = await apiClient.post(API_ENDPOINTS.PAYMENT_ACCOUNTS, formData);
+    return response.data;
+  },
+
+  update: async (id: number, formData: FormData) => {
+    const response = await apiClient.patch(API_ENDPOINTS.PAYMENT_ACCOUNT_DETAIL(id), formData);
+    return response.data;
+  },
+
+  delete: async (id: number) => {
+    const response = await apiClient.delete(API_ENDPOINTS.PAYMENT_ACCOUNT_DETAIL(id));
+    return response.data;
+  },
+
+  deleteQr: async (id: number) => {
+    const response = await apiClient.delete(API_ENDPOINTS.PAYMENT_ACCOUNT_DELETE_QR(id));
+    return response.data;
+  },
+};
+
+// ✅ ALSO KEEP DEFAULT EXPORT
 export default apiClient;

@@ -35,7 +35,7 @@ const iconMap: Record<string, any> = {
 
 const titleMap: Record<string, string> = {
   '/admin': 'Dashboard',
-  '/admin/hubs': 'Hubs',
+  '/admin/hubs': 'Delivery Centers',
   '/admin/employees': 'Employees',
   '/admin/edit-requests': 'Information Edit Requests',
   '/admin/leave-requests': 'Leave Requests',
@@ -48,7 +48,7 @@ const titleMap: Record<string, string> = {
 
 const subtitleMap: Record<string, string> = {
   '/admin': 'Overview of your network',
-  '/admin/hubs': 'Manage hub locations',
+  '/admin/hubs': 'Manage delivery center locations',
   '/admin/employees': 'Workforce management',
   '/admin/edit-requests': 'Pending modifications',
   '/admin/leave-requests': 'Manage employee leaves',
@@ -232,7 +232,7 @@ function AdminMobileProfile() {
                     </span>
                     {employee?.hub_name && (
                       <span className={`${isDarkMode ? 'text-white/40' : 'text-gray-500'} text-[9px] font-semibold mt-0.5 truncate max-w-[80px]`}>
-                        Hub: {employee.hub_name}
+                        Delivery Center: {employee.hub_name}
                       </span>
                     )}
                   </div>
@@ -255,7 +255,7 @@ function AdminMobileProfile() {
                         <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold text-sm`}>{user?.username || 'admin'}</p>
                         <p className={`${isDarkMode ? 'text-white/50' : 'text-gray-600'} text-xs`}>{user?.role || 'Admin'}</p>
                         {employee?.hub_name && (
-                          <p className={`${isDarkMode ? 'text-white/40' : 'text-gray-500'} text-[10px] font-semibold truncate`}>Hub: {employee.hub_name}</p>
+                          <p className={`${isDarkMode ? 'text-white/40' : 'text-gray-500'} text-[10px] font-semibold truncate`}>Delivery Center: {employee.hub_name}</p>
                         )}
                       </div>
                     </div>

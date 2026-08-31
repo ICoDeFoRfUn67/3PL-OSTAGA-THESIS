@@ -37,7 +37,7 @@ export const hrNav: NavSection[] = [
   },
   {
     items: [
-      { to: '/hr/hubs', label: 'Hubs', icon: <MapPin size={16} /> },
+      { to: '/hr/hubs', label: 'Delivery Centers', icon: <MapPin size={16} /> },
       { to: '/hr/access-control', label: 'Access Control', icon: <Shield size={16} /> },
       { to: '/hr/attendance', label: 'Attendance', icon: <Clock size={16} /> },
       { to: '/hr/payslip', label: 'Payslip', icon: <FileText size={16} /> },

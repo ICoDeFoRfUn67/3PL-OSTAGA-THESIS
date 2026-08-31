@@ -9,3 +9,6 @@ build/
 .DS_Store
 .tsbuildinfo
 backend/data.json
+*.sqlite3
+db.sqlite3
+.env*

@@ -128,13 +128,13 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory, hideHeader }: Att
     }
 
     if (!assignedHub) {
-      toast.error('No assigned hub found for your profile. Please contact HR.');
+      toast.error('No assigned delivery center found for your profile. Please contact HR.');
       return;
     }
 
     const distance = getDistance(userLat, userLng, assignedHub.latitude, assignedHub.longitude);
     if (distance > 10) {
-      toast.error(`You are too far from your assigned hub (${assignedHub.name}). You are currently ${distance.toFixed(1)}m away. Allowed distance: 10m.`);
+      toast.error(`You are too far from your assigned delivery center (${assignedHub.name}). You are currently ${distance.toFixed(1)}m away. Allowed distance: 10m.`);
       return;
     }
 
@@ -173,13 +173,13 @@ export const AttendanceSidebar = ({ employeeId, onViewHistory, hideHeader }: Att
     }
 
     if (!assignedHub) {
-      toast.error('No assigned hub found for your profile. Please contact HR.');
+      toast.error('No assigned delivery center found for your profile. Please contact HR.');
       return;
     }
 
     const distance = getDistance(userLat, userLng, assignedHub.latitude, assignedHub.longitude);
     if (distance > 10) {
-      toast.error(`You are too far from your assigned hub (${assignedHub.name}). You are currently ${distance.toFixed(1)}m away. Allowed distance: 10m.`);
+      toast.error(`You are too far from your assigned delivery center (${assignedHub.name}). You are currently ${distance.toFixed(1)}m away. Allowed distance: 10m.`);
       return;
     }
 

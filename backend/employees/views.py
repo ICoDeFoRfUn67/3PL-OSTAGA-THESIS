@@ -16,7 +16,7 @@ from django.db.models import Count, Prefetch
 from django.http import HttpResponse, Http404
 import os
 import json
-from .models import Hub, Employee, EditRequest, LeaveRequest, Attendance, LiveLocation, Payroll, EmployeeDocument, ActivityLog, SecurityAlert, HRPermission, SavedImage
+from .models import Hub, Employee, EditRequest, LeaveRequest, Attendance, LiveLocation, Payroll, EmployeeDocument, ActivityLog, SecurityAlert, HRPermission, SavedImage, PaymentAccount
 
 def apply_hr_hub_filter(queryset, user, hub_field='hub'):
     """Filter queryset by managed hubs if user is HR."""
@@ -826,6 +826,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         hub_id = self.request.query_params.get('hub_id')
         employee_id = self.request.query_params.get('employee_id')
         date = self.request.query_params.get('date')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
 
         if hub_id:
             queryset = queryset.filter(employee__hub_id=hub_id)
@@ -833,6 +835,10 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(employee_id=employee_id)
         if date:
             queryset = queryset.filter(date=date)
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
         return queryset
 
     @action(detail=False, methods=['post'])
@@ -1694,8 +1700,10 @@ class EditRequestViewSet(viewsets.ModelViewSet):
         FIELD_MAP = {
             'firstName': 'firstname', 'lastName': 'lastname', 'middleInitial': 'middle_initial',
             'placeOfBirth': 'place_of_birth', 'dateOfBirth': 'date_of_birth', 'maritalStatus': 'marital_status',
-            'email': 'email_address', 'phone': 'phone_number', 'currentAddress': 'current_address',
-            'permanentAddress': 'permanent_address', 'employmentType': 'employment_type',
+            'email': 'email_address', 'phone': 'phone_number',
+            'region': 'region', 'province': 'province', 'cityMunicipality': 'city_municipality',
+            'barangay': 'barangay', 'zipCode': 'zip_code',
+            'employmentType': 'employment_type',
             'hireDate': 'hired_date', 'jtpCode': 'jtp_code', 'employeeId': 'employee_id',
             'emergencyContactName': 'emergency_contact_name', 'emergencyContactPhone': 'emergency_contact_phone',
             'canEditInfo': 'can_edit_info', 'isActive': 'is_active',
@@ -1817,29 +1825,62 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = EmployeeDocument.objects.select_related('employee', 'employee__user').all()
         user = self.request.user
-        employee_id = self.request.query_params.get('employee_id')
+        employee_id = self.request.query_params.get('employee_id') or self.request.query_params.get('employee')
 
-        if user.is_staff or user.is_superuser:
+        emp = getattr(user, 'employee', None)
+        role = (emp.role or '').lower() if emp else ''
+        is_admin_or_hr = user.is_staff or user.is_superuser or role in ('admin', 'hr')
+
+        if is_admin_or_hr:
             if employee_id:
                 qs = qs.filter(employee_id=employee_id)
         else:
-            try:
-                emp = Employee.objects.get(user=user)
+            if emp:
                 qs = qs.filter(employee=emp)
-            except Employee.DoesNotExist:
+            else:
                 qs = qs.none()
 
         return qs
 
+    def perform_create(self, serializer):
+        user = self.request.user
+        emp = getattr(user, 'employee', None)
+        role = (emp.role or '').lower() if emp else ''
+        is_admin_or_hr = user.is_staff or user.is_superuser or role in ('admin', 'hr')
+
+        target_employee = None
+        target_employee_id = self.request.data.get('employee') or self.request.data.get('employee_id')
+        if target_employee_id and is_admin_or_hr:
+            try:
+                target_employee = Employee.objects.get(id=target_employee_id)
+            except Employee.DoesNotExist:
+                pass
+
+        if not target_employee:
+            target_employee = emp
+
+        if not target_employee:
+            raise PermissionDenied('Employee not specified or not found.')
+
+        file_obj = self.request.FILES.get('file')
+        file_name = self.request.data.get('file_name') or (file_obj.name if file_obj else '')
+        document_type = self.request.data.get('document_type') or 'other'
+
+        serializer.save(
+            employee=target_employee,
+            file_name=file_name,
+            document_type=document_type
+        )
+
     def perform_destroy(self, instance):
         user = self.request.user
-        if not (user.is_staff or user.is_superuser):
-            try:
-                emp = Employee.objects.get(user=user)
-                if instance.employee_id != emp.id:
-                    raise PermissionDenied('You can only delete your own documents.')
-            except Employee.DoesNotExist:
-                raise PermissionDenied('Employee profile not found.')
+        emp = getattr(user, 'employee', None)
+        role = (emp.role or '').lower() if emp else ''
+        is_admin_or_hr = user.is_staff or user.is_superuser or role in ('admin', 'hr')
+
+        if not is_admin_or_hr:
+            if not emp or instance.employee_id != emp.id:
+                raise PermissionDenied('You can only delete your own documents.')
         super().perform_destroy(instance)
 
 class PayrollViewSet(viewsets.ModelViewSet):
@@ -2395,6 +2436,15 @@ class LiveLocationViewSet(viewsets.ModelViewSet):
     serializer_class = LiveLocationSerializer
     permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+        emp = getattr(self.request.user, 'employee_profile', None)
+        emp_target = serializer.validated_data.get('employee') or emp
+        if emp_target:
+            LiveLocation.objects.filter(employee=emp_target).delete()
+            serializer.save(employee=emp_target)
+        else:
+            serializer.save()
+
 class ServeSavedImageView(APIView):
     """Serve images directly from the database (binary data)"""
     permission_classes = [AllowAny] # Or IsAuthenticated if preferred
@@ -2421,6 +2471,7 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     
     # Track failed login attempts per user
+    # Format: { username_key: { 'count': int, 'last_failed_time': datetime, 'cooldown_minutes': int } }
     failed_attempts = {}
     MAX_FAILED_ATTEMPTS = 5
     
@@ -2435,26 +2486,61 @@ class LoginView(APIView):
         if not username or not password:
             return Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Fallback: look up user by username or email to fetch actual username for tracking key
         account = User.objects.filter(username=username).first()
+        if not account:
+            account = User.objects.filter(email=username).first()
+
         if not account:
             return Response({'error': 'Account did not exist'}, status=status.HTTP_400_BAD_REQUEST)
         if not account.is_active:
             return Response({'error': 'Account is disabled. Contact administrator.'}, status=status.HTTP_403_FORBIDDEN)
 
-        user = authenticate(username=username, password=password)
+        # Use canonical username as rate limit identifier
+        tracking_key = account.username
+
+        # Determine user role (only apply cooldowns to HR and Employee accounts, not Admin)
+        is_target_role = True
+        try:
+            employee = Employee.objects.get(user=account)
+            if employee.role.lower() == 'admin':
+                is_target_role = False
+        except Employee.DoesNotExist:
+            if account.is_superuser:
+                is_target_role = False
+
+        # Retrieve cooldown information if applicable
+        attempt_info = self.failed_attempts.get(tracking_key, {
+            'count': 0,
+            'last_failed_time': None,
+            'cooldown_minutes': 0
+        })
+
+        # Cooldown check
+        if is_target_role and attempt_info['count'] >= self.MAX_FAILED_ATTEMPTS and attempt_info['last_failed_time']:
+            now = timezone.now()
+            cooldown_duration = timedelta(minutes=attempt_info['cooldown_minutes'])
+            cooldown_end = attempt_info['last_failed_time'] + cooldown_duration
+            if now < cooldown_end:
+                remaining_seconds = int((cooldown_end - now).total_seconds())
+                if remaining_seconds >= 60:
+                    time_left = f"{remaining_seconds // 60}m {remaining_seconds % 60}s"
+                else:
+                    time_left = f"{remaining_seconds}s"
+                return Response(
+                    {'error': f'Too many failed attempts. Cooldown active. Please try again in {time_left}.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Attempt authentication
+        user = authenticate(username=account.username, password=password)
         client_ip = self.get_client_ip(request)
-        failed_count = self.failed_attempts.get(username, 0)
-        if not user:
-            # Fallback: try to authenticate using email as identifier
-            email_user = User.objects.filter(email=username).first()
-            if email_user:
-                user = authenticate(username=email_user.username, password=password)
 
         if user and user.is_active:
             try:
                 employee = Employee.objects.get(user=user)
                 role = employee.role
-                # ✓ ENABLED: Check can_login restriction to prevent unauthorized access
+                # Check can_login restriction
                 if not employee.can_login:
                     SecurityAlert.objects.create(
                         employee=employee,
@@ -2462,7 +2548,7 @@ class LoginView(APIView):
                         severity='high',
                         message=f'{employee.full_name} attempted login while account is disabled.',
                         details={
-                            'username': username,
+                            'username': tracking_key,
                             'ip_address': client_ip,
                             'timestamp': str(timezone.now())
                         }
@@ -2475,14 +2561,20 @@ class LoginView(APIView):
                 employee = None
                 role = 'Admin' if user.is_superuser else 'HR' if user.is_staff else 'Employee'
 
-            self.failed_attempts[username] = 0
+            # Reset attempts on successful login
+            if is_target_role:
+                self.failed_attempts[tracking_key] = {
+                    'count': 0,
+                    'last_failed_time': None,
+                    'cooldown_minutes': 0
+                }
 
             ActivityLog.objects.create(
                 user=user,
                 employee=employee,
                 role=role,
                 action='login',
-                details=f'{username} logged in successfully from {client_ip}',
+                details=f'{tracking_key} logged in successfully from {client_ip}',
                 ip_address=client_ip
             )
 
@@ -2500,14 +2592,31 @@ class LoginView(APIView):
                 'refresh': str(refresh)
             })
 
-        # Known account, active user, wrong password
-        self.failed_attempts[username] = failed_count + 1
-        failed_count = self.failed_attempts[username]
+        # Authentication failed (wrong password)
+        failed_count = 0
+        if is_target_role:
+            attempt_info = self.failed_attempts.get(tracking_key, {
+                'count': 0,
+                'last_failed_time': None,
+                'cooldown_minutes': 0
+            })
+            new_count = attempt_info['count'] + 1
+            attempt_info['count'] = new_count
+            attempt_info['last_failed_time'] = timezone.now()
+
+            # Calculate cooldown: N=5 is 1 min; N=6 is 5 mins; N>=7 adds 5 mins per failure
+            if new_count >= 5:
+                if new_count == 5:
+                    attempt_info['cooldown_minutes'] = 1
+                else:
+                    attempt_info['cooldown_minutes'] = 5 * (new_count - 5)
+
+            self.failed_attempts[tracking_key] = attempt_info
+            failed_count = new_count
 
         try:
-            user_obj = User.objects.get(username=username)
-            employee = Employee.objects.get(user=user_obj)
-        except (User.DoesNotExist, Employee.DoesNotExist):
+            employee = Employee.objects.get(user=account)
+        except Employee.DoesNotExist:
             employee = None
 
         alert_type = 'failed_login'
@@ -2515,9 +2624,9 @@ class LoginView(APIView):
         if failed_count >= self.MAX_FAILED_ATTEMPTS:
             alert_type = 'multiple_attempts'
             severity = 'high'
-            message = f'Multiple failed login attempts detected for {username} ({failed_count} attempts from {client_ip})'
+            message = f'Multiple failed login attempts detected for {tracking_key} ({failed_count} attempts from {client_ip})'
         else:
-            message = f'Failed login attempt for {username}'
+            message = f'Failed login attempt for {tracking_key}'
 
         SecurityAlert.objects.create(
             employee=employee,
@@ -2525,7 +2634,7 @@ class LoginView(APIView):
             severity=severity,
             message=message,
             details={
-                'username': username,
+                'username': tracking_key,
                 'ip_address': client_ip,
                 'failed_attempts': failed_count,
                 'timestamp': str(timezone.now())
@@ -2537,12 +2646,13 @@ class LoginView(APIView):
                 employee=employee,
                 role=employee.role,
                 action='failed_login',
-                details=f'Failed login attempt #{failed_count} for {username}',
+                details=f'Failed login attempt #{failed_count} for {tracking_key}',
                 ip_address=client_ip
             )
 
         if failed_count >= self.MAX_FAILED_ATTEMPTS:
-            error_msg = 'Too many failed login attempts. Please try again later.'
+            cooldown_min = attempt_info['cooldown_minutes']
+            error_msg = f'Too many failed login attempts. Cooldown of {cooldown_min}m activated.'
         else:
             error_msg = 'Password is incorrect'
 
@@ -3609,3 +3719,73 @@ class TopEmployeesByHubView(APIView):
             'working_days': working_days,
         })
 
+
+# =============================================================================
+# PAYMENT ACCOUNT VIEWS
+# =============================================================================
+
+class PaymentAccountViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for employee payment accounts (Maya, GCash, Bank Card, Credit/Debit Card).
+    - Admins/HR: see all accounts
+    - Employees: see & manage only their own accounts
+    """
+    from .serializers import PaymentAccountSerializer
+    serializer_class = PaymentAccountSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        from .serializers import PaymentAccountSerializer
+        return PaymentAccountSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        emp = getattr(user, 'employee', None)
+        if emp:
+            role = (emp.role or '').lower()
+            if role in ('admin', 'hr'):
+                qs = PaymentAccount.objects.select_related('employee').all()
+                # HR filter by hub
+                employee_id = self.request.query_params.get('employee')
+                if employee_id:
+                    qs = qs.filter(employee_id=employee_id)
+                account_type = self.request.query_params.get('account_type')
+                if account_type:
+                    qs = qs.filter(account_type=account_type)
+                return qs
+            else:
+                # Employee: only their own
+                return PaymentAccount.objects.filter(employee=emp)
+        return PaymentAccount.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        emp = getattr(user, 'employee', None)
+        role = (emp.role or '').lower() if emp else ''
+
+        if role in ('admin', 'hr'):
+            # Admin/HR can specify employee
+            employee_id = self.request.data.get('employee')
+            if employee_id:
+                target_emp = Employee.objects.get(pk=employee_id)
+                serializer.save(employee=target_emp)
+                return
+        # Employees save to themselves
+        if emp:
+            serializer.save(employee=emp)
+        else:
+            raise PermissionDenied("No employee profile found.")
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    @action(detail=True, methods=['delete'], url_path='delete-qr')
+    def delete_qr(self, request, pk=None):
+        """Remove just the QR code image from a payment account."""
+        obj = self.get_object()
+        if obj.qr_code:
+            obj.qr_code.delete(save=False)
+            obj.qr_code = None
+            obj.save()
+        return Response({'status': 'QR code removed'})

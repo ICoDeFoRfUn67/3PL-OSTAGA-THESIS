@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, EmptyState } from '@/components/common';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Search, MapPin, Users, Home, FileText, Plus } from 'lucide-react';
@@ -121,17 +121,28 @@ export const MobileAdminDashboardView = ({
         hub.city?.toLowerCase().includes(searchLocationTerm.toLowerCase())
     );
   }, [hubs, searchLocationTerm]);
-  const modernMarker = L.divIcon({
-    className: 'custom-modern-marker',
-    html: `
-      <div style="position:relative; width:16px; height:16px;">
-        <div style="position:absolute; inset:0; border-radius:999px; background:#ef4444; border:3px solid white; box-shadow: 0 0 0 4px rgba(239,68,68,0.15), 0 4px 12px rgba(239,68,68,0.25);"></div>
-      </div>
-    `,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    popupAnchor: [0, -10],
-  });
+  const hubIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: '',
+        html: `
+        <div
+          style="
+            width:18px;
+            height:18px;
+            background:#10b981;
+            border-radius:999px;
+            border:3px solid white;
+            box-shadow:
+              0 0 0 4px rgba(16,185,129,.25),
+              0 0 14px rgba(16,185,129,.85);
+          "
+        ></div>
+        `,
+        iconSize: [18, 18],
+      }),
+    []
+  );
 
   return (
     <div className={`min-h-screen pb-24 font-sans selection:bg-blue-500/30 ${isDarkMode ? 'bg-[#0B1120] text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
@@ -172,7 +183,7 @@ export const MobileAdminDashboardView = ({
               </div>
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Hubs</p>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Delivery Centers</p>
               <p className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{hubs.length}</p>
             </div>
           </Card>
@@ -291,8 +302,8 @@ export const MobileAdminDashboardView = ({
                     <MapPin className={`w-4 h-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} />
                   </div>
                   <div>
-                    <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Hub Locations</h3>
-                    <p className={`text-[9px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Live hub overview</p>
+                    <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Delivery Center Locations</h3>
+                    <p className={`text-[9px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Live delivery center overview</p>
                   </div>
                 </div>
                 <button
@@ -307,20 +318,17 @@ export const MobileAdminDashboardView = ({
           </div>
           
           <div className={`h-[250px] w-full ${isDarkMode ? 'bg-[#0B1120]' : 'bg-gray-100'}`}>
-            <MapContainer center={[12.8797, 121.774]} zoom={5} zoomControl={false} attributionControl={false} style={{ width: '100%', height: '100%', background: isDarkMode ? '#0B1120' : '#f3f4f6' }}>
-              <TileLayer url={isDarkMode ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'} />
+            <MapContainer center={[14.5995, 120.9842]} zoom={6} style={{ width: '100%', height: '100%' }}>
+              <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <FitBoundsComponent mapHubs={filteredHubs} getCoords={getHubCoordinates} />
               {filteredHubs.map((hub: any) => {
                 const [lat, lng] = getHubCoordinates(hub);
                 return (
-                  <Marker key={hub.id} position={[lat, lng]} icon={modernMarker}>
-                    <Popup closeButton={false}>
-                      <div className="text-xs font-semibold">{hub.name}</div>
-                    </Popup>
-                  </Marker>
+                  <Marker key={hub.id} position={[lat, lng]} icon={hubIcon} />
                 );
               })}
-            </MapContainer>          </div>
+            </MapContainer>
+          </div>
       </Card>
 
         {/* Hub Employee Distribution Chart */}        <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4`}>
@@ -328,7 +336,7 @@ export const MobileAdminDashboardView = ({
             <div className={`w-8 h-8 rounded-lg ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'} flex items-center justify-center border`}>
               <Users className={`w-4 h-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} />
             </div>
-            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Hub Employee Distribution</h3>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Delivery Center Employee Distribution</h3>
           </div>
 
           {/* Fixed Legend */}
@@ -359,7 +367,7 @@ export const MobileAdminDashboardView = ({
               </div>
               <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-650'}`}>
                 <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
-                  {hubEmployeeData.reduce((prev: any, current: any) => (prev.Active > current.Active) ? prev : current).name} Hub
+                  {hubEmployeeData.reduce((prev: any, current: any) => (prev.Active > current.Active) ? prev : current).name} Delivery Center
                 </span> has the highest number of active employees.
               </p>
             </div>
@@ -382,7 +390,7 @@ export const MobileAdminDashboardView = ({
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Name</th>
                   <th className="px-4 py-2.5 font-medium">Position</th>
-                  <th className="px-4 py-2.5 font-medium">Hub</th>
+                  <th className="px-4 py-2.5 font-medium">Delivery Center</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
                   <th className="px-4 py-2.5 font-medium text-center">Actions</th>
                 </tr>
@@ -412,17 +420,17 @@ export const MobileAdminDashboardView = ({
         {/* Hubs Table */}
         <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} overflow-hidden flex flex-col mb-6`}>
           <div className={`p-4 flex justify-between items-center border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-250'}`}>
-            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Hubs</h3>
+            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Delivery Centers</h3>
             <div className="relative w-36">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-              <input type="text" placeholder="Search hubs..." className={`w-full ${isDarkMode ? 'bg-[#0B1120] border-gray-800 text-gray-300 focus:border-gray-700' : 'bg-white border-gray-200 text-gray-900 focus:border-gray-300'} border rounded-full py-1.5 pl-8 pr-3 text-[10px] placeholder-gray-500 focus:outline-none`} value={searchHubTerm} onChange={e => setSearchHubTerm(e.target.value)} />
+              <input type="text" placeholder="Search delivery centers..." className={`w-full ${isDarkMode ? 'bg-[#0B1120] border-gray-800 text-gray-300 focus:border-gray-700' : 'bg-white border-gray-200 text-gray-900 focus:border-gray-300'} border rounded-full py-1.5 pl-8 pr-3 text-[10px] placeholder-gray-500 focus:outline-none`} value={searchHubTerm} onChange={e => setSearchHubTerm(e.target.value)} />
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[11px] whitespace-nowrap">
               <thead className={`${isDarkMode ? 'bg-gray-800/60 text-gray-300' : 'bg-gray-100 text-gray-600'} uppercase text-[9px] tracking-wider`}>
                 <tr>
-                  <th className="px-4 py-2.5 font-medium">Hub Name</th>
+                  <th className="px-4 py-2.5 font-medium">Delivery Center Name</th>
                   <th className="px-4 py-2.5 font-medium">Location</th>
                   <th className="px-4 py-2.5 font-medium text-center">Employees</th>
                 </tr>
@@ -450,7 +458,7 @@ export const MobileAdminDashboardView = ({
             </table>
           </div>
           <div className={`p-3 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} text-center`}>
-            <button onClick={() => navigate('/admin/hubs')} className={`text-[11px] ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} transition-colors`}>View all hubs &gt;</button>
+            <button onClick={() => navigate('/admin/hubs')} className={`text-[11px] ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} transition-colors`}>View all delivery centers &gt;</button>
           </div>
         </Card>
 

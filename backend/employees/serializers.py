@@ -1,11 +1,12 @@
 import json
+import re
 import time
 from django.db import transaction
 from django.utils.text import slugify
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.conf import settings
-from .models import Hub, Employee, EditRequest, LeaveRequest, Attendance, LiveLocation, EmployeeDocument, Payroll, ActivityLog, SecurityAlert, HRPermission, SavedImage
+from .models import Hub, Employee, EditRequest, LeaveRequest, Attendance, LiveLocation, EmployeeDocument, Payroll, ActivityLog, SecurityAlert, HRPermission, SavedImage, PaymentAccount
 from django.http import QueryDict
 
 from .media_urls import absolute_media_url
@@ -265,7 +266,9 @@ class EmployeeDocumentSerializer(serializers.ModelSerializer):
         queryset=Employee.objects.all(),
     )
     file = serializers.FileField(write_only=True, required=True, allow_empty_file=False)
-    
+    file_name = serializers.CharField(required=False, allow_blank=True)
+    document_type = serializers.CharField(required=False, default='document')
+
     class Meta:
         model = EmployeeDocument
         fields = [
@@ -278,7 +281,7 @@ class EmployeeDocumentSerializer(serializers.ModelSerializer):
             'uploaded_at',
             'document_type',
         ]
-        read_only_fields = ['id', 'file_url', 'file_name', 'file_size', 'uploaded_at', 'document_type']
+        read_only_fields = ['id', 'file_url', 'file_size', 'uploaded_at']
 
     def get_file_url(self, obj):
         if obj.file:
@@ -300,7 +303,7 @@ class EmployeeListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'firstname', 'lastname', 'middle_initial',
             'place_of_birth', 'date_of_birth', 'gender', 'nationality', 'marital_status',
-            'email_address', 'phone_number', 'complete_address', 'region', 'province',
+            'email_address', 'phone_number', 'region', 'province',
             'city_municipality', 'barangay', 'zip_code', 'position', 'employment_type',
             'status', 'role', 'hub', 'hub_name', 'hired_date', 'jtp_code', 'employee_id',
             'emergency_contact_name', 'emergency_contact_phone', 'tin', 'sss', 'philhealth',
@@ -428,10 +431,6 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
         'maritalStatus': 'marital_status',
         'email': 'email_address',
         'phone': 'phone_number',
-        # Support old free-text keys and new structured keys
-        'currentAddress': 'complete_address',
-        'permanentAddress': 'complete_address',
-        'completeAddress': 'complete_address',
         'region': 'region',
         'province': 'province',
         'cityMunicipality': 'city_municipality',
@@ -505,6 +504,29 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
                 pass
 
         return super().to_internal_value(mutable_data)
+
+    def validate_phone_number(self, value):
+        if value:
+            digits = re.sub(r'\D', '', str(value))
+            if len(digits) != 11:
+                raise serializers.ValidationError("Phone number must be exactly 11 digits.")
+            return digits
+        return value
+
+    def validate_emergency_contact_phone(self, value):
+        if value:
+            digits = re.sub(r'\D', '', str(value))
+            if len(digits) != 11:
+                raise serializers.ValidationError("Emergency contact number must be exactly 11 digits.")
+            return digits
+        return value
+
+    def validate_email_address(self, value):
+        if value:
+            value = value.strip()
+            if '@' not in value:
+                value = f"{value}@gmail.com"
+        return value
 
     def validate(self, data):
         request = self.context.get('request')
@@ -1154,12 +1176,17 @@ class LoginResponseSerializer(serializers.Serializer):
 class LiveLocationSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    role = serializers.CharField(source='employee.role', read_only=True)
+    position = serializers.CharField(source='employee.position', read_only=True)
+    hub_name = serializers.CharField(source='employee.hub.name', read_only=True)
+    status = serializers.CharField(source='employee.status', read_only=True)
     distance_from_hub = serializers.SerializerMethodField()
     
     class Meta:
         model = LiveLocation
         fields = [
             'id', 'employee', 'employee_name', 'employee_id',
+            'role', 'position', 'hub_name', 'status',
             'latitude', 'longitude',
             'timestamp', 'distance_from_hub'
         ]
@@ -1189,7 +1216,7 @@ class CreateEmployeeSerializer(serializers.ModelSerializer):
         fields = [
             'firstname', 'lastname', 'middle_initial', 'position',  'employment_type', 'role', 
             'hub', 'employee_id', 'jtp_code', 'phone_number', 'email_address',
-            'complete_address', 'region', 'province', 'city_municipality', 'barangay', 'zip_code',
+            'region', 'province', 'city_municipality', 'barangay', 'zip_code',
             'username', 'password', 'can_login'
         ]
     
@@ -1283,3 +1310,44 @@ class SavedImageSerializer(serializers.ModelSerializer):
         except:
             pass
         return None
+
+
+class PaymentAccountSerializer(serializers.ModelSerializer):
+    employee_name = serializers.SerializerMethodField()
+    jtp_code = serializers.SerializerMethodField()
+    qr_code_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PaymentAccount
+        fields = [
+            'id', 'employee', 'employee_name', 'jtp_code',
+            'account_name', 'account_number', 'account_type',
+            'bank_name', 'qr_code', 'qr_code_url', 'is_active',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_employee_name(self, obj):
+        try:
+            if obj.employee:
+                return obj.employee.full_name
+        except:
+            pass
+        return obj.account_name or "N/A"
+
+    def get_jtp_code(self, obj):
+        try:
+            if obj.employee:
+                return obj.employee.jtp_code or "—"
+        except:
+            pass
+        return "—"
+
+    def get_qr_code_url(self, obj):
+        try:
+            if obj.qr_code:
+                return absolute_media_url(self.context.get('request'), obj.qr_code.url)
+        except:
+            pass
+        return None
+

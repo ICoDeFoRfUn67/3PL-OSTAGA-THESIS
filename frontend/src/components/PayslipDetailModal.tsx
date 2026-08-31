@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Modal } from './Modal';
 import { useToast } from '@/hooks/useToast';
 import { useUpdatePayroll, useCreatePayroll } from '@/hooks/useQueries';
 import { useAuth } from '@/hooks/useAuth';
+import { apiClient } from '@/api/apiService';
+import { exportElementToPdf } from '@/utils/pdfGenerator';
 import { 
   Download, 
   DollarSign, 
@@ -181,6 +183,7 @@ export const PayslipDetailModal = ({
   const [localPayslip, setLocalPayslip] = useState<Payslip | null>(payslip);
   const [periodStart, setPeriodStart] = useState<string>('');
   const [periodEnd, setPeriodEnd] = useState<string>('');
+  const payslipRef = useRef<HTMLDivElement>(null);
 
   const history = (allPayroll || []).filter(p => {
     if (!payslip) return false;
@@ -340,19 +343,18 @@ export const PayslipDetailModal = ({
       params.set('convenience_fee', String(toNumber(formData.convenience_fee)));
       params.set('general_deduction', String(toNumber(formData.general_deduction)));
 
-      const res = await fetch(`/api/payroll/compute/?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-      });
-      if (!res.ok) throw new Error('Failed to compute payroll');
-      const data = await res.json();
-      setLocalPayslip((p) => ({ ...(p as any), ...data } as Payslip));
-      setGovPercents({
-        sss: toNumber(data.sss_percent ?? 0),
-        philhealth: toNumber(data.philhealth_percent ?? 0),
-        pagibig: toNumber(data.pagibig_percent ?? 0),
-      });
+      const res = await apiClient.get(`/payroll/compute/?${params.toString()}`);
+      const data = res.data;
+      if (data) {
+        setLocalPayslip((p) => ({ ...(p as any), ...data } as Payslip));
+        setGovPercents({
+          sss: toNumber(data.sss_percent ?? 0),
+          philhealth: toNumber(data.philhealth_percent ?? 0),
+          pagibig: toNumber(data.pagibig_percent ?? 0),
+        });
+      }
     } catch (e) {
-      console.error(e);
+      console.warn('Could not recompute payroll, using existing payslip data:', e);
     } finally {
       setIsLoading(false);
     }
@@ -507,59 +509,18 @@ export const PayslipDetailModal = ({
     }
   };
 
-  const handleDownload = () => {
-    if (!localPayslip) return;
+  const handleDownload = async () => {
+    if (!localPayslip || !payslipRef.current) return;
     try {
-      const headers = [
-        'Fullname', 'JTP Code', 'Position', 'Hub', 'Period',
-        'Total Hours', 'Overtime Hours', 'Lates', 'Absences',
-        'Basic Pay', 'Overtime Pay', 'Total Earnings', 'SSS Deduction',
-        'Philhealth Deduction', 'Pagibig Deduction', 'Total Deductions', 'Net Pay', 'Status'
-      ];
-
-      const govDeductions = toNumber(localPayslip.sss_deduction) + toNumber(localPayslip.philhealth_deduction) + toNumber(localPayslip.pagibig_deduction);
-      const otherDeductions = toNumber(localPayslip.total_deductions);
-      const totalDed = govDeductions + otherDeductions;
-      const netPay = toNumber(localPayslip.total_earnings) - totalDed;
-
-      const row = [
-        localPayslip.full_name || localPayslip.fullname || 'N/A',
-        localPayslip.jtp_code || 'N/A',
-        localPayslip.position || 'N/A',
-        localPayslip.hub_name || localPayslip.hub || 'N/A',
-        localPayslip.payslip_period || `${localPayslip.period_start} - ${localPayslip.period_end}`,
-        localPayslip.total_hours || '0',
-        localPayslip.overtime_hours || '0',
-        localPayslip.lates || '0',
-        localPayslip.absences || '0',
-        localPayslip.basic_salary || '0',
-        localPayslip.overtime_pay || '0',
-        localPayslip.total_earnings || '0',
-        localPayslip.sss_deduction || '0',
-        localPayslip.philhealth_deduction || '0',
-        localPayslip.pagibig_deduction || '0',
-        otherDeductions,
-        totalDed,
-        netPay.toFixed(2),
-        localPayslip.status || 'N/A'
-      ];
-
-      const csvContent = [
-        headers.join(','),
-        row.map(cell => `"${cell}"`).join(',')
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Payroll-${localPayslip.full_name || 'Employee'}-${localPayslip.period_end}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      success('Payroll downloaded successfully');
+      setIsLoading(true);
+      const filename = `Payslip-${(localPayslip.full_name || localPayslip.fullname || 'Employee').replace(/\s+/g, '_')}-${localPayslip.period_end || 'period'}.pdf`;
+      await exportElementToPdf(payslipRef.current, filename);
+      success('Payslip downloaded as PDF');
     } catch (err) {
       console.error(err);
-      error('Failed to download payroll');
+      error('Failed to generate PDF');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -820,7 +781,7 @@ export const PayslipDetailModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} onBack={onClose} title="Employee Payslip" size="3xl" hideCloseButton={true}>
-      <div className="space-y-6">
+      <div ref={payslipRef} className="space-y-6">
         
         {/* HEADER AREA */}
         <div className="bg-gradient-to-br from-red-800 via-red-950 to-slate-950 p-6 text-white relative shadow-xl rounded-3xl">
@@ -828,10 +789,19 @@ export const PayslipDetailModal = ({
             <div />
             <button
               onClick={handleDownload}
-              className="bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all text-white border border-white/10"
-              aria-label="Download CSV"
+              disabled={isLoading}
+              className="bg-white/10 hover:bg-white/20 disabled:opacity-50 p-2.5 rounded-full transition-all text-white border border-white/10 flex items-center gap-1.5"
+              aria-label="Download PDF"
+              title="Download as PDF"
             >
-              <Download size={18} />
+              {isLoading ? (
+                <svg className="animate-spin w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              ) : (
+                <Download size={18} />
+              )}
             </button>
           </div>
 
@@ -874,7 +844,7 @@ export const PayslipDetailModal = ({
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-red-200 font-bold uppercase tracking-wider block">Hub Name</span>
+                  <span className="text-[10px] text-red-200 font-bold uppercase tracking-wider block">Delivery Center Name</span>
                   <span className="font-semibold text-white truncate block mt-0.5">
                     {localPayslip?.hub_name || localPayslip?.hub || 'N/A'}
                   </span>

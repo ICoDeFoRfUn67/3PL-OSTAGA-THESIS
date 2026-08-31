@@ -63,7 +63,7 @@ export const BottomNavigation = ({
         path: basePath,
       },
       {
-        label: 'Hubs',
+        label: 'Delivery Centers',
         icon: MapPin,
         path: `${basePath}/hubs`,
       },

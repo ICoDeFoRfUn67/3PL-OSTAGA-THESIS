@@ -5,13 +5,14 @@ import { Card, Button, Badge, LoadingSpinner, EmptyState } from './common';
 import { useGetEmployees, useDeleteEmployee, useBulkToggleLogin } from '@/hooks/useQueries';
 import { useToast } from '@/hooks/useToast';
 import { ConfirmDialog } from './ConfirmDialog';
-import { Trash2, Eye, Lock, Unlock } from 'lucide-react';
+import { Trash2, Eye, Lock, Unlock, Users, UserX } from 'lucide-react';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 
 const getStatusBadgeVariant = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'active': return 'success';
-    case 'resign': return 'neutral';
+    case 'resign':
+    case 'resigned': return 'neutral';
     case 'awol': return 'orange';
     case 'blacklist': return 'error';
     default: return 'info';
@@ -49,15 +50,31 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
   const bulkToggleMutation = useBulkToggleLogin();
   const { success, error } = useToast();
 
+  const [employeeTab, setEmployeeTab] = useState<'current' | 'resigned'>('current');
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, employeeId: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  let employees = normalizeApiResponse(data);
+  const rawEmployees: Employee[] = normalizeApiResponse(data) || [];
 
-  // Apply status filter if provided
-  if (props.statusFilter && props.statusFilter !== 'All') {
+  // Calculate live counts
+  const currentCount = rawEmployees.filter(
+    (emp) => emp.status?.toLowerCase() !== 'resign' && emp.status?.toLowerCase() !== 'resigned'
+  ).length;
+
+  const resignedCount = rawEmployees.filter(
+    (emp) => emp.status?.toLowerCase() === 'resign' || emp.status?.toLowerCase() === 'resigned'
+  ).length;
+
+  // Separate employees by active tab
+  let employees = rawEmployees.filter((emp) => {
+    const isResigned = emp.status?.toLowerCase() === 'resign' || emp.status?.toLowerCase() === 'resigned';
+    return employeeTab === 'resigned' ? isResigned : !isResigned;
+  });
+
+  // Apply status filter if provided (for current tab)
+  if (employeeTab === 'current' && props.statusFilter && props.statusFilter !== 'All') {
     employees = employees.filter((emp: Employee) => emp.status === props.statusFilter);
   }
 
@@ -73,16 +90,17 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
 
   // Automatically disable login for Blacklist and Resign employees
   employees = employees.map((emp: Employee) => {
-    if ((emp.status === 'Blacklist' || emp.status === 'Resign') && emp.can_login) {
+    if ((emp.status === 'Blacklist' || emp.status === 'Resign' || emp.status === 'Resigned') && emp.can_login) {
       return { ...emp, can_login: false };
     }
     return emp;
   });
 
-  // Reset to page 1 when search or status filter changes
+  // Reset to page 1 and clear selections when search, tab, or status filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [props.searchTerm, props.statusFilter]);
+    setSelectedEmployees([]);
+  }, [props.searchTerm, props.statusFilter, employeeTab]);
 
   // Pagination calculation
   const totalPages = Math.ceil(employees.length / itemsPerPage);
@@ -141,7 +159,54 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
 
   return (
     <>
-      <Card>
+      <Card className="overflow-hidden">
+        {/* Top Category Tabs: Current Employees vs Resigned */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700 -mx-6 -mt-6 mb-4 px-2 sm:px-6 bg-gray-50/70 dark:bg-gray-800/40">
+          <button
+            type="button"
+            onClick={() => setEmployeeTab('current')}
+            className={`flex items-center justify-center gap-2 py-3.5 px-4 sm:px-6 font-bold text-xs sm:text-sm tracking-wide border-b-2 transition-all duration-150 ${
+              employeeTab === 'current'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 border-t border-l border-r border-gray-200 dark:border-gray-700 rounded-t-lg shadow-xs'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Users size={16} />
+            <span>Current Employees</span>
+            <span
+              className={`ml-1 px-2 py-0.5 text-[11px] rounded-full font-bold ${
+                employeeTab === 'current'
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300'
+                  : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+              }`}
+            >
+              {currentCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEmployeeTab('resigned')}
+            className={`flex items-center justify-center gap-2 py-3.5 px-4 sm:px-6 font-bold text-xs sm:text-sm tracking-wide border-b-2 transition-all duration-150 ${
+              employeeTab === 'resigned'
+                ? 'border-red-600 text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 border-t border-l border-r border-gray-200 dark:border-gray-700 rounded-t-lg shadow-xs'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <UserX size={16} />
+            <span>Resigned</span>
+            <span
+              className={`ml-1 px-2 py-0.5 text-[11px] rounded-full font-bold ${
+                employeeTab === 'resigned'
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+                  : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+              }`}
+            >
+              {resignedCount}
+            </span>
+          </button>
+        </div>
+
         <div className="space-y-4">
           {/* Bulk Actions */}
           {selectedEmployees.length > 0 && (
@@ -354,7 +419,14 @@ export const EmployeeManagePanel = (props: EmployeeManagePanelProps) => {
               )}
             </>
           ) : (
-            <EmptyState title="No employees found" />
+            <EmptyState
+              title={employeeTab === 'resigned' ? 'No resigned employees found' : 'No current employees found'}
+              description={
+                employeeTab === 'resigned'
+                  ? 'Employees with "Resign" status will appear here with archived records.'
+                  : 'Try adjusting your search or status filters.'
+              }
+            />
           )}
         </div>
       </Card>

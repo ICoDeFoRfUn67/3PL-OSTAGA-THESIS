@@ -128,7 +128,7 @@ export const PayslipPage = () => {
   const excludedIds = useMemo(() => new Set(
     allEmployees
       .filter((e: any) => NON_EMPLOYEE_ROLES.includes((e.role || '').toString().toLowerCase()))
-      .map((e: any) => e.id)
+      .map((e: any) => String(e.id))
   ), [allEmployees]);
 
   const managedHubIds = useMemo(() => {
@@ -144,10 +144,14 @@ export const PayslipPage = () => {
   }, [hubs, isHR, managedHubIds]);
 
   const payroll = useMemo(() => {
-    let filtered = payrollRaw.filter((p: any) => !excludedIds.has(p.employee));
+    let filtered = (payrollRaw || []).filter((p: any) => {
+      const empId = p.employee ? (typeof p.employee === 'object' ? String(p.employee?.id) : String(p.employee)) : String(p.employee_id || '');
+      return !excludedIds.has(empId);
+    });
     if (isHR && managedHubIds) {
       filtered = filtered.filter((p: any) => {
-        const emp = allEmployees.find((e: any) => e.id === p.employee);
+        const empId = p.employee ? (typeof p.employee === 'object' ? p.employee?.id : p.employee) : p.employee_id;
+        const emp = allEmployees.find((e: any) => String(e.id) === String(empId));
         const hubId = emp ? (typeof emp.hub === 'object' ? emp.hub?.id : emp.hub) : null;
         return managedHubIds.includes(hubId);
       });
@@ -156,10 +160,14 @@ export const PayslipPage = () => {
   }, [payrollRaw, excludedIds, isHR, managedHubIds, allEmployees]);
 
   const allPayroll = useMemo(() => {
-    let filtered = (normalizeApiResponse(allPayrollData) || []).filter((p: any) => !excludedIds.has(p.employee));
+    let filtered = (normalizeApiResponse(allPayrollData) || []).filter((p: any) => {
+      const empId = p.employee ? (typeof p.employee === 'object' ? String(p.employee?.id) : String(p.employee)) : String(p.employee_id || '');
+      return !excludedIds.has(empId);
+    });
     if (isHR && managedHubIds) {
       filtered = filtered.filter((p: any) => {
-        const emp = allEmployees.find((e: any) => e.id === p.employee);
+        const empId = p.employee ? (typeof p.employee === 'object' ? p.employee?.id : p.employee) : p.employee_id;
+        const emp = allEmployees.find((e: any) => String(e.id) === String(empId));
         const hubId = emp ? (typeof emp.hub === 'object' ? emp.hub?.id : emp.hub) : null;
         return managedHubIds.includes(hubId);
       });
@@ -167,16 +175,12 @@ export const PayslipPage = () => {
     return filtered;
   }, [allPayrollData, excludedIds, isHR, managedHubIds, allEmployees]);
 
-
-
-
-
   // Calculate stats
   const stats = useMemo(() => {
     const totalEmployees = employees.length;
-    const approved = payroll.filter((p: any) => (p.status || '').toString().toLowerCase() === 'approved').length;
-    const pending = payroll.filter((p: any) => (p.status || '').toString().toLowerCase() === 'pending' || (p.status || '').toString().toLowerCase() === 'processing').length;
-    const drafts = payroll.filter((p: any) => (p.status || '').toString().toLowerCase() === 'draft').length;
+    const approved = (payroll || []).filter((p: any) => (p.status || '').toString().toLowerCase() === 'approved').length;
+    const pending = (payroll || []).filter((p: any) => (p.status || '').toString().toLowerCase() === 'pending' || (p.status || '').toString().toLowerCase() === 'processing').length;
+    const drafts = (payroll || []).filter((p: any) => (p.status || '').toString().toLowerCase() === 'draft').length;
 
     return {
       totalEmployees,
@@ -191,9 +195,14 @@ export const PayslipPage = () => {
     const uniqueYears = new Set<string>();
     
     // Add years from current payroll data
-    payroll.forEach((p: any) => {
-      const year = new Date(p.period_end || p.created_at).getFullYear().toString();
-      uniqueYears.add(year);
+    (payroll || []).forEach((p: any) => {
+      const d = p.period_end || p.created_at;
+      if (d) {
+        const year = new Date(d).getFullYear();
+        if (!isNaN(year)) {
+          uniqueYears.add(year.toString());
+        }
+      }
     });
     
     // Always include current and previous year as fallback options
@@ -223,13 +232,13 @@ export const PayslipPage = () => {
   const handleDownload = (hubName: string) => {
     const hubData = payrollByHub[hubName];
     if (!hubData || hubData.length === 0) {
-      alert('No data to download for this hub');
+      alert('No data to download for this delivery center');
       return;
     }
 
     // Prepare CSV data with all detailed fields
     const headers = [
-      'Fullname', 'JTP Code', 'Hub', 'Period Start', 'Period End',
+      'Fullname', 'JTP Code', 'Delivery Center', 'Period Start', 'Period End',
       'Total Hours', 'Overtime Hours', 'Lates (Count)', 'Absences (Count)',
       'Basic Salary', 'Standard Pay', 'Overtime Pay', 'Night Differential', 'NDOT',
       'Rest Day', 'Rest Day OT', 'Rest Day ND', 'Rest Day NDOT',
@@ -384,7 +393,7 @@ export const PayslipPage = () => {
         <div className="p-4 lg:p-6 space-y-6 max-md:p-3 max-md:space-y-4 max-md:pb-32 pb-32 lg:pb-6">
           <div className="hidden md:block">
             <h1 className="text-3xl max-md:text-2xl font-bold mb-2 max-md:mb-1">Payroll Management</h1>
-            <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">View and manage employee payrolls by hub</p>
+            <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">View and manage employee payrolls by delivery center</p>
           </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-md:gap-3">
@@ -431,9 +440,9 @@ export const PayslipPage = () => {
               </select>
             </div>
             <div className="flex-1 w-full">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Hub Name</label>
-              <select value={hubFilter} onChange={(e) => setHubFilter(e.target.value)} aria-label="Filter by hub name" className="input-field w-full">
-                <option value="All">All Hubs</option>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Delivery Center Name</label>
+              <select value={hubFilter} onChange={(e) => setHubFilter(e.target.value)} aria-label="Filter by delivery center name" className="input-field w-full">
+                <option value="All">All Delivery Centers</option>
                 {filteredHubs.map((hub: any) => <option key={hub.id} value={hub.name}>{hub.name}</option>)}
               </select>
             </div>
@@ -478,7 +487,7 @@ export const PayslipPage = () => {
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold">Fullname</th>
                           <th className="px-4 py-3 text-left font-semibold">JTP Code</th>
-                          <th className="px-4 py-3 text-left font-semibold">Hub</th>
+                          <th className="px-4 py-3 text-left font-semibold">Delivery Center</th>
                           <th className="px-4 py-3 text-left font-semibold">Period</th>
                           <th className="px-4 py-3 text-left font-semibold">Net Pay</th>
                           <th className="px-4 py-3 text-left font-semibold">Status</th>

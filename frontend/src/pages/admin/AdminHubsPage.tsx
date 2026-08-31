@@ -11,6 +11,7 @@ import { LoadingSpinner } from '@/components/common';
 import {
   useGetHubs,
   useGetEmployees,
+  useGetLiveLocations,
   useCreateHub,
   useUpdateHub,
   useDeleteHub,
@@ -354,7 +355,7 @@ const AddHubModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      toast.error('Hub name is required');
+      toast.error('Delivery Center name is required');
       return;
     }
     try {
@@ -367,11 +368,11 @@ const AddHubModal = ({
         latitude: formData.latitude ? parseFloat(formData.latitude) : 14.5995,
         longitude: formData.longitude ? parseFloat(formData.longitude) : 120.9842,
       });
-      toast.success('Hub created successfully');
+      toast.success('Delivery Center created successfully');
       setFormData({ ...emptyFormData });
       onClose();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to create hub');
+      toast.error(err?.message || 'Failed to create delivery center');
     }
   };
 
@@ -387,7 +388,7 @@ const AddHubModal = ({
               <Plus size={18} className="text-white" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Add New Hub
+              Add New Delivery Center
             </h3>
           </div>
           <button
@@ -403,10 +404,10 @@ const AddHubModal = ({
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
           <FormField
-            label="Hub Name"
+            label="Delivery Center Name"
             value={formData.name}
             onChange={(v) => updateField('name', v)}
-            placeholder="e.g. Lucena Hub Del Center"
+            placeholder="e.g. Lucena Delivery Center"
             required
             icon={Building2}
           />
@@ -463,7 +464,7 @@ const AddHubModal = ({
             ) : (
               <>
                 <Plus size={16} />
-                Create Hub
+                Create Delivery Center
               </>
             )}
           </button>
@@ -507,7 +508,7 @@ const EditHubModal = ({
     e.preventDefault();
     if (!hub) return;
     if (!formData.name.trim()) {
-      toast.error('Hub name is required');
+      toast.error('Delivery Center name is required');
       return;
     }
     try {
@@ -523,10 +524,10 @@ const EditHubModal = ({
           longitude: formData.longitude ? parseFloat(formData.longitude) : 120.9842,
         },
       });
-      toast.success('Hub updated successfully');
+      toast.success('Delivery Center updated successfully');
       onClose();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to update hub');
+      toast.error(err?.message || 'Failed to update delivery center');
     }
   };
 
@@ -542,7 +543,7 @@ const EditHubModal = ({
               <Edit3 size={16} className="text-white" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Edit Hub
+              Edit Delivery Center
             </h3>
           </div>
           <button
@@ -558,10 +559,10 @@ const EditHubModal = ({
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
           <FormField
-            label="Hub Name"
+            label="Delivery Center Name"
             value={formData.name}
             onChange={(v) => updateField('name', v)}
-            placeholder="e.g. Lucena Hub Del Center"
+            placeholder="e.g. Lucena Delivery Center"
             required
             icon={Building2}
           />
@@ -645,10 +646,10 @@ const DeleteHubModal = ({
     if (!hub) return;
     try {
       await deleteHub.mutateAsync(hub.id);
-      toast.success('Hub deleted successfully');
+      toast.success('Delivery Center deleted successfully');
       onClose();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete hub');
+      toast.error(err?.message || 'Failed to delete delivery center');
     }
   };
 
@@ -662,7 +663,7 @@ const DeleteHubModal = ({
           <AlertTriangle size={28} className="text-red-500" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Delete Hub
+          Delete Delivery Center
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
           Are you sure you want to delete{' '}
@@ -886,9 +887,11 @@ export const AdminHubsPage = () => {
 
   const { data, isLoading } = useGetHubs();
   const { data: employeesData } = useGetEmployees();
+  const { data: liveLocationsData } = useGetLiveLocations();
 
   const hubs: Hub[] = normalizeApiResponse(data);
   const allEmployees: Employee[] = normalizeApiResponse(employeesData);
+  const liveLocations: any[] = normalizeApiResponse(liveLocationsData) || [];
 
   // ======================================
   // GEOLOCATION
@@ -942,28 +945,29 @@ export const AdminHubsPage = () => {
   }, [hubState.selectedHub]);
 
   // ======================================
-  // ICONS
+  // ICONS (Custom Color Scheme)
+  // Hubs: Green, Riders: Blue, Sorters: Orange, Admin: Red, HR: Black
   // ======================================
 
   const hubIcon = useMemo(
     () =>
       L.divIcon({
         className: '',
-       html: `
+        html: `
         <div
           style="
             width:18px;
             height:18px;
-            background:#ff4d4f;
+            background:#10b981;
             border-radius:999px;
             border:3px solid white;
             box-shadow:
-              0 0 0 4px rgba(255,77,79,.15),
-              0 0 15px rgba(255,77,79,.8);
+              0 0 0 4px rgba(16,185,129,.25),
+              0 0 14px rgba(16,185,129,.85);
           "
         ></div>
         `,
-        iconSize: [16, 16],
+        iconSize: [18, 18],
       }),
     []
   );
@@ -975,6 +979,139 @@ export const AdminHubsPage = () => {
         html: `<div style="width:16px;height:16px;background:#3b82f6;border-radius:999px;border:3px solid white;box-shadow:0 4px 12px rgba(59,130,246,.4);"></div>`,
         iconSize: [16, 16],
       }),
+    []
+  );
+
+  const riderIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: '',
+        html: `
+        <div
+          style="
+            width:14px;
+            height:14px;
+            background:#3b82f6;
+            border-radius:999px;
+            border:2.5px solid white;
+            box-shadow:
+              0 0 0 3px rgba(59,130,246,.35),
+              0 2px 8px rgba(0,0,0,0.35);
+          "
+        ></div>
+        `,
+        iconSize: [14, 14],
+      }),
+    []
+  );
+
+  const sorterIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: '',
+        html: `
+        <div
+          style="
+            width:14px;
+            height:14px;
+            background:#f97316;
+            border-radius:999px;
+            border:2.5px solid white;
+            box-shadow:
+              0 0 0 3px rgba(249,115,22,.35),
+              0 2px 8px rgba(0,0,0,0.35);
+          "
+        ></div>
+        `,
+        iconSize: [14, 14],
+      }),
+    []
+  );
+
+  const adminIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: '',
+        html: `
+        <div
+          style="
+            width:14px;
+            height:14px;
+            background:#ef4444;
+            border-radius:999px;
+            border:2.5px solid white;
+            box-shadow:
+              0 0 0 3px rgba(239,68,68,.35),
+              0 2px 8px rgba(0,0,0,0.35);
+          "
+        ></div>
+        `,
+        iconSize: [14, 14],
+      }),
+    []
+  );
+
+  const hrIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: '',
+        html: `
+        <div
+          style="
+            width:14px;
+            height:14px;
+            background:#0f172a;
+            border-radius:999px;
+            border:2.5px solid white;
+            box-shadow:
+              0 0 0 3px rgba(15,23,42,.35),
+              0 2px 8px rgba(0,0,0,0.45);
+          "
+        ></div>
+        `,
+        iconSize: [14, 14],
+      }),
+    []
+  );
+
+  const getEmployeeRoleCategory = (loc: any): 'admin' | 'hr' | 'sorter' | 'rider' => {
+    const role = (loc.role || '').toString().toLowerCase();
+    const pos = (loc.position || '').toString().toLowerCase();
+    if (role === 'admin' || pos.includes('admin')) {
+      return 'admin';
+    }
+    if (role === 'hr' || pos.includes('hr') || pos.includes('human resource')) {
+      return 'hr';
+    }
+    if (pos.includes('sorter') || pos.includes('warehouse') || role === 'sorter') {
+      return 'sorter';
+    }
+    return 'rider';
+  };
+
+  const getRoleIconAndColor = (cat: 'admin' | 'hr' | 'sorter' | 'rider') => {
+    switch (cat) {
+      case 'admin':
+        return { icon: adminIcon, dotClass: 'bg-red-500', label: 'Admin' };
+      case 'hr':
+        return { icon: hrIcon, dotClass: 'bg-slate-900', label: 'HR' };
+      case 'sorter':
+        return { icon: sorterIcon, dotClass: 'bg-orange-500', label: 'Sorter' };
+      case 'rider':
+      default:
+        return { icon: riderIcon, dotClass: 'bg-blue-500', label: 'Rider' };
+    }
+  };
+
+  const getLiveLocationCoordinates = useCallback(
+    (loc: any): [number, number] | null => {
+      const lat = loc.latitude || loc.clock_in_latitude;
+      const lng = loc.longitude || loc.clock_in_longitude;
+      if (lat && lng && !isNaN(Number(lat)) && !isNaN(Number(lng)) && Number(lat) !== 0) {
+        return [Number(lat), Number(lng)];
+      }
+      return null;
+    },
     []
   );
 
@@ -1151,10 +1288,10 @@ export const AdminHubsPage = () => {
           <div className="hidden md:flex items-start justify-between gap-4 mb-2">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
-                Hub Management
+                Delivery Centers
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-[220px] leading-relaxed">
-                Manage hubs, employees and routes across locations
+                Manage delivery centers, employees and routes across locations
               </p>
             </div>
       
@@ -1164,7 +1301,7 @@ export const AdminHubsPage = () => {
               className="hidden sm:flex h-10 px-5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-semibold items-center gap-2"
             >
               <Plus size={16} />
-              Add Hub
+              Add Delivery Center
             </button>
           </div>
         
@@ -1177,7 +1314,7 @@ export const AdminHubsPage = () => {
             />
             <input
               type="text"
-              placeholder="Search hubs by name, city, or location..."
+              placeholder="Search delivery centers by name, city, or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-12 sm:h-14 rounded-2xl bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] pl-11 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 dark:focus:border-red-500/50 transition-all"
@@ -1196,11 +1333,7 @@ export const AdminHubsPage = () => {
                 >
                  <TileLayer
                     attribution=""
-                    url={
-                      isDarkMode
-                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-                    }
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
 
                   {userLocation && (
@@ -1209,6 +1342,7 @@ export const AdminHubsPage = () => {
                     </Marker>
                   )}
 
+                  {/* Hub Markers */}
                   {filteredHubs.map((hub) => (
                     <Marker
                       key={hub.id}
@@ -1216,19 +1350,99 @@ export const AdminHubsPage = () => {
                       icon={hubIcon}
                       eventHandlers={{ click: () => handleMarkerClick(hub) }}
                     >
-                      <Popup>{hub.name}</Popup>
+                      <Popup>
+                        <div className="p-1 min-w-[150px]">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                            <p className="font-bold text-xs text-gray-900">{hub.name}</p>
+                          </div>
+                          <p className="text-[11px] text-gray-600">{hub.address || hub.city || 'Delivery Center Location'}</p>
+                        </div>
+                      </Popup>
                     </Marker>
                   ))}
+
+                  {/* Live Employee Markers (Only shown when employee opens/shares location) */}
+                  {liveLocations.map((loc: any) => {
+                    const coords = getLiveLocationCoordinates(loc);
+                    if (!coords) return null;
+                    const cat = getEmployeeRoleCategory(loc);
+                    const { icon, dotClass, label } = getRoleIconAndColor(cat);
+
+                    return (
+                      <Marker key={`live-loc-${loc.id || loc.employee}`} position={coords} icon={icon}>
+                        <Popup>
+                          <div className="p-1.5 min-w-[170px]">
+                            <div className="flex items-center gap-2 mb-1.5 border-b pb-1.5">
+                              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotClass}`} />
+                              <div>
+                                <p className="font-bold text-xs text-gray-900 leading-tight">
+                                  {loc.employee_name || 'Active Employee'}
+                                </p>
+                                {loc.employee_id && (
+                                  <p className="text-[10px] text-gray-400 font-mono">#{loc.employee_id}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-[11px] text-gray-600 space-y-1">
+                              <p className="flex justify-between">
+                                <span className="font-semibold text-gray-500">Role:</span>
+                                <span className="font-bold text-gray-800">{loc.position || label}</span>
+                              </p>
+                              {loc.hub_name && (
+                                <p className="flex justify-between">
+                                  <span className="font-semibold text-gray-500">Delivery Center:</span>
+                                  <span className="text-gray-700 font-medium truncate max-w-[100px]">{loc.hub_name}</span>
+                                </p>
+                              )}
+                              <p className="flex justify-between items-center pt-1 border-t">
+                                <span className="font-semibold text-gray-500">Live GPS:</span>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Online
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
 
                   {showDirections && routeData?.car?.coordinates && (
                     <Polyline
                       positions={routeData.car.coordinates}
-                      color="#ef4444"
+                      color="#10b981"
                       weight={4}
                       opacity={0.8}
                     />
                   )}
                 </MapContainer>
+
+                {/* FLOATING LEGEND (Beside Leaflet Zoom Controls) */}
+                <div className="absolute top-2.5 left-14 md:top-3 md:left-14 z-[1000] bg-white/95 dark:bg-[#0d1b2e]/95 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl px-3 py-1.5 shadow-lg flex flex-wrap items-center gap-2.5 md:gap-3.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 border border-emerald-300 shadow-sm" />
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">Delivery Centers</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0 border border-blue-300 shadow-sm" />
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">Riders</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0 border border-orange-300 shadow-sm" />
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">Sorters</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 border border-red-300 shadow-sm" />
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">Admin</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-900 dark:bg-black shrink-0 border border-slate-400 shadow-sm" />
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">HR</span>
+                  </div>
+                </div>
+
               {weatherData && (
                 <div
                   className={`absolute top-2 right-2 md:top-4 md:right-4 z-[1000] backdrop-blur-xl rounded-lg md:rounded-2xl px-2 md:px-3 py-1.5 md:py-2 min-w-[120px] md:min-w-[150px] shadow-lg md:shadow-2xl border ${
@@ -1543,10 +1757,10 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
                         />
                     </motion.div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Select a Hub
+                      Select a Delivery Center
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-[260px] leading-relaxed">
-                      Click a hub marker on the map or a hub card below to view details, employees, and directions.
+                      Click a delivery center marker on the map or a delivery center card below to view details, employees, and directions.
                     </p>
                   </div>
                 )}
@@ -1558,7 +1772,7 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                {isHR ? 'Assigned Hubs' : 'All Hubs'}
+                {isHR ? 'Assigned Delivery Centers' : 'All Delivery Centers'}
                 <span className="inline-flex items-center justify-center h-6 px-2.5 rounded-full bg-red-50 dark:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400">
                   {filteredHubs.length} total
                 </span>
@@ -1594,12 +1808,12 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
                   <Map size={28} className="text-gray-400 dark:text-gray-500" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
-                  {searchTerm ? 'No hubs found' : 'No hubs yet'}
+                  {searchTerm ? 'No delivery centers found' : 'No delivery centers yet'}
                 </h3>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 max-w-sm">
                   {searchTerm
-                    ? `No hubs match "${searchTerm}". Try a different search term.`
-                    : 'Get started by adding your first hub location.'}
+                    ? `No delivery centers match "${searchTerm}". Try a different search term.`
+                    : 'Get started by adding your first delivery center location.'}
                 </p>
                 {!searchTerm && (
                   <button
@@ -1607,7 +1821,7 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
                     className="mt-5 h-10 px-5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-semibold flex items-center gap-2 shadow-lg shadow-red-500/20 hover:shadow-red-500/30 hover:brightness-110 active:scale-[0.97] transition-all"
                   >
                     <Plus size={16} />
-                    Add First Hub
+                    Add First Delivery Center
                   </button>
                 )}
               </div>
@@ -1666,7 +1880,7 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
           items-center
           justify-center
         "
-        aria-label="Add Hub"
+        aria-label="Add Delivery Center"
       >
         <Plus className="w-5 h-5" />
       </button>

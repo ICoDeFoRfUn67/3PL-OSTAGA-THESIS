@@ -9,6 +9,7 @@ import { employeeAPI } from '@/api/apiService';
 import { Layout, LoadingSpinner } from '@/components/common';
 import { ThemeProvider } from '@/context/ThemeContext';
 import BottomNavigation from '@/components/BottomNavigation';
+import { LiveLocationTracker } from '@/components/LiveLocationTracker';
 
 // Styles
 import '@/styles/globals.css';
@@ -25,6 +26,8 @@ const PayslipPage = React.lazy(() => import('@/pages/admin/PayslipPage').then(m 
 const AdminEmployeePayslipHistoryPage = React.lazy(() => import('@/pages/admin/AdminEmployeePayslipHistoryPage').then(m => ({ default: m.AdminEmployeePayslipHistoryPage })));
 const ActivityLogsPage = React.lazy(() => import('@/pages/admin/ActivityLogsPage').then(m => ({ default: m.ActivityLogsPage })));
 const SecurityAlertsPage = React.lazy(() => import('@/pages/admin/SecurityAlertsPage').then(m => ({ default: m.SecurityAlertsPage })));
+const PredictionsPage = React.lazy(() => import('@/pages/admin/PredictionsPage').then(m => ({ default: m.PredictionsPage })));
+const AdminPaymentAccountsPage = React.lazy(() => import('@/pages/admin/AdminPaymentAccountsPage').then(m => ({ default: m.AdminPaymentAccountsPage })));
 
 const HrDashboardPage = React.lazy(() => import('@/pages/hr/HrDashboardPage'));
 const HrEmployeesPage = React.lazy(() => import('@/pages/hr/HrEmployeesPage'));
@@ -147,6 +150,8 @@ function AppRoutes() {
                 <Route path="leave-requests" element={<LeaveRequestsPanel />} />
                 <Route path="activity-logs" element={<ActivityLogsPage />} />
                 <Route path="security-alerts" element={<SecurityAlertsPage />} />
+                <Route path="predictions" element={<PredictionsPage />} />
+                <Route path="payment-accounts" element={<AdminPaymentAccountsPage />} />
               </Routes>
               </DashboardLayout>
           </ProtectedRoute>
@@ -174,6 +179,8 @@ function AppRoutes() {
                 <Route path="activity-logs" element={<HrActivityLogsPage />} />
                 <Route path="security-alerts" element={<HrSecurityAlertsPage />} />
                 <Route path="edit-requests/:id" element={<HrEditRequestPage />} />
+                <Route path="predictions" element={<PredictionsPage />} />
+                <Route path="payment-accounts" element={<AdminPaymentAccountsPage />} />
               </Routes>
             </DashboardLayout>
           </ProtectedRoute>
@@ -239,6 +246,7 @@ function App() {
       <ThemeProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Heartbeat />
+          <LiveLocationTracker />
           <AppRoutes />
           {/* Toast Notifications */}
           <Toaster position="bottom-right" />

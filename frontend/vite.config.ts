@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['jspdf', 'html2canvas'],
+  },
   server: {
     port: 5173,
     proxy: {
@@ -38,8 +41,7 @@ export default defineConfig({
             id.includes('node_modules\\react\\') ||
             id.includes('node_modules/scheduler/') ||
             id.includes('node_modules\\scheduler\\') ||
-            id.includes('recharts') ||
-            id.includes('@mui')
+            id.includes('recharts')
           ) return 'vendor_react';
           return undefined;
         }

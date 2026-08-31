@@ -1,5 +1,14 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { BarChart } from '@mui/x-charts/BarChart';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import { Hub, Employee } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -8,124 +17,112 @@ interface Props {
   employees?: Employee[];
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg text-xs">
+      <p className="font-bold text-gray-800 dark:text-white mb-1.5">{label}</p>
+      {payload.map((entry: any) => (
+        <div key={entry.dataKey} className="flex items-center gap-2 mb-0.5">
+          <span
+            className="inline-block w-2.5 h-2.5 rounded-full"
+            style={{ background: entry.fill }}
+          />
+          <span className="text-gray-600 dark:text-gray-300">{entry.name}:</span>
+          <span className="font-semibold text-gray-800 dark:text-white">{entry.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function HubsEmployeeChart({ hubsData = [], employees = [] }: Props) {
   const { isDarkMode } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(800);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width;
-      if (width && width > 0) setContainerWidth(width);
-    });
-    observer.observe(el);
-    setContainerWidth(el.clientWidth || 800);
-
-    return () => observer.disconnect();
-  }, []);
 
   const dataset = useMemo(() => {
     return hubsData.map((hub) => {
-      const hubEmployees = employees.filter(emp => {
+      const hubEmployees = employees.filter((emp) => {
         if (emp.hub == null) return false;
         if (typeof emp.hub === 'number') return emp.hub === hub.id;
         return (emp.hub as Hub).id === hub.id;
       });
 
       const countByStatus = (status: string) =>
-        hubEmployees.filter(e => ((e.status || '') as string).toLowerCase() === status).length;
+        hubEmployees.filter((e) => ((e.status || '') as string).toLowerCase() === status).length;
 
       return {
-        product: hub.name,
-        active: countByStatus('active'),
-        awol: countByStatus('awol'),
-        resign: countByStatus('resign'),
-        blacklist: countByStatus('blacklist'),
+        name: hub.name,
+        Active: countByStatus('active'),
+        AWOL: countByStatus('awol'),
+        Resign: countByStatus('resign'),
+        Blacklist: countByStatus('blacklist'),
       };
     });
   }, [hubsData, employees]);
 
   const filteredDataset = dataset.filter(
-    d => d.active || d.awol || d.resign || d.blacklist
+    (d) => d.Active || d.AWOL || d.Resign || d.Blacklist
   );
 
   if (!filteredDataset.length) {
-    return <div className="p-5">No employee data available</div>;
+    return (
+      <div className="flex items-center justify-center p-10 text-sm text-gray-400 dark:text-gray-500">
+        No employee data available
+      </div>
+    );
   }
 
-  const textColor = isDarkMode ? '#F3F4F6' : '#374151';
-  const gridColor = isDarkMode ? '#4B5563' : '#E5E7EB';
-
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const chartHeight = isMobile ? 220 : 380;
-  const barsPerHub = 4;
-  const minBarWidth = isMobile ? 56 : 90;
-  const minScrollWidth = filteredDataset.length * minBarWidth * barsPerHub + 80;
-  const chartWidth = Math.max(containerWidth, minScrollWidth);
-  const tickFontSize = isMobile ? 8 : 11;
-  const marginConfig = isMobile
-    ? { top: 8, left: 36, bottom: 56, right: 12 }
-    : { top: 8, left: 52, bottom: 72, right: 16 };
+  const axisColor = isDarkMode ? '#9CA3AF' : '#6B7280';
+  const gridColor = isDarkMode ? '#374151' : '#E5E7EB';
 
   return (
     <div ref={containerRef} className="w-full overflow-x-auto overflow-y-hidden thin-scrollbar pb-2">
-      <BarChart
-        dataset={filteredDataset}
-        xAxis={[
-          {
-            dataKey: 'product',
-            scaleType: 'band',
-            tickLabelStyle: {
-              angle: -35,
-              textAnchor: 'end',
-              fontSize: tickFontSize,
-              fill: textColor,
-            },
-          },
-        ]}
-        series={[
-          { dataKey: 'active', label: 'Active', color: '#22C55E' },
-          { dataKey: 'awol', label: 'AWOL', color: '#F59E0B' },
-          { dataKey: 'resign', label: 'Resign', color: '#6B7280' },
-          { dataKey: 'blacklist', label: 'Blacklist', color: '#EF4444' },
-        ]}
-        slotProps={{
-          bar: { rx: 3 },
-        }}
-        yAxis={[
-          {
-            label: isMobile ? '' : 'Employee Count',
-            labelStyle: {
-              fill: textColor,
-              fontSize: 11,
-            },
-            tickLabelStyle: {
-              fill: textColor,
-              fontSize: tickFontSize,
-            },
-            tickMinStep: 1,
-          },
-        ]}
-        height={chartHeight}
-        width={chartWidth}
-        margin={marginConfig}
-        sx={{
-          '& .MuiChartsAxis-line': { stroke: gridColor },
-          '& .MuiChartsAxis-tick': { stroke: gridColor },
-          '& .MuiChartsAxis-tickLabel': {
-            fill: `${textColor} !important`,
-            fontSize: `${tickFontSize}px !important`,
-          },
-          '& .MuiChartsAxis-label': {
-            fill: `${textColor} !important`,
-            fontSize: '11px !important',
-          },
-          '& .MuiChartsLegend-root': { display: 'none !important' },
-        }}
-      />
+      <div style={{ minWidth: Math.max(filteredDataset.length * 160, 400) }}>
+        <ResponsiveContainer width="100%" height={360}>
+          <BarChart
+            data={filteredDataset}
+            margin={{ top: 8, right: 16, left: 8, bottom: 60 }}
+            barCategoryGap="25%"
+            barGap={2}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fill: axisColor, fontSize: 11 }}
+              tickLine={false}
+              axisLine={{ stroke: gridColor }}
+              angle={-35}
+              textAnchor="end"
+              interval={0}
+              height={70}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fill: axisColor, fontSize: 11 }}
+              tickLine={false}
+              axisLine={{ stroke: gridColor }}
+              label={{
+                value: 'Employee Count',
+                angle: -90,
+                position: 'insideLeft',
+                offset: 12,
+                style: { fill: axisColor, fontSize: 11 },
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }} />
+            <Legend
+              wrapperStyle={{ fontSize: '12px', paddingTop: '8px', color: axisColor }}
+              iconType="circle"
+              iconSize={8}
+            />
+            <Bar dataKey="Active" fill="#22C55E" radius={[3, 3, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="AWOL" fill="#F59E0B" radius={[3, 3, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="Resign" fill="#6B7280" radius={[3, 3, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="Blacklist" fill="#EF4444" radius={[3, 3, 0, 0]} maxBarSize={28} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

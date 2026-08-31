@@ -2,6 +2,9 @@ import React from 'react';
 import { LoadingSpinner } from '@/components/common';
 import DocumentsSection from '@/components/DocumentsSection';
 import { useGetDocuments } from '@/hooks/useQueries';
+import { normalizeApiResponse } from '@/utils/apiResponseHandler';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/constants/api';
 
 interface EmployeeDocumentsCardProps {
   employeeId: number;
@@ -9,9 +12,15 @@ interface EmployeeDocumentsCardProps {
 }
 
 export const EmployeeDocumentsCard = ({ employeeId, readOnly = false }: EmployeeDocumentsCardProps) => {
-  const { data, isLoading } = useGetDocuments({ employee_id: employeeId });
+  const queryClient = useQueryClient();
+  const { data, isLoading, refetch } = useGetDocuments(employeeId ? { employee_id: employeeId } : undefined);
   
-  const documents = data?.results || [];
+  const normalized = normalizeApiResponse(data);
+  const documents = Array.isArray(normalized)
+    ? normalized
+    : Array.isArray(data)
+    ? data
+    : (data?.results || []);
 
   if (isLoading) {
     return (
@@ -26,6 +35,11 @@ export const EmployeeDocumentsCard = ({ employeeId, readOnly = false }: Employee
       documents={documents}
       employeeId={employeeId}
       readOnly={readOnly}
+      onUpdate={() => {
+        refetch();
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DOCUMENTS] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DOCUMENTS });
+      }}
     />
   );
 };

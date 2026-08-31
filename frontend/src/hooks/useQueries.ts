@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authAPI, employeeAPI, hubAPI, attendanceAPI, payrollAPI, editRequestAPI, leaveRequestAPI, activityLogAPI, securityAlertAPI, documentAPI, dashboardAPI } from '@/api/apiService';
+import { authAPI, employeeAPI, hubAPI, attendanceAPI, payrollAPI, editRequestAPI, leaveRequestAPI, activityLogAPI, securityAlertAPI, documentAPI, dashboardAPI, paymentAccountAPI, liveLocationAPI } from '@/api/apiService';
 import { QUERY_KEYS } from '@/constants/api';
 
 // Auth hooks
@@ -347,7 +347,7 @@ export const useClearAllSecurityAlerts = () => {
 ========================= */
 export const useGetDocuments = (params?: Record<string, any>) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.DOCUMENTS, params],
+    queryKey: [...QUERY_KEYS.DOCUMENTS, params],
     queryFn: () => documentAPI.getDocuments(params),
     staleTime: 2 * 60 * 1000,
   });
@@ -356,8 +356,8 @@ export const useGetDocuments = (params?: Record<string, any>) => {
 export const useUploadDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, file, fileName }: { employeeId: number; file: File; fileName: string }) =>
-      documentAPI.uploadDocument(employeeId, file, fileName),
+    mutationFn: ({ employeeId, file, fileName, documentType }: { employeeId: number; file: File; fileName: string; documentType?: string }) =>
+      documentAPI.uploadDocument(employeeId, file, fileName, documentType),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DOCUMENTS });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CURRENT_USER });
@@ -433,3 +433,66 @@ export const useDisapproveAttendance = () => {
     },
   });
 };
+
+// ─── Payment Account Hooks ───────────────────────────────────────────────────
+
+export const useGetPaymentAccounts = (params?: Record<string, any>) => {
+  return useQuery({
+    queryKey: [...QUERY_KEYS.PAYMENT_ACCOUNTS, params],
+    queryFn: () => paymentAccountAPI.getAll(params),
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useCreatePaymentAccount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (formData: FormData) => paymentAccountAPI.create(formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PAYMENT_ACCOUNTS });
+    },
+  });
+};
+
+export const useUpdatePaymentAccount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      paymentAccountAPI.update(id, formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PAYMENT_ACCOUNTS });
+    },
+  });
+};
+
+export const useDeletePaymentAccount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => paymentAccountAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PAYMENT_ACCOUNTS });
+    },
+  });
+};
+
+// Live Location hooks
+export const useGetLiveLocations = () => {
+  return useQuery({
+    queryKey: QUERY_KEYS.LIVE_LOCATIONS,
+    queryFn: () => liveLocationAPI.getAll(),
+    refetchInterval: 10000, // auto-refresh every 10 seconds
+    staleTime: 5000,
+  });
+};
+
+export const useUpdateLiveLocation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { latitude: number; longitude: number; employee?: number }) =>
+      liveLocationAPI.update(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LIVE_LOCATIONS });
+    },
+  });
+};
+

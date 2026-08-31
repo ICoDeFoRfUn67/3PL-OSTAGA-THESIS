@@ -22,7 +22,7 @@ export const EditInfoRequestModal = ({ employeeId, isOpen, onClose, onSuccess }:
   const requestableFields = [
     'firstname', 'lastname', 'middle_initial', 'place_of_birth', 'date_of_birth',
     'gender', 'nationality', 'marital_status', 'email_address', 'phone_number',
-    'complete_address', 'region', 'province', 'city_municipality', 'barangay', 'zip_code', 'emergency_contact_name',
+    'region', 'province', 'city_municipality', 'barangay', 'zip_code', 'emergency_contact_name',
     'emergency_contact_phone', 'tin', 'sss', 'philhealth', 'pagibig'
   ];
 

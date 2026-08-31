@@ -213,7 +213,7 @@ export const AccessControlPage = () => {
             onChange={(e: any) =>
               setHubFilter(e.target.value)
             }
-            title="Filter by hub"
+            title="Filter by delivery center"
             className="input-field w-full md:w-56"
           >
             {hubs.map((hub, index) => (
@@ -221,7 +221,7 @@ export const AccessControlPage = () => {
                 key={`${hub}-${index}`}
                 value={hub}
               >
-                Hub: {hub}
+                Delivery Center: {hub}
               </option>
             ))}
           </select>
@@ -252,7 +252,7 @@ export const AccessControlPage = () => {
                       <th className="px-4 py-3 text-left font-semibold">JTP Code</th>
                       <th className="px-4 py-3 text-left font-semibold">Fullname</th>
                       <th className="px-4 py-3 text-left font-semibold">Position</th>
-                      <th className="px-4 py-3 text-left font-semibold">Hub</th>
+                      <th className="px-4 py-3 text-left font-semibold">Delivery Center</th>
                       <th className="px-4 py-3 text-left font-semibold">Status</th>
                       <th className="px-4 py-3 text-center font-semibold">Actions</th>
                     </tr>
@@ -325,7 +325,7 @@ export const AccessControlPage = () => {
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center border-t border-gray-50 dark:border-gray-700/50 pt-3 mt-1">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[50%] truncate">{emp.hub_name || 'No Hub'}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[50%] truncate">{emp.hub_name || 'No Delivery Center'}</p>
                       <button
                         onClick={() => handleManageClick(emp)}
                         className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold py-1.5 px-4 rounded-lg text-xs transition-colors"

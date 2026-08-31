@@ -104,7 +104,6 @@ class Employee(models.Model):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
 
     # Structured address fields (replaces legacy free-text fields)
-    complete_address = models.TextField(blank=True, null=True)
     region = models.CharField(max_length=100, blank=True, null=True)
     province = models.CharField(max_length=100, blank=True, null=True)
     city_municipality = models.CharField(max_length=100, blank=True, null=True)
@@ -197,7 +196,7 @@ class EmployeeDocument(models.Model):
 
     file_name = models.CharField(max_length=255, blank=True)
     file_size = models.IntegerField(null=True, blank=True)  # in KB
-    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES, default='other')
+    document_type = models.CharField(max_length=50, blank=True, default='document')
 
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -983,3 +982,67 @@ def backup_payroll_payslip(sender, instance, created, **kwargs):
             saved.save()
         except Exception as e:
             print(f"[signal] Error backing up payslip image: {e}")
+
+
+# =============================================================================
+# PAYMENT ACCOUNT MODEL
+# =============================================================================
+
+class PaymentAccount(models.Model):
+    ACCOUNT_TYPE_CHOICES = [
+        ('Maya', 'Maya'),
+        ('GCash', 'GCash'),
+        ('Bank Card', 'Bank Card'),
+        ('Credit Card/Debit Card', 'Credit Card/Debit Card'),
+    ]
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payment_accounts')
+    account_name = models.CharField(max_length=150, blank=True, help_text="Account Holder Name")
+    account_number = models.CharField(max_length=100, help_text="Mobile number, Bank Account, or Card number")
+    account_type = models.CharField(max_length=50, choices=ACCOUNT_TYPE_CHOICES)
+    bank_name = models.CharField(max_length=100, blank=True, null=True, help_text="Bank/Provider Name (e.g. BDO, BPI, UnionBank)")
+    qr_code = models.ImageField(upload_to='payment_qr_codes/', null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['employee', 'account_type']),
+            models.Index(fields=['account_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.account_type} ({self.account_number})"
+
+
+@receiver(post_save, sender=PaymentAccount)
+def backup_payment_qr_code(sender, instance, created, **kwargs):
+    """Backup payment account QR code images to SavedImage with binary data."""
+    if not instance.qr_code:
+        return
+
+    fname = os.path.basename(instance.qr_code.name)
+    existing = SavedImage.objects.filter(
+        employee=instance.employee,
+        image_type='payment_qr',
+        original_filename=fname,
+    ).exists()
+
+    if not existing:
+        try:
+            data = _read_image_bytes(instance.qr_code)
+            saved = SavedImage(
+                employee=instance.employee,
+                image=instance.qr_code,
+                image_type='payment_qr',
+                original_filename=fname,
+                description=f"Payment QR Code ({instance.account_type}) for {instance.employee.full_name}",
+            )
+            if data:
+                saved.image_data = data
+            saved.save()
+        except Exception as e:
+            print(f"[signal] Error backing up payment QR code: {e}")
+

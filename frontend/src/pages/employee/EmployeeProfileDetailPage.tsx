@@ -3,13 +3,17 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Card, Button, Badge, LoadingSpinner } from '@/components/common';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, Edit2, Save, X, Clock, Send, ArrowLeft, Key } from 'lucide-react';
+import { Upload, Edit2, Save, X, Clock, Send, ArrowLeft, Key, ScanLine, CreditCard, User } from 'lucide-react';
 import { EditInfoRequestModal } from '@/components/EditInfoRequestModal';
 import { ChangePasswordModal } from '../../components/ChangePasswordModal';
-import apiClient from '@/api/apiService';
+import apiClient, { documentAPI } from '@/api/apiService';
 import Sidebar from '@/components/Sidebar';
 import { useGetHubs } from '@/hooks/useQueries';
 import { EmployeeDocumentsCard } from '@/components/EmployeeDocumentsCard';
+import { EmployeePaymentAccountsTab } from '@/components/EmployeePaymentAccountsTab';
+import { IDScanner } from '@/components/IDScanner';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/constants/api';
 import * as phil from 'phil-reg-prov-mun-brgy';
 
 interface EmployeeData {
@@ -24,7 +28,6 @@ interface EmployeeData {
   marital_status: string;
   email_address: string;
   phone_number: string;
-  complete_address: string;
   region: string;
   province: string;
   city_municipality: string;
@@ -80,7 +83,7 @@ const FIELD_CONFIG = {
   position: { label: 'Position', type: 'text' },
   employment_type: { label: 'Employment Type', type: 'select', options: ['Full-time', 'OCW'] },
   status: { label: 'Status', type: 'select', options: ['Active', 'Resign', 'AWOL', 'Blacklist'] },
-  hub: { label: 'Hub', type: 'select', options: [] },
+  hub: { label: 'Delivery Center', type: 'select', options: [] },
   role: { label: 'Role', type: 'select', options: ['Employee', 'HR', 'Admin'] },
   can_login: { label: 'Can Login', type: 'checkbox' },
   can_edit_info: { label: 'Can Edit Info', type: 'checkbox' },
@@ -106,16 +109,39 @@ export const EmployeeProfileDetailPage = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'payment'>('profile');
+  const [showScanner, setShowScanner] = useState(false);
+  const queryClient = useQueryClient();
 
   const isOwnProfile = currentEmployee?.id === Number(id);
   const { isAdmin, isHR, canEditEmployeeInfo } = useAuth();
   const isHRorAdmin = isAdmin || isHR;
 
+  const handleScanComplete = async (frontFile: File, backFile: File, categoryKey?: string) => {
+    try {
+      if (id) {
+        const cat = categoryKey || 'license';
+        await documentAPI.uploadDocument(Number(id), frontFile, frontFile.name || 'ID_Front.jpg', cat);
+        await documentAPI.uploadDocument(Number(id), backFile, backFile.name || 'ID_Back.jpg', cat);
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DOCUMENTS });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DOCUMENTS] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DOCUMENT(Number(id)) });
+        success('ID front and back uploaded to documents successfully!');
+      }
+    } catch (e) {
+      console.error(e);
+      error('Failed to save scanned ID documents');
+    } finally {
+      setShowScanner(false);
+    }
+  };
+
   const { data: hubsData } = useGetHubs();
   const hubOptions = (hubsData?.results || hubsData || []).map((h: any) => ({ value: h.id, label: h.name || h.hub_name || h.city || String(h.id) }));
   
-  // HR can only edit if they have the permission
+  // HR can only edit info if they have the permission, but Admin and HR can manage documents
   const canEdit = isAdmin || (isHR && canEditEmployeeInfo) || isOwnProfile;
+  const canManageDocs = isAdmin || isHR || isOwnProfile;
 
   useEffect(() => {
     if (id) {
@@ -178,7 +204,7 @@ export const EmployeeProfileDetailPage = () => {
       const editableFields = [
         'firstname', 'lastname', 'middle_initial', 'place_of_birth', 'date_of_birth',
         'gender', 'nationality', 'marital_status', 'email_address', 'phone_number',
-        'complete_address', 'region', 'province', 'city_municipality', 'barangay', 'zip_code',
+        'region', 'province', 'city_municipality', 'barangay', 'zip_code',
         'position', 'employment_type',
         'status', 'role', 'hub', 'hired_date', 'jtp_code', 'employee_id',
         'emergency_contact_name', 'emergency_contact_phone', 'tin', 'sss',
@@ -287,6 +313,14 @@ export const EmployeeProfileDetailPage = () => {
 
           {!isLoading && !hasError && (
             <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setShowScanner(true)}
+                className="text-xs md:text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700"
+              >
+                <ScanLine size={16} className="mr-2 text-blue-500" /> Scan ID
+              </Button>
+
               {isOwnProfile && (
                 <Button variant="secondary" onClick={() => setShowChangePasswordModal(true)} className="text-xs md:text-sm">
                   <Key size={16} className="mr-2" /> Password
@@ -321,6 +355,37 @@ export const EmployeeProfileDetailPage = () => {
           )}
         </div>
 
+        {/* Navigation Tabs between Profile Details and Payment Accounts */}
+        {!isLoading && !hasError && (
+          <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 rounded-xl p-1.5 gap-2 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setActiveProfileTab('profile')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-xs md:text-sm uppercase tracking-wide transition-all ${
+                activeProfileTab === 'profile'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <User size={16} />
+              <span>Profile Details</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveProfileTab('payment')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-xs md:text-sm uppercase tracking-wide transition-all ${
+                activeProfileTab === 'payment'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <CreditCard size={16} />
+              <span>Payment Accounts</span>
+            </button>
+          </div>
+        )}
+
         {isLoading && (
           <div className="flex justify-center items-center py-12">
             <LoadingSpinner size="lg" />
@@ -338,7 +403,17 @@ export const EmployeeProfileDetailPage = () => {
           </Card>
         )}
 
-        {!isLoading && !hasError && (
+        {!isLoading && !hasError && activeProfileTab === 'payment' && (
+          <Card className="p-6">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <CreditCard className="text-blue-500" size={20} />
+              Payment Methods & E-Wallets (Maya, GCash, Bank Card, Credit/Debit Card)
+            </h2>
+            <EmployeePaymentAccountsTab employeeId={Number(id)} />
+          </Card>
+        )}
+
+        {!isLoading && !hasError && activeProfileTab === 'profile' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left column — sticky profile card */}
               <div className="lg:col-span-1 space-y-6 lg:self-start lg:sticky lg:top-8">
@@ -376,7 +451,7 @@ export const EmployeeProfileDetailPage = () => {
                     </div>
                     <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-2">Company Role</p>
                     <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight mb-4">{formData.role}</p>
-                    <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-2">Assigned Hub</p>
+                    <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-2">Assigned Delivery Center</p>
                     <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{formData.hub_name || 'N/A'}</p>
                   </div>
                 </Card>
@@ -437,17 +512,16 @@ export const EmployeeProfileDetailPage = () => {
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">Address Information</h3>
                     {isEditing ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField field="complete_address" value={formData.complete_address || ''} config={{ label: 'Complete Address (Street/Block/Lot)', type: 'textarea' }} isEditing={true} onChange={handleFieldChange} />
-                        <FormField field="zip_code" value={formData.zip_code || ''} config={{ label: 'ZIP Code', type: 'text' }} isEditing={true} onChange={handleFieldChange} />
                         <FormField field="region" value={formData.region || ''} config={{ label: 'Region', type: 'select', options: regionsList }} isEditing={true} onChange={handleFieldChange} />
                         <FormField field="province" value={formData.province || ''} config={{ label: 'Province', type: 'select', options: availableProvinces, disabled: !formData.region }} isEditing={true} onChange={handleFieldChange} />
                         <FormField field="city_municipality" value={formData.city_municipality || ''} config={{ label: 'City / Municipality', type: 'select', options: availableCities, disabled: !formData.province }} isEditing={true} onChange={handleFieldChange} />
                         <FormField field="barangay" value={formData.barangay || ''} config={{ label: 'Barangay', type: 'select', options: availableBarangays, disabled: !formData.city_municipality }} isEditing={true} onChange={handleFieldChange} />
+                        <FormField field="zip_code" value={formData.zip_code || ''} config={{ label: 'ZIP Code', type: 'text' }} isEditing={true} onChange={handleFieldChange} />
                       </div>
                     ) : (
                       <div className="p-3 md:p-4 bg-gray-50 dark:bg-gray-800/70 rounded-lg border border-gray-200 dark:border-gray-700">
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {[formData.complete_address, formData.barangay, formData.city_municipality, formData.province, formData.region, formData.zip_code ? `ZIP: ${formData.zip_code}` : ''].filter(Boolean).join(', ') || '—'}
+                          {[formData.barangay, formData.city_municipality, formData.province, formData.region, formData.zip_code ? `ZIP: ${formData.zip_code}` : ''].filter(Boolean).join(', ') || '—'}
                         </p>
                       </div>
                     )}
@@ -487,7 +561,7 @@ export const EmployeeProfileDetailPage = () => {
                 </Card>
 
                 <div className="mt-2">
-                  <EmployeeDocumentsCard employeeId={Number(id)} readOnly={!canEdit} />
+                  <EmployeeDocumentsCard employeeId={Number(id)} readOnly={!canManageDocs} />
                 </div>
 
               </div>
@@ -505,6 +579,13 @@ export const EmployeeProfileDetailPage = () => {
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}
       />
+
+      {showScanner && (
+        <IDScanner
+          onScanComplete={handleScanComplete}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 };

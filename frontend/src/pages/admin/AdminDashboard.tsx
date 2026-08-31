@@ -154,21 +154,41 @@ export const AdminDashboard = () => {
   const [searchLocationTerm, setSearchLocationTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [selectedMapHub, setSelectedMapHub] = useState<any>(null);
   const [employeesPage, setEmployeesPage] = useState(1);
+
+  const hubIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: '',
+        html: `
+        <div
+          style="
+            width:18px;
+            height:18px;
+            background:#10b981;
+            border-radius:999px;
+            border:3px solid white;
+            box-shadow:
+              0 0 0 4px rgba(16,185,129,.25),
+              0 0 14px rgba(16,185,129,.85);
+          "
+        ></div>
+        `,
+        iconSize: [18, 18],
+      }),
+    []
+  );
 
   const formatSelectedEmployeeAddress = (emp: any) => {
     if (!emp) return 'N/A';
     const parts = [
-      emp.complete_address,
       emp.barangay,
       emp.city_municipality,
       emp.province,
       emp.region,
       emp.zip_code ? `ZIP: ${emp.zip_code}` : ''
     ].filter(Boolean);
-    if (parts.length) return parts.join(', ');
-    return emp.current_address || 'N/A';
+    return parts.length ? parts.join(', ') : 'N/A';
   };
 
 
@@ -364,7 +384,7 @@ export const AdminDashboard = () => {
 
         {/* Hub Employee Distribution – full width */}
         <Card className="p-4 md:p-5 overflow-hidden w-full">
-          <h2 className="text-sm md:text-base font-bold text-gray-900 dark:text-white mb-3">Hub Employee Distribution</h2>
+          <h2 className="text-sm md:text-base font-bold text-gray-900 dark:text-white mb-3">Delivery Center Employee Distribution</h2>
 
           <div className="flex items-center gap-5 mb-4 flex-wrap">
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-[#22C55E]"></div><span className="text-xs text-gray-800 dark:text-gray-400">Active</span></div>
@@ -377,7 +397,7 @@ export const AdminDashboard = () => {
             {hubEmployeeData.length > 0 && allEmployees.length > 0 ? (
               <HubsEmployeeChart hubsData={hubs} employees={allEmployees} />
             ) : (
-              <EmptyState title="No hub data" />
+              <EmptyState title="No delivery center data" />
             )}
           </div>
 
@@ -392,7 +412,7 @@ export const AdminDashboard = () => {
               </div>
               <p className="text-xs text-gray-800 dark:text-gray-400">
                 <span className="text-gray-905 dark:text-white font-medium">
-                  {hubEmployeeData.reduce((prev: any, current: any) => (prev.active > current.active) ? prev : current).name} Hub
+                  {hubEmployeeData.reduce((prev: any, current: any) => (prev.active > current.active) ? prev : current).name} Delivery Center
                 </span> has the highest number of active employees.
               </p>
             </div>
@@ -438,7 +458,7 @@ export const AdminDashboard = () => {
           font-bold
         "
       >
-        Hub Locations
+        Delivery Center Locations
       </h2>
 
       <p
@@ -450,7 +470,7 @@ export const AdminDashboard = () => {
           dark:text-gray-400
         "
       >
-        Live hub overview
+        Live delivery center overview
       </p>
     </div>
 
@@ -459,11 +479,11 @@ export const AdminDashboard = () => {
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
       <input
         type="text"
-        placeholder="Search hub..."
+        placeholder="Search delivery center..."
         value={searchLocationTerm}
         onChange={(e) => setSearchLocationTerm(e.target.value)}
         className="w-full h-9 md:h-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 text-xs md:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 outline-none transition-colors duration-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/30"
-        aria-label="Search hubs"
+        aria-label="Search delivery centers"
       />
     </div>
   </div>
@@ -499,133 +519,47 @@ export const AdminDashboard = () => {
     />
 
     <MapContainer
-      center={[12.8797, 121.774]}
+      center={[14.5995, 120.9842]}
       zoom={6}
-      zoomControl={false}
-      attributionControl={false}
       style={{
         width: '100%',
         height: '100%',
       }}
     >
-      {/* LIGHT MAP */}
+      {/* OPENSTREETMAP - Same as Delivery Centers */}
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        attribution=""
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
       {/* AUTO FIT */}
       <FitBoundsComponent
-  mapHubs={hubs}
-  getCoords={getHubCoordinates}
-/>
+        mapHubs={hubs}
+        getCoords={getHubCoordinates}
+      />
 
       {hubs
         .filter((hub: any) => {
-          const q =
-            searchLocationTerm.toLowerCase();
-
+          const q = searchLocationTerm.toLowerCase();
           return (
             !q ||
-            hub.name
-              ?.toLowerCase()
-              .includes(q) ||
-            hub.location
-              ?.toLowerCase()
-              .includes(q) ||
-            hub.city
-              ?.toLowerCase()
-              .includes(q)
+            hub.name?.toLowerCase().includes(q) ||
+            hub.location?.toLowerCase().includes(q) ||
+            hub.city?.toLowerCase().includes(q)
           );
         })
         .map((hub: any) => {
-          const [lat, lng] =
-            getHubCoordinates(hub);
-
-          /**
-           * CLEANER SMALLER MARKER
-           */
-          const modernMarker = L.divIcon({
-  className: 'custom-modern-marker',
-  html: `
-    <div
-      style="
-        position:relative;
-        width:16px;
-        height:16px;
-      "
-    >
-      <div
-        style="
-          position:absolute;
-          inset:0;
-          border-radius:999px;
-          background:#ef4444;
-          border:3px solid white;
-          box-shadow:
-            0 0 0 4px rgba(239,68,68,0.15),
-            0 4px 12px rgba(239,68,68,0.25);
-        "
-      ></div>
-    </div>
-  `,
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
-  popupAnchor: [0, -10],
-});
-
+          const [lat, lng] = getHubCoordinates(hub);
           return (
             <Marker
               key={hub.id}
               position={[lat, lng]}
-              icon={modernMarker}
-              eventHandlers={{ click: () => setSelectedMapHub(hub) }}
+              icon={hubIcon}
             />
           );
         })}
     </MapContainer>
   </div>
-
-  {/* MAP HUB DETAILS (Placed Below Map) */}
-  {selectedMapHub && (
-    <div className="bg-white dark:bg-[#0F172A] mt-7 border-t border-gray-200 dark:border-gray-800 pt-4 pb-8 px-5 fade-in flex flex-col md:flex-row gap-4 items-start md:items-center justify-between z-10 relative">
-      <div className="flex justify-between items-start w-full md:w-auto">
-        <div>
-          <h3 className="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-            {selectedMapHub.name}
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {selectedMapHub.location || selectedMapHub.city}
-          </p>
-        </div>
-        <button 
-          onClick={() => setSelectedMapHub(null)}
-          className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none md:hidden ml-4"
-        >
-          &times;
-        </button>
-      </div>
-
-      <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-        <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 flex items-center gap-3 border border-gray-100 dark:border-gray-800 w-full md:w-auto justify-between">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Employees</span>
-          <span className="text-sm font-bold text-gray-900 dark:text-white">
-            {allEmployees.filter((emp: any) => emp.hub === selectedMapHub.id).length}
-          </span>
-        </div>
-        
-        <div className="hidden md:flex flex-col items-end gap-1 ml-2">
-          <button 
-            onClick={() => setSelectedMapHub(null)}
-            className="text-gray-400 hover:text-red-500 text-xs font-medium bg-transparent px-2 py-1 rounded transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
-  {/* Insight Box removed from map - now shown inside Hub Employee Distribution card above */}
 </Card>
 
       {/* Employees Table */}
@@ -911,7 +845,7 @@ export const AdminDashboard = () => {
                       <p className="text-sm font-semibold text-gray-800 dark:text-white">{selectedEmployee.employment_type || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Hub</p>
+                      <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Delivery Center</p>
                       <p className="text-sm font-semibold text-gray-800 dark:text-white">{selectedEmployee.hub_name || 'N/A'}</p>
                     </div>
                     <div>

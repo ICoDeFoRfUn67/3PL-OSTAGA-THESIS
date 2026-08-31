@@ -5,6 +5,7 @@ import { Employee, FieldDefinition } from '@/types';
 import { useCreateEditRequest, useUpdateEmployee, useGetHubs, useUploadDocument } from '@/hooks/useQueries';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
 import { Modal } from './Modal';
+import { getPhilippineZipCode } from '@/utils/philippineZipCodes';
 import * as phil from 'phil-reg-prov-mun-brgy';
 
 interface EmployeeEditModalProps {
@@ -32,7 +33,7 @@ const FIELD_DEFINITIONS: FieldDefinition[] = [
   { name: 'employment_type', label: 'Employment Type', type: 'select', options: [{ value: 'Full-time', label: 'Full-time' }, { value: 'OCW', label: 'OCW' }] },
   { name: 'position', label: 'Position', type: 'text', required: true },
   { name: 'employee_id', label: 'Employee ID', type: 'text', required: true },
-  { name: 'hub', label: 'Hub Location', type: 'select', options: [] },
+  { name: 'hub', label: 'Delivery Center Location', type: 'select', options: [] },
   { name: 'tin', label: 'TIN', type: 'text' },
   { name: 'sss', label: 'SSS', type: 'text' },
   { name: 'philhealth', label: 'PhilHealth', type: 'text' },
@@ -77,13 +78,12 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
           initialData[field.name] = employee[field.name as keyof Employee] ?? '';
         }
       });
-      // initialize structured address fields (fallback to legacy current_address if present)
-      initialData['complete_address'] = (employee as any).complete_address ?? (employee as any).current_address ?? '';
+      // initialize structured address fields
       initialData['region'] = (employee as any).region ?? '';
       initialData['province'] = (employee as any).province ?? '';
       initialData['city_municipality'] = (employee as any).city_municipality ?? '';
       initialData['barangay'] = (employee as any).barangay ?? '';
-      initialData['zip_code'] = (employee as any).zip_code ?? '';
+      initialData['zip_code'] = (employee as any).zip_code || getPhilippineZipCode((employee as any).city_municipality, (employee as any).province);
       setFormData(initialData);
       setErrors({});
       setProfileFile(null);
@@ -92,6 +92,44 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
   }, [employee]);
   
   const handleChange = (name: string, value: any) => {
+    // 11 digits enforcement
+    if (name === 'phone_number' || name === 'emergency_contact_phone') {
+      value = String(value).replace(/\D/g, '').slice(0, 11);
+    }
+
+    if (name === 'region') {
+      setFormData((prev) => ({
+        ...prev,
+        region: value,
+        province: '',
+        city_municipality: '',
+        barangay: '',
+        zip_code: '',
+      }));
+      return;
+    }
+    if (name === 'province') {
+      const autoZip = getPhilippineZipCode('', value);
+      setFormData((prev) => ({
+        ...prev,
+        province: value,
+        city_municipality: '',
+        barangay: '',
+        zip_code: autoZip,
+      }));
+      return;
+    }
+    if (name === 'city_municipality') {
+      const autoZip = getPhilippineZipCode(value, formData['province']);
+      setFormData((prev) => ({
+        ...prev,
+        city_municipality: value,
+        barangay: '',
+        zip_code: autoZip,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => {
@@ -340,35 +378,24 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
         {/* Address UI (structured) */}
         {title === 'Contact Information' && (
           <div className="sm:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Complete Address</label>
-                <input value={formData['complete_address'] ?? ''} onChange={(e) => handleChange('complete_address', e.target.value)} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm`} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">ZIP / Postal Code</label>
-                <input value={formData['zip_code'] ?? ''} onChange={(e) => handleChange('zip_code', e.target.value)} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm`} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-3">
               <div>
                 <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Region</label>
-                <select aria-label="Region" value={formData['region'] ?? ''} onChange={(e) => { handleChange('region', e.target.value); handleChange('province', ''); handleChange('city_municipality', ''); handleChange('barangay',''); }} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm`}>
+                <select aria-label="Region" value={formData['region'] ?? ''} onChange={(e) => { handleChange('region', e.target.value); }} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm`}>
                   <option value="">Select region</option>
                   {regionsList.map((r: any) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Province</label>
-                <select aria-label="Province" value={formData['province'] ?? ''} onChange={(e) => { handleChange('province', e.target.value); handleChange('city_municipality',''); handleChange('barangay',''); }} disabled={!formData['region']} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm ${!formData['region'] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <select aria-label="Province" value={formData['province'] ?? ''} onChange={(e) => { handleChange('province', e.target.value); }} disabled={!formData['region']} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm ${!formData['region'] ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <option value="">Select province</option>
                   {availableProvinces.map((p: any) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">City / Municipality</label>
-                <select aria-label="City / Municipality" value={formData['city_municipality'] ?? ''} onChange={(e) => { handleChange('city_municipality', e.target.value); handleChange('barangay',''); }} disabled={!formData['province']} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm ${!formData['province'] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <select aria-label="City / Municipality" value={formData['city_municipality'] ?? ''} onChange={(e) => { handleChange('city_municipality', e.target.value); }} disabled={!formData['province']} className={`w-full px-4 py-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 text-sm ${!formData['province'] ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <option value="">Select city/municipality</option>
                   {availableCities.map((c: any) => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -379,6 +406,20 @@ export const EmployeeEditModal = ({ isOpen, onClose, employee, onSuccess }: Empl
                   <option value="">Select barangay</option>
                   {availableBarangays.map((b: any) => <option key={b} value={b}>{b}</option>)}
                 </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">
+                  ZIP / Postal Code <span className="text-xs text-blue-500 font-normal">(Auto-filled)</span>
+                </label>
+                <input
+                  value={formData['zip_code'] ?? ''}
+                  readOnly
+                  placeholder="Auto-populated"
+                  className="w-full px-4 py-3 rounded-lg border border-dashed border-gray-300 bg-gray-100/80 dark:border-gray-700 dark:bg-gray-900/80 text-sm font-mono font-medium text-gray-700 dark:text-gray-300 cursor-not-allowed"
+                />
               </div>
             </div>
           </div>

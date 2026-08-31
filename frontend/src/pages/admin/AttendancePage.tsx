@@ -216,39 +216,47 @@ export const AttendancePage = () => {
   const handleDownload = (hubName: string) => {
     const hubData = attendanceByHub[hubName];
     if (!hubData || hubData.length === 0) {
-      alert('No data to download for this hub');
+      alert('No data to download for this delivery center');
       return;
     }
 
-    // Prepare CSV data with new columns
-    const headers = ['Fullname', 'JTP Code', 'Hub', 'Time In', 'Time Out', 'Status'];
+    // Prepare CSV data matching table columns: Employee, ID Code, Delivery Center, Date, Time In, Time Out, Status, Photo
+    const headers = ['Employee', 'ID Code', 'Delivery Center', 'Date', 'Time In', 'Time Out', 'Status', 'Photo'];
     const rows = hubData.map((record: any) => {
-      const clockIn = record.clock_in_time ? new Date(record.clock_in_time).toLocaleTimeString() : 'N/A';
-      const clockOut = record.clock_out_time ? new Date(record.clock_out_time).toLocaleTimeString() : 'N/A';
-      
+      const clockIn = record.clock_in_time ? formatTime(record.clock_in_time) : '-';
+      const clockOut = record.clock_out_time ? formatTime(record.clock_out_time) : '-';
+      const photo = (record.clock_in_image || record.clock_out_image)
+        ? (record.clock_in_image && record.clock_out_image
+            ? `${record.clock_in_image} | ${record.clock_out_image}`
+            : (record.clock_in_image || record.clock_out_image))
+        : 'No photo';
+
       return [
-        record.full_name || 'N/A',
+        record.employee_name || record.full_name || 'N/A',
         record.jtp_code || record.employee_id || 'N/A',
-        record.hub_name || record.hub || 'N/A',
+        record.hub_name || record.hub || hubName || 'N/A',
+        record.date || dateFilter || 'N/A',
         clockIn,
         clockOut,
         record.status || 'N/A',
+        photo,
       ];
     });
 
     // Create CSV content
     const csvContent = [
       headers.join(','),
-      ...rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(',')),
-    ].join('\n');
+      ...rows.map((row: any[]) => row.map((cell: any) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')),
+    ].join('\r\n');
 
     // Download
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${hubName}-attendance-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `${hubName}-attendance-${(dateFilter || new Date().toISOString().split('T')[0])}.csv`;
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -386,7 +394,7 @@ export const AttendancePage = () => {
           {/* Header */}
           <div className="hidden md:block">
             <h1 className="text-3xl max-md:text-2xl font-bold mb-2 max-md:mb-1">Attendance Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">Real-time employee attendance tracking by hub</p>
+            <p className="text-gray-600 dark:text-gray-400 max-md:text-xs">Real-time employee attendance tracking by delivery center</p>
           </div>
 
       {/* Stats Cards */}
@@ -442,15 +450,15 @@ export const AttendancePage = () => {
 
           <div>
             <label className="block text-sm max-md:text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 max-md:mb-1">
-              Hub Name
+              Delivery Center Name
             </label>
             <select
               value={hubFilter}
               onChange={(e) => setHubFilter(e.target.value)}
-              aria-label="Filter by hub name"
+              aria-label="Filter by delivery center name"
               className="input-field w-full max-md:text-xs max-md:py-2 max-md:px-3"
             >
-              <option value="All">All Hubs</option>
+              <option value="All">All Delivery Centers</option>
               {hubs.map((hub: any) => (
                 <option key={hub.id} value={hub.name}>
                   {hub.name}
@@ -523,7 +531,7 @@ export const AttendancePage = () => {
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold">Employee</th>
                       <th className="px-4 py-3 text-left font-semibold">ID Code</th>
-                      <th className="px-4 py-3 text-left font-semibold">Hub</th>
+                      <th className="px-4 py-3 text-left font-semibold">Delivery Center</th>
                       <th className="px-4 py-3 text-left font-semibold">Date</th>
                       <th className="px-4 py-3 text-left font-semibold">Time In</th>
                       <th className="px-4 py-3 text-left font-semibold">Time Out</th>

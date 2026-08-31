@@ -114,6 +114,11 @@ export const API_ENDPOINTS = {
 
   // Attendance Summary (today)
   ATTENDANCE_SUMMARY_TODAY: '/attendance/summary/',
+
+  // Payment Accounts
+  PAYMENT_ACCOUNTS: '/payment-accounts/',
+  PAYMENT_ACCOUNT_DETAIL: (id: number) => `/payment-accounts/${id}/`,
+  PAYMENT_ACCOUNT_DELETE_QR: (id: number) => `/payment-accounts/${id}/delete-qr/`,
 } as const;
 
 export const QUERY_KEYS = {
@@ -136,4 +141,6 @@ export const QUERY_KEYS = {
   DASHBOARD_ANALYTICS: ['dashboard-analytics'],
   TOP_EMPLOYEES_BY_HUB: ['top-employees-by-hub'],
   EMPLOYEES_ONLINE: ['employees-online'],
+  PAYMENT_ACCOUNTS: ['payment-accounts'],
 } as const;
+

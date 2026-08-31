@@ -10,6 +10,7 @@ import { API_ENDPOINTS, QUERY_KEYS } from '@/constants/api';
 import { useGetHubs } from '@/hooks/useQueries';
 import { useAuth } from '@/hooks';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
+import { getPhilippineZipCode } from '@/utils/philippineZipCodes';
 import * as phil from 'phil-reg-prov-mun-brgy';
 type RoleType = string;
 type EmploymentType = string;
@@ -36,7 +37,6 @@ interface EmployeeFormState {
   maritalStatus: string;
   email: string;
   phone: string;
-  completeAddress: string;
   region: string;
   province: string;
   cityMunicipality: string;
@@ -77,7 +77,6 @@ const initialFormState: EmployeeFormState = {
   maritalStatus: 'Single',
   email: '',
   phone: '',
-  completeAddress: '',
   region: '',
   province: '',
   cityMunicipality: '',
@@ -271,7 +270,27 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
     }
   }, [currentUserRole]);
 
+  useEffect(() => {
+    if (formState.cityMunicipality || formState.province) {
+      const autoZip = getPhilippineZipCode(formState.cityMunicipality, formState.province);
+      setFormState((prev) => (prev.zipCode !== autoZip ? { ...prev, zipCode: autoZip } : prev));
+    } else if (!formState.region) {
+      setFormState((prev) => (prev.zipCode ? { ...prev, zipCode: '' } : prev));
+    }
+  }, [formState.cityMunicipality, formState.province, formState.region]);
+
   const callClose = () => { onClose?.(); onCancel?.(); };
+
+  const handleEmailBlur = () => {
+    setFormState((prev) => {
+      const trimmed = prev.email.trim();
+      if (!trimmed) return prev;
+      if (!trimmed.includes('@')) {
+        return { ...prev, email: `${trimmed}@gmail.com` };
+      }
+      return { ...prev, email: trimmed };
+    });
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -284,17 +303,44 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
       return;
     }
 
+    // Strictly enforce 11 digits only for phone numbers
+    if (name === 'phone' || name === 'emergencyContactPhone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 11);
+      setFormState((prev) => ({ ...prev, [name]: digitsOnly }));
+      return;
+    }
+
     // Cascade reset for location fields
     if (name === 'region') {
-      setFormState((prev) => ({ ...prev, region: value, province: '', cityMunicipality: '', barangay: '' }));
+      setFormState((prev) => ({
+        ...prev,
+        region: value,
+        province: '',
+        cityMunicipality: '',
+        barangay: '',
+        zipCode: '',
+      }));
       return;
     }
     if (name === 'province') {
-      setFormState((prev) => ({ ...prev, province: value, cityMunicipality: '', barangay: '' }));
+      const autoZip = getPhilippineZipCode('', value);
+      setFormState((prev) => ({
+        ...prev,
+        province: value,
+        cityMunicipality: '',
+        barangay: '',
+        zipCode: autoZip,
+      }));
       return;
     }
     if (name === 'cityMunicipality') {
-      setFormState((prev) => ({ ...prev, cityMunicipality: value, barangay: '' }));
+      const autoZip = getPhilippineZipCode(value, formState.province);
+      setFormState((prev) => ({
+        ...prev,
+        cityMunicipality: value,
+        barangay: '',
+        zipCode: autoZip,
+      }));
       return;
     }
 
@@ -350,12 +396,17 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
       );
     }
     if (s === 1) {
+      const emailVal = formState.email.trim();
+      const hasValidEmail = emailVal.length > 0;
+      const phoneValid = formState.phone.length === 11;
+      const emergencyPhoneValid = formState.emergencyContactPhone.length === 11;
+
       const personalValid = Boolean(
-        formState.firstName && formState.lastName && formState.email &&
-        formState.phone && formState.gender && formState.dateOfBirth &&
-        formState.completeAddress && formState.region && formState.province &&
+        formState.firstName && formState.lastName && hasValidEmail &&
+        phoneValid && formState.gender && formState.dateOfBirth &&
+        formState.region && formState.province &&
         formState.cityMunicipality && formState.barangay &&
-        formState.emergencyContactName && formState.emergencyContactPhone
+        formState.emergencyContactName && emergencyPhoneValid
       );
       if (isCreatingHrRole) {
         return personalValid && formState.managedHubs.length > 0;
@@ -374,8 +425,29 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
   const canProceed = !loading && isStepValid(step);
   const isLastStep = step === STEPS.length - 1;
 
+  const normalizeEmailBeforeSubmit = (): string => {
+    let email = formState.email.trim();
+    if (email && !email.includes('@')) {
+      email = `${email}@gmail.com`;
+      setFormState((prev) => ({ ...prev, email }));
+    }
+    return email;
+  };
+
   const goNext = () => {
-    if (!isStepValid(step)) { setError('Please complete all required fields before continuing.'); return; }
+    normalizeEmailBeforeSubmit();
+    if (formState.phone && formState.phone.length !== 11) {
+      setError('Phone number must be exactly 11 digits.');
+      return;
+    }
+    if (formState.emergencyContactPhone && formState.emergencyContactPhone.length !== 11) {
+      setError('Emergency contact number must be exactly 11 digits.');
+      return;
+    }
+    if (!isStepValid(step)) {
+      setError('Please complete all required fields before continuing.');
+      return;
+    }
     setError(null);
     setStep((p) => Math.min(p + 1, STEPS.length - 1));
   };
@@ -386,10 +458,20 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
     setError(null);
     setSuccess(null);
 
+    const finalizedEmail = normalizeEmailBeforeSubmit();
+
     if (!isLastStep) { goNext(); return; }
 
-    if (!formState.firstName || !formState.lastName || !formState.email || !formState.password || !formState.position) {
+    if (!formState.firstName || !formState.lastName || !finalizedEmail || !formState.password || !formState.position) {
       setError('Please complete required fields (name, email, password, position).');
+      return;
+    }
+    if (formState.phone.length !== 11) {
+      setError('Phone number must be exactly 11 digits.');
+      return;
+    }
+    if (formState.emergencyContactPhone && formState.emergencyContactPhone.length !== 11) {
+      setError('Emergency contact number must be exactly 11 digits.');
       return;
     }
     if (formState.password !== formState.confirmPassword) {
@@ -403,7 +485,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
       const fieldMap: Record<string, string> = {
         firstName: 'firstname', lastName: 'lastname', middleInitial: 'middle_initial',
         placeOfBirth: 'place_of_birth', dateOfBirth: 'date_of_birth', maritalStatus: 'marital_status',
-        email: 'email_address', phone: 'phone_number', completeAddress: 'complete_address',
+        email: 'email_address', phone: 'phone_number',
         employmentType: 'employment_type', hireDate: 'hired_date', jtpCode: 'jtp_code',
         employeeId: 'employee_id', emergencyContactName: 'emergency_contact_name',
         emergencyContactPhone: 'emergency_contact_phone', isActive: 'is_active',
@@ -416,7 +498,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
         'confirmPassword', 'createdAt',
       ]);
 
-      Object.entries(formState).forEach(([key, val]) => {
+      Object.entries({ ...formState, email: finalizedEmail }).forEach(([key, val]) => {
         if (skipKeys.has(key)) return;
         const backendKey = fieldMap[key] ?? key;
         let value: string | boolean = val as string | boolean;
@@ -427,10 +509,6 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
         if (value === undefined || value === null || value === '') return;
         formData.append(backendKey, String(value));
       });
-
-      const fullAddress = [formState.completeAddress, formState.barangay, formState.cityMunicipality, formState.province, formState.region]
-        .filter(Boolean).join(', ');
-      formData.set('current_address', fullAddress);
 
       if (formState.role === 'HR') {
         const managed = formState.accessType === 'Single'
@@ -591,7 +669,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Personal Information</h3>
                 <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
                   {isCreatingHrRole
-                    ? 'Provide personal details and assign which hub(s) this HR staff will manage.'
+                    ? 'Provide personal details and assign which delivery center(s) this HR staff will manage.'
                     : 'Please provide personal details and contact information.'}
                 </p>
 
@@ -642,14 +720,37 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                     <div>
                       <label className={labelCls}>Email Address {redStar}</label>
                       <div className="relative"><FieldIcon icon={Mail} />
-                        <input type="email" name="email" value={formState.email} onChange={handleChange} placeholder="Enter email" required className={iconInputCls} />
+                        <input
+                          type="email"
+                          name="email"
+                          value={formState.email}
+                          onChange={handleChange}
+                          onBlur={handleEmailBlur}
+                          placeholder="e.g. john.smith (auto @gmail.com)"
+                          required
+                          className={iconInputCls}
+                        />
                       </div>
+                      <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">Auto-completes with @gmail.com on blur if no @ typed</p>
                     </div>
                     <div>
                       <label className={labelCls}>Phone Number {redStar}</label>
                       <div className="relative"><FieldIcon icon={Phone} />
-                        <input name="phone" value={formState.phone} onChange={handleChange} placeholder="Enter phone" required className={iconInputCls} />
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={11}
+                          name="phone"
+                          value={formState.phone}
+                          onChange={handleChange}
+                          placeholder="09XXXXXXXXX (11 digits)"
+                          required
+                          className={iconInputCls}
+                        />
                       </div>
+                      <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                        {formState.phone.length}/11 digits {formState.phone.length === 11 ? '✓' : ''}
+                      </p>
                     </div>
                   </div>
 
@@ -659,22 +760,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                     <p className="text-[10px] text-slate-400 dark:text-slate-500">Please provide residential address details.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div className="md:col-span-3">
-                      <label className={labelCls}>Complete Address {redStar}</label>
-                      <div className="relative"><FieldIcon icon={MapPin} />
-                        <input name="completeAddress" value={formState.completeAddress} onChange={handleChange} placeholder="House/Block/Lot, Street name" required className={iconInputCls} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelCls}>ZIP / Postal Code</label>
-                      <div className="relative"><FieldIcon icon={Hash} />
-                        <input name="zipCode" value={formState.zipCode} onChange={handleChange} placeholder="Enter zip code" className={iconInputCls} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cascading dropdowns in 4 columns */}
+                  {/* Cascading dropdowns + Auto ZIP in responsive layout */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <div>
                       <label className={labelCls}>Region {redStar}</label>
@@ -706,6 +792,24 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div className="md:col-span-2">
+                      <label className={labelCls}>
+                        ZIP / Postal Code <span className="text-[10px] font-normal text-blue-500">(Auto-filled)</span>
+                      </label>
+                      <div className="relative">
+                        <FieldIcon icon={Hash} />
+                        <input
+                          name="zipCode"
+                          value={formState.zipCode}
+                          readOnly
+                          placeholder="Auto-populated from address"
+                          className={iconInputCls + ' bg-slate-100/80 dark:bg-slate-900/80 font-mono font-medium text-slate-700 dark:text-slate-300 cursor-not-allowed border-dashed'}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Emergency Contact heading */}
                   <div className="border-t border-slate-100 pt-2.5 mt-3 dark:border-slate-800">
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Emergency Contact</p>
@@ -722,8 +826,21 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                     <div>
                       <label className={labelCls}>Contact Number {redStar}</label>
                       <div className="relative"><FieldIcon icon={Phone} />
-                        <input name="emergencyContactPhone" value={formState.emergencyContactPhone} onChange={handleChange} placeholder="Contact number" required className={iconInputCls} />
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={11}
+                          name="emergencyContactPhone"
+                          value={formState.emergencyContactPhone}
+                          onChange={handleChange}
+                          placeholder="09XXXXXXXXX (11 digits)"
+                          required
+                          className={iconInputCls}
+                        />
                       </div>
+                      <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                        {formState.emergencyContactPhone.length}/11 digits {formState.emergencyContactPhone.length === 11 ? '✓' : ''}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -731,14 +848,14 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                 {isCreatingHrRole && (
                   <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
                     <div className="mb-3">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">Hub Assignment</h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Assign the hub(s) this HR staff will manage.</p>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">Delivery Center Assignment</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Assign the delivery center(s) this HR staff will manage.</p>
                     </div>
 
                     <div className="mb-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-100/50 px-3 py-2 dark:border-blue-800/50 dark:bg-blue-900/20">
                       <Info size={14} className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
                       <p className="text-[11px] text-blue-800 dark:text-blue-200">
-                        This determines which hub(s) the HR staff can access and manage. They will only manage employees registered under the selected hub(s).
+                        This determines which delivery center(s) the HR staff can access and manage. They will only manage employees registered under the selected delivery center(s).
                       </p>
                     </div>
 
@@ -753,8 +870,8 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                           className="mt-0.5 h-3.5 w-3.5 border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
                         <div>
-                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Single Hub Access</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400">HR can manage and access only the assigned hub.</p>
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Single Delivery Center Access</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">HR can manage and access only the assigned delivery center.</p>
                         </div>
                       </label>
                       <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
@@ -766,14 +883,14 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                           className="mt-0.5 h-3.5 w-3.5 border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
                         <div>
-                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Multiple Hub Access</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400">HR can manage and access multiple hubs.</p>
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Multiple Delivery Center Access</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">HR can manage and access multiple delivery centers.</p>
                         </div>
                       </label>
                     </div>
 
                     <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Select Hub {redStar}
+                      Select Delivery Center {redStar}
                     </p>
                     <div className="relative mb-2">
                       <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -781,7 +898,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                         type="text"
                         value={hubSearch}
                         onChange={(e) => setHubSearch(e.target.value)}
-                        placeholder="Search hub..."
+                        placeholder="Search delivery center..."
                         className={iconInputCls}
                       />
                     </div>
@@ -807,17 +924,17 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                           );
                         })
                       ) : (
-                        <p className="px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">No hubs found.</p>
+                        <p className="px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">No delivery centers found.</p>
                       )}
                     </div>
 
                     <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
                       {formState.accessType === 'Single'
-                        ? 'Select one hub for this HR staff.'
-                        : 'You can select multiple hubs if needed.'}
+                        ? 'Select one delivery center for this HR staff.'
+                        : 'You can select multiple delivery centers if needed.'}
                     </p>
                     {formState.managedHubs.length === 0 && (
-                      <p className="mt-1 text-[10px] text-red-500">Please select at least one hub.</p>
+                      <p className="mt-1 text-[10px] text-red-500">Please select at least one delivery center.</p>
                     )}
                   </div>
                 )}
@@ -830,7 +947,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
               <>
                 <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-blue-500">Step 3 of 3</p>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Employment Information</h3>
-                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Assign position, hub, IDs, and payroll details.</p>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Assign position, delivery center, IDs, and payroll details.</p>
 
                 <div className="space-y-3">
                   {/* Work Assignment in 4 columns */}
@@ -850,7 +967,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Hub {redStar}</label>
+                      <label className={labelCls}>Delivery Center {redStar}</label>
                       <div className="relative"><FieldIcon icon={Building2} />
                         <select
                           name="hub"
@@ -860,7 +977,7 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                           disabled={isCreatingHrRole}
                           className={iconSelectCls + (isCreatingHrRole ? ' opacity-70 cursor-not-allowed' : '')}
                         >
-                          <option value="">Select hub</option>
+                          <option value="">Select delivery center</option>
                           {(isCreatingHrRole
                             ? allHubs.filter((h) => formState.managedHubs.includes(h.id))
                             : selectableHubs
@@ -868,10 +985,10 @@ export const AddEmployee = ({ onCancel, onClose, onCreated }: AddEmployeeProps) 
                         </select>
                       </div>
                       {isCreatingHrRole && (
-                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Hub is set from Hub Assignment in Step 2.</p>
+                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Delivery Center is set from Delivery Center Assignment in Step 2.</p>
                       )}
                       {currentUserRole === 'HR' && (
-                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Only hubs you manage are available.</p>
+                        <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Only delivery centers you manage are available.</p>
                       )}
                     </div>
                     <div>

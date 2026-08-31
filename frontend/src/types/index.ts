@@ -41,10 +41,7 @@ export interface Employee {
   email_address?: string;
   email?: string;
   phone_number?: string;
-  current_address?: string;
-  permanent_address?: string;
   // Structured address
-  complete_address?: string;
   region?: string;
   province?: string;
   city_municipality?: string;
@@ -145,6 +142,7 @@ export interface EmployeeDocument {
   file_name: string;
   file_size: number;
   uploaded_at: string;
+  document_type?: string;
 }
 
 export interface EditRequest {

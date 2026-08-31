@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  Sparkles,
+  CreditCard,
 } from 'lucide-react';
 import logo from '@/images/3pl4.png';
 
@@ -100,7 +102,7 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
     },
 
     {
-      label: 'Hubs',
+      label: 'Delivery Centers',
       icon: MapPin,
       path:
         normalizedRole === 'admin'
@@ -148,6 +150,18 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
     },
 
     {
+      label: 'Payment Account',
+      icon: CreditCard,
+      path:
+        normalizedRole === 'admin'
+          ? '/admin/payment-accounts'
+          : normalizedRole === 'hr'
+          ? '/hr/payment-accounts'
+          : '/employee',
+      roles: ['admin', 'hr'],
+    },
+
+    {
       label: 'Activity Logs',
       icon: Activity,
       path:
@@ -168,6 +182,15 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
           : normalizedRole === 'hr'
           ? '/hr/security-alerts'
           : '/employee',
+      roles: ['admin', 'hr'],
+    },
+    {
+      label: 'Predictions',
+      icon: Sparkles,
+      path:
+        normalizedRole === 'admin'
+          ? '/admin/predictions'
+          : '/hr/predictions',
       roles: ['admin', 'hr'],
     },
   ];
@@ -288,7 +311,7 @@ onClick={() => {
                 </p>
                 {employee?.hub_name && (
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate font-semibold mt-0.5">
-                    Hub: {employee.hub_name}
+                    Delivery Center: {employee.hub_name}
                   </p>
                 )}
               </div>

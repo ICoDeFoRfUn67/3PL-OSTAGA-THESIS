@@ -40,9 +40,17 @@ import {
   Mail,
   Clock,
   ChevronLeft,
+  ScanLine,
+  QrCode,
 } from 'lucide-react';
 
 import logo from '@/images/3pl1.png';
+import { EmployeePaymentAccountsTab } from '@/components/EmployeePaymentAccountsTab';
+import { IDScanner } from '@/components/IDScanner';
+import { documentAPI } from '@/api/apiService';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/constants/api';
+import { useToast } from '@/hooks/useToast';
 
 type Section =
   | 'overview'
@@ -50,6 +58,8 @@ type Section =
   | 'payroll'
   | 'payslip_detail'
   | 'payslip_history'
+  | 'payment_account'
+  | 'id_scanner'
   | 'documents'
   | 'information'
   | 'leave'
@@ -73,7 +83,7 @@ const navigation = [
   },
   {
     key: 'documents',
-    label: 'Documents',
+    label: "Documents and ID's",
     icon: FileText,
   },
   {
@@ -85,6 +95,11 @@ const navigation = [
     key: 'leave',
     label: 'Leave Request',
     icon: Briefcase,
+  },
+  {
+    key: 'payment_account',
+    label: 'Payment Account',
+    icon: CreditCard,
   },
 ];
 
@@ -112,15 +127,13 @@ export const EmployeeDashboard = () => {
   const formatEmployeeAddress = (emp: any) => {
     if (!emp) return 'N/A';
     const parts = [
-      emp.complete_address,
       emp.barangay,
       emp.city_municipality,
       emp.province,
       emp.region,
       emp.zip_code ? `ZIP: ${emp.zip_code}` : ''
     ].filter(Boolean);
-    if (parts.length) return parts.join(', ');
-    return emp.current_address || 'N/A';
+    return parts.length ? parts.join(', ') : 'N/A';
   };
 
   const [activeSection, setActiveSection] =
@@ -142,6 +155,10 @@ export const EmployeeDashboard = () => {
   const [selectedPayslip, setSelectedPayslip] =
     useState<any>(null);
   const [payslipOpenedFromHistory, setPayslipOpenedFromHistory] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+
+  const queryClient = useQueryClient();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [darkMode, setDarkMode] =
     useState<boolean>(() => {
@@ -514,10 +531,10 @@ export const EmployeeDashboard = () => {
       case 'documents':
         return (
           <DocumentsSection
-            documents={documentsList}
+            documents={documentsList || []}
             employeeId={employee?.id || 0}
             onUpdate={() => documentsQuery.refetch()}
-            readOnly={true}
+            readOnly={false}
           />
         );
 
@@ -1015,7 +1032,7 @@ export const EmployeeDashboard = () => {
                     <div className="sm:col-span-2 flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50 dark:hover:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-750/85 rounded-2xl p-4 transition-all">
                       <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
                         <MapPin size={14} />
-                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Hub</span>
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Delivery Center</span>
                       </div>
                       <span className="text-sm font-extrabold text-slate-900 dark:text-white break-words">{employee?.hub_name || 'N/A'}</span>
                     </div>
@@ -1186,6 +1203,85 @@ export const EmployeeDashboard = () => {
                 </div>
               </div>
             </div>
+          </div>
+        );
+
+      case 'payment_account':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-xl bg-blue-600/10">
+                <CreditCard className="text-blue-500" size={22} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Payment Account</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Manage your payment methods and QR codes</p>
+              </div>
+            </div>
+            <EmployeePaymentAccountsTab />
+          </div>
+        );
+
+      case 'id_scanner':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-xl bg-purple-600/10">
+                <ScanLine className="text-purple-500" size={22} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">ID Scanner</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Scan and upload your government-issued ID</p>
+              </div>
+            </div>
+            {!showScanner ? (
+              <div className="max-w-md mx-auto">
+                <div className="rounded-2xl bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800 p-8 shadow-sm text-center space-y-5">
+                  <div className="flex justify-center">
+                    <div className="p-5 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                      <ScanLine size={40} className="text-purple-600 dark:text-purple-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Scan Your ID</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Use your camera to scan the front and back of your government ID. The scanner will auto-detect and capture the card.
+                    </p>
+                  </div>
+                  <ul className="text-left text-sm text-slate-600 dark:text-slate-400 space-y-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                    <li className="flex items-center gap-2"><QrCode size={14} className="text-purple-500 shrink-0" /> Place your ID flat on a surface</li>
+                    <li className="flex items-center gap-2"><QrCode size={14} className="text-purple-500 shrink-0" /> Camera will auto-frame the card edges</li>
+                    <li className="flex items-center gap-2"><QrCode size={14} className="text-purple-500 shrink-0" /> Capture front then back side</li>
+                    <li className="flex items-center gap-2"><QrCode size={14} className="text-purple-500 shrink-0" /> Images upload automatically to Documents</li>
+                  </ul>
+                  <button
+                    onClick={() => setShowScanner(true)}
+                    className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-bold transition-all shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2"
+                  >
+                    <ScanLine size={18} />
+                    Launch Camera ID Scanner
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <IDScanner
+                onScanComplete={async (frontFile: File, backFile: File, categoryKey?: string) => {
+                  if (!employee?.id) return;
+                  try {
+                    const cat = categoryKey || 'license';
+                    await documentAPI.uploadDocument(employee.id, frontFile, frontFile.name || 'ID_Front.jpg', cat);
+                    await documentAPI.uploadDocument(employee.id, backFile, backFile.name || 'ID_Back.jpg', cat);
+                    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DOCUMENTS });
+                    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DOCUMENTS] });
+                    toastSuccess('Front and back of your ID have been saved to Documents.');
+                    setShowScanner(false);
+                  } catch {
+                    toastError('Could not upload ID images. Please try again.');
+                  }
+                }}
+                onClose={() => setShowScanner(false)}
+              />
+            )}
           </div>
         );
 

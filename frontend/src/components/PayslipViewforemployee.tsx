@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { Download, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useGetPayroll } from '@/hooks/useQueries';
 import { normalizeApiResponse } from '@/utils/apiResponseHandler';
+import { exportElementToPdf } from '@/utils/pdfGenerator';
 
 type PayslipStatus = 'draft' | 'approved' | 'pending' | string;
 
@@ -131,6 +132,8 @@ export const PayslipDetailModal = ({
 }: PayslipDetailViewProps) => {
   const { success, error } = useToast();
   const [localPayslip, setLocalPayslip] = useState<Payslip | null>(payslip);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const payslipRef = useRef<HTMLDivElement>(null);
 
   // Fetch all payroll records to show history for the employee
   const { data: allPayrollData } = useGetPayroll();
@@ -146,59 +149,18 @@ export const PayslipDetailModal = ({
     setLocalPayslip(payslip);
   }, [payslip]);
 
-  const handleDownload = () => {
-    if (!localPayslip) return;
+  const handleDownload = async () => {
+    if (!localPayslip || !payslipRef.current) return;
     try {
-      const headers = [
-        'Fullname', 'JTP Code', 'Position', 'Hub', 'Period',
-        'Total Hours', 'Overtime Hours', 'Lates', 'Absences',
-        'Basic Pay', 'Overtime Pay', 'Total Earnings', 'SSS Deduction',
-        'Philhealth Deduction', 'Pagibig Deduction', 'Total Deductions', 'Net Pay', 'Status'
-      ];
-
-      const govDeductions = toNumber(localPayslip.sss_deduction) + toNumber(localPayslip.philhealth_deduction) + toNumber(localPayslip.pagibig_deduction);
-      const otherDeductions = toNumber(localPayslip.total_deductions);
-      const totalDed = govDeductions + otherDeductions;
-      const netPay = toNumber(localPayslip.total_earnings) - totalDed;
-
-      const row = [
-        localPayslip.full_name || localPayslip.fullname || 'N/A',
-        localPayslip.jtp_code || 'N/A',
-        localPayslip.position || 'N/A',
-        localPayslip.hub_name || localPayslip.hub || 'N/A',
-        localPayslip.payslip_period || `${localPayslip.period_start} - ${localPayslip.period_end}`,
-        localPayslip.total_hours || '0',
-        localPayslip.overtime_hours || '0',
-        localPayslip.lates || '0',
-        localPayslip.absences || '0',
-        localPayslip.basic_salary || '0',
-        localPayslip.overtime_pay || '0',
-        localPayslip.total_earnings || '0',
-        localPayslip.sss_deduction || '0',
-        localPayslip.philhealth_deduction || '0',
-        localPayslip.pagibig_deduction || '0',
-        otherDeductions,
-        totalDed,
-        netPay.toFixed(2),
-        localPayslip.status || 'N/A'
-      ];
-
-      const csvContent = [
-        headers.join(','),
-        row.map(cell => `"${cell}"`).join(',')
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Payslip-${localPayslip.full_name || 'Employee'}-${localPayslip.period_end}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      success('Payslip downloaded successfully');
+      setIsDownloading(true);
+      const filename = `Payslip-${(localPayslip.full_name || localPayslip.fullname || 'Employee').replace(/\s+/g, '_')}-${localPayslip.period_end || 'period'}.pdf`;
+      await exportElementToPdf(payslipRef.current, filename);
+      success('Payslip downloaded as PDF');
     } catch (err) {
       console.error(err);
-      error('Failed to download payslip');
+      error('Failed to generate PDF');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -259,7 +221,7 @@ export const PayslipDetailModal = ({
   if (!payslip && !localPayslip) return null;
 
   return (
-    <div className="bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 rounded-3xl overflow-hidden shadow-xl">
+    <div ref={payslipRef} className="bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-gray-700 rounded-3xl overflow-hidden shadow-xl">
       <div className="bg-gray-50 dark:bg-slate-950">
         {/* HEADER AREA */}
         <div className="bg-gradient-to-r from-red-800 via-red-900 to-red-950 p-6 text-white relative shadow-lg">
@@ -275,11 +237,20 @@ export const PayslipDetailModal = ({
             ) : <div />}
             <button
               onClick={handleDownload}
-              className="hover:bg-white/10 p-2 rounded-full transition-all flex items-center gap-1.5 border border-white/10"
-              aria-label="Download payslip"
+              disabled={isDownloading}
+              className="hover:bg-white/10 disabled:opacity-50 p-2 rounded-full transition-all flex items-center gap-1.5 border border-white/10"
+              aria-label="Download PDF"
+              title="Download as PDF"
             >
-              <Download size={18} />
-              <span className="text-xs font-bold pr-1">Download CSV</span>
+              {isDownloading ? (
+                <svg className="animate-spin w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              ) : (
+                <Download size={18} />
+              )}
+              <span className="text-xs font-bold pr-1">{isDownloading ? 'Generating PDF...' : 'Download PDF'}</span>
             </button>
           </div>
 
@@ -318,7 +289,7 @@ export const PayslipDetailModal = ({
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-red-200 font-bold uppercase tracking-wider block">Hub Name</span>
+                  <span className="text-[10px] text-red-200 font-bold uppercase tracking-wider block">Delivery Center Name</span>
                   <span className="font-semibold text-white truncate block">{localPayslip?.hub_name || localPayslip?.hub || 'N/A'}</span>
                 </div>
               </div>

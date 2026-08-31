@@ -84,7 +84,7 @@ const HubDropdown = ({
         className="flex items-center gap-1.5 text-[11px] font-semibold bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-2.5 py-1.5 rounded-lg transition-colors max-w-[160px]"
       >
         <Building2 className="w-3 h-3 shrink-0 text-purple-500" />
-        <span className="truncate">{selected?.name ?? 'All Hubs (Default)'}</span>
+        <span className="truncate">{selected?.name ?? 'All Delivery Centers (Default)'}</span>
         <ChevronDown className={`w-3 h-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -94,7 +94,7 @@ const HubDropdown = ({
             onClick={() => { onChange(null); setOpen(false); }}
             className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${selectedId === null ? 'font-bold text-red-600' : 'text-gray-800 dark:text-gray-300'}`}
           >
-            Default (Top Hub)
+            Default (Top Delivery Center)
           </button>
           <div className="border-t border-gray-100 dark:border-gray-700" />
           {hubs.map(hub => (
@@ -194,7 +194,7 @@ const TopEmployeesCard = () => {
               {topEmployees.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-6 text-gray-500 dark:text-gray-400">
-                    No employee attendance data for this hub
+                    No employee attendance data for this delivery center
                   </td>
                 </tr>
               )}
@@ -345,11 +345,11 @@ export const AdminDashboardOverview = () => {
           )}
         </Card>
 
-        {/* Total Hubs */}
+        {/* Total Delivery Centers */}
         <Card className="p-3 flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-1.5 mb-1">
             <Building2 className="w-3.5 h-3.5 text-purple-500" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-400">Total Hubs</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-400">Total Delivery Centers</span>
           </div>
           {isLoading ? <Skeleton className="h-8 w-14" /> : (
             <span className="text-3xl font-black text-gray-900 dark:text-white">{totalHubs}</span>
@@ -628,10 +628,10 @@ export const AdminDashboardOverview = () => {
       {/* ── Row 4: Top Hubs Active + AWOL Chart (widened, 2 cols) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
-        {/* Top Hubs by Active Employees – horizontal ranked bars */}
+        {/* Top Delivery Centers by Active Employees – horizontal ranked bars */}
         <Card className="p-4">
           <h3 className="text-xs font-bold uppercase text-gray-900 dark:text-gray-300 mb-2 flex justify-between items-center gap-2">
-            <span className="truncate">Top Hubs – Active Employees</span>
+            <span className="truncate">Top Delivery Centers – Active Employees</span>
             {topHubsActive[0] && (
               <Badge variant="success" className="text-[9px] shrink-0">
                 <TrendingUp className="w-3 h-3 mr-1 inline" />
@@ -642,7 +642,7 @@ export const AdminDashboardOverview = () => {
           <div className="h-44">
             {isLoading ? <Skeleton className="w-full h-full" /> : topHubsActive.length === 0 ? (
               <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm">
-                No hub data available
+                No delivery center data available
               </div>
             ) : (() => {
               const chartData = topHubsActive.slice(0, 8);
@@ -700,7 +700,7 @@ export const AdminDashboardOverview = () => {
         <Card className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-2">
             <h3 className="text-xs font-bold uppercase text-gray-900 dark:text-gray-300">
-              AWOL / Resign / Blacklist By Hub
+              AWOL / Resign / Blacklist By Delivery Center
             </h3>
             <div className="flex items-center gap-3 text-[10px] text-gray-600 dark:text-gray-400">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F97316]" />AWOL</span>
@@ -759,10 +759,10 @@ export const AdminDashboardOverview = () => {
       {/* ── Row 5: Overtime + Security Summary + Recent Alerts ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
-        {/* Top Hubs by Overtime */}
+        {/* Top Delivery Centers by Overtime */}
         <Card className="p-4">
           <h3 className="text-xs font-bold uppercase text-gray-900 dark:text-gray-300 mb-2">
-            Top Hubs – Overtime Hours (This Month)
+            Top Delivery Centers – Overtime Hours (This Month)
           </h3>
           <div className="h-40">
             {isLoading ? <Skeleton className="w-full h-full" /> : topHubsOvertime.length === 0 ? (
@@ -889,15 +889,15 @@ export const AdminDashboardOverview = () => {
           </div>
         </Card>
 
-        {/* What Hub Has the Highest Pay Bar Chart */}
+        {/* What Delivery Center Has the Highest Pay Bar Chart */}
         <Card className="p-4">
           <h3 className="text-xs font-bold uppercase text-gray-900 dark:text-gray-300 mb-2">
-            Total Payroll Cost by Hub
+            Total Payroll Cost by Delivery Center
           </h3>
           <div className="h-44">
             {isLoading ? <Skeleton className="w-full h-full" /> : (hubTotalPayData.length === 0) ? (
               <div className="h-full flex items-center justify-center text-gray-505 dark:text-gray-400 text-xs">
-                No payroll data by hub
+                No payroll data by delivery center
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -924,10 +924,10 @@ export const AdminDashboardOverview = () => {
           </div>
         </Card>
 
-        {/* Highest Paid Employee per Hub Bar Chart */}
+        {/* Highest Paid Employee per Delivery Center Bar Chart */}
         <Card className="p-4">
           <h3 className="text-xs font-bold uppercase text-gray-900 dark:text-gray-300 mb-2">
-            Highest Paid Employee per Hub
+            Highest Paid Employee per Delivery Center
           </h3>
           <div className="h-44">
             {isLoading ? <Skeleton className="w-full h-full" /> : (highestPaidData.length === 0) ? (

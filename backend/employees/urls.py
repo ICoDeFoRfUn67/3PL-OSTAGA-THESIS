@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
-from .views import ServeSavedImageView
+from .views import ServeSavedImageView, PaymentAccountViewSet
 
 router = DefaultRouter()
 router.register(r'employees', views.EmployeeViewSet)
@@ -11,11 +11,11 @@ router.register(r'edit-requests', views.EditRequestViewSet)
 router.register(r'leave-requests', views.LeaveRequestViewSet)
 router.register(r'employee-documents', views.EmployeeDocumentViewSet)
 router.register(r'live-locations', views.LiveLocationViewSet)
-
 router.register(r'payroll', views.PayrollViewSet)
 router.register(r'activity-logs', views.ActivityLogViewSet, basename='activity-logs')
 router.register(r'security-alerts', views.SecurityAlertViewSet, basename='security-alerts')
 router.register(r'hr-permissions', views.HRPermissionViewSet, basename='hr-permissions')
+router.register(r'payment-accounts', PaymentAccountViewSet, basename='payment-accounts')
 
 urlpatterns = [
     path('meta/', views.MetaView.as_view(), name='meta'),
