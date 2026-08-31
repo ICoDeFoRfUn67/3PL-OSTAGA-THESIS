@@ -231,7 +231,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://127.0.0.1:5175",
     "https://3-plcjfinal-79xnpq3is-cj-g-a-js-projects.vercel.app",  # Old Vercel frontend
-    "https://3-plcj-again.vercel.app",  # ✅ Current Vercel frontend
+    "https://3-plcj-again.vercel.app",  # Old Vercel frontend
+    "https://3-pl-cj.vercel.app",  # ✅ Current Vercel frontend
 ]
 # Production + preview deployments on Vercel (URLs change per branch)
 CORS_ALLOWED_ORIGIN_REGEXES = [
