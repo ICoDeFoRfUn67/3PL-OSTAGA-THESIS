@@ -238,10 +238,12 @@ export const AdminEmployeeAttendanceHistoryPage = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070E1E] text-gray-900 dark:text-white pb-24">
-      <Sidebar
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
+      <div className="hidden lg:block">
+        <Sidebar
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+        />
+      </div>
       <div className="lg:ml-64">
         <AdminMobileProfile />
       {/* HEADER */}

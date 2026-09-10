@@ -79,8 +79,8 @@ export const AttendancePage = () => {
 
 
 
-  // Fetch data
-  const { data: attendanceData, isLoading: attendanceLoading } = useGetAttendance();
+  // Fetch data with server-side date filter to prevent loading thousands of records
+  const { data: attendanceData, isLoading: attendanceLoading } = useGetAttendance({ date: dateFilter });
   const { data: hubsData, isLoading: hubsLoading } = useGetHubs();
   const { data: employeesData, isLoading: employeesLoading } = useGetEmployees();
 
@@ -111,10 +111,12 @@ export const AttendancePage = () => {
   }, [rawEmployees, isHR, managedHubIds]);
 
   // Exclude HR and Admin users from attendance counts and tables
-  const employees = allEmployees.filter((e: any) => {
-    const role = (e.role || '').toString().toLowerCase();
-    return role !== 'hr' && role !== 'admin';
-  });
+  const employees = useMemo(() => {
+    return allEmployees.filter((e: any) => {
+      const role = (e.role || '').toString().toLowerCase();
+      return role !== 'hr' && role !== 'admin';
+    });
+  }, [allEmployees]);
 
   // Calculate stats - Presents, Absents, Lates
   const stats = useMemo(() => {
@@ -122,7 +124,7 @@ export const AttendancePage = () => {
     
     const todaysAttendance = attendance.filter((a: any) => {
       const aDate = a.date || (a.clock_in_time ? a.clock_in_time.split('T')[0] : '');
-      return aDate === dateFilter;
+      return !dateFilter || aDate === dateFilter;
     });
 
     const presents = todaysAttendance.filter((a: any) => a.status === 'Present').length;
@@ -143,7 +145,7 @@ export const AttendancePage = () => {
 
     const todaysAttendance = attendance.filter((a: any) => {
       const aDate = a.date || (a.clock_in_time ? a.clock_in_time.split('T')[0] : '');
-      return aDate === dateFilter;
+      return !dateFilter || aDate === dateFilter;
     });
 
     const attendanceMap = new Map();
@@ -380,10 +382,12 @@ export const AttendancePage = () => {
 
   return (
       <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
-        <Sidebar
-          open={sidebarOpen}
-          onToggle={() => setSidebarOpen(!sidebarOpen)}
-        />
+        <div className="hidden lg:block">
+          <Sidebar
+            open={sidebarOpen}
+            onToggle={() => setSidebarOpen(!sidebarOpen)}
+          />
+        </div>
       <div className="lg:ml-64">
         <AdminMobileProfile />
 

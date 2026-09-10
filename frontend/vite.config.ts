@@ -32,8 +32,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          // Bundle React core + chart libraries that depend on React into
-          // a single chunk to avoid circular chunk references.
           if (
             id.includes('node_modules/react-dom/') ||
             id.includes('node_modules\\react-dom\\') ||
@@ -41,8 +39,16 @@ export default defineConfig({
             id.includes('node_modules\\react\\') ||
             id.includes('node_modules/scheduler/') ||
             id.includes('node_modules\\scheduler\\') ||
-            id.includes('recharts')
+            id.includes('react-router') ||
+            id.includes('zustand') ||
+            id.includes('@tanstack/react-query')
           ) return 'vendor_react';
+
+          if (id.includes('recharts')) return 'vendor_charts';
+          if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor_leaflet';
+          if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor_pdf';
+          if (id.includes('lucide-react')) return 'vendor_icons';
+          if (id.includes('framer-motion')) return 'vendor_motion';
           return undefined;
         }
       }

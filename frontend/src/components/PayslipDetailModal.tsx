@@ -790,6 +790,7 @@ export const PayslipDetailModal = ({
             <button
               onClick={handleDownload}
               disabled={isLoading}
+              data-pdf-hide="true"
               className="bg-white/10 hover:bg-white/20 disabled:opacity-50 p-2.5 rounded-full transition-all text-white border border-white/10 flex items-center gap-1.5"
               aria-label="Download PDF"
               title="Download as PDF"
@@ -1115,7 +1116,7 @@ export const PayslipDetailModal = ({
         </div>
 
         {/* FOOTER ACTIONS */}
-        <div className="border-t border-gray-200 dark:border-slate-800/80 pt-4 flex flex-col sm:flex-row gap-3 justify-end">
+        <div data-pdf-hide="true" className="border-t border-gray-200 dark:border-slate-800/80 pt-4 flex flex-col sm:flex-row gap-3 justify-end">
           {isEditMode ? (
             <>
               <button

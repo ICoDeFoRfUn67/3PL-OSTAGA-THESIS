@@ -12,12 +12,8 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@hookform/resolvers": "^3.3.4",
     "@tanstack/react-query": "^5.25.0",
     "axios": "^1.6.2",
-    "chart.js": "^4.4.0",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
     "framer-motion": "^12.38.0",
@@ -27,17 +23,12 @@
     "lucide-react": "^0.292.0",
     "phil-reg-prov-mun-brgy": "^1.1.0",
     "react": "^18.2.0",
-    "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
-    "react-hook-form": "^7.48.0",
     "react-hot-toast": "^2.4.1",
     "react-leaflet": "^4.2.1",
-    "react-responsive": "^9.0.2",
     "react-router-dom": "^6.20.0",
-    "react-window": "^1.8.10",
     "recharts": "^2.15.4",
     "tailwind-merge": "^2.2.1",
-    "zod": "^3.22.4",
     "zustand": "^4.4.2"
   },
   "devDependencies": {

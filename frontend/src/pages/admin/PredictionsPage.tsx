@@ -469,7 +469,10 @@ export const PredictionsPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070E1E] text-slate-900 dark:text-slate-100">
-      <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <div className="hidden lg:block">
+        <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      </div>
+
 
       <div className="lg:ml-64">
         <AdminMobileProfile />
@@ -497,7 +500,7 @@ export const PredictionsPage = () => {
         </header>
 
         {/* MAIN PANEL */}
-        <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 w-full">
+        <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 w-full pb-32 lg:pb-8">
           
           {/* TAB BUTTONS */}
           <div className="flex border-b border-gray-200 dark:border-slate-800/80">

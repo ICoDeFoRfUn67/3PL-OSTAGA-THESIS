@@ -20,12 +20,13 @@ export const useGetCurrentUser = () => {
 };
 
 // Employee hooks
-export const useGetEmployees = (params?: Record<string, any>) => {
+export const useGetEmployees = (params?: Record<string, any>, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: [QUERY_KEYS.EMPLOYEES, params],
     queryFn: () => employeeAPI.getEmployees(params),
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1,
+    enabled: options?.enabled !== undefined ? options.enabled : true,
   });
 };
 
@@ -397,8 +398,8 @@ export const useGetOnlineEmployees = (params?: Record<string, any>) => {
   return useQuery({
     queryKey: [QUERY_KEYS.EMPLOYEES_ONLINE, params],
     queryFn: () => employeeAPI.getOnlineEmployees(params),
-    staleTime: 5 * 1000,
-    refetchInterval: 5 * 1000,
+    staleTime: 15 * 1000,
+    refetchInterval: 15 * 1000,
   });
 };
 

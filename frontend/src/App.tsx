@@ -28,12 +28,14 @@ const ActivityLogsPage = React.lazy(() => import('@/pages/admin/ActivityLogsPage
 const SecurityAlertsPage = React.lazy(() => import('@/pages/admin/SecurityAlertsPage').then(m => ({ default: m.SecurityAlertsPage })));
 const PredictionsPage = React.lazy(() => import('@/pages/admin/PredictionsPage').then(m => ({ default: m.PredictionsPage })));
 const AdminPaymentAccountsPage = React.lazy(() => import('@/pages/admin/AdminPaymentAccountsPage').then(m => ({ default: m.AdminPaymentAccountsPage })));
+const ApplicationRequestsPanel = React.lazy(() => import('@/components/ApplicationRequestsPanel').then(m => ({ default: m.ApplicationRequestsPanel })));
 
 const HrDashboardPage = React.lazy(() => import('@/pages/hr/HrDashboardPage'));
 const HrEmployeesPage = React.lazy(() => import('@/pages/hr/HrEmployeesPage'));
 const HrEmployeeRequestPage = React.lazy(() => import('@/pages/hr/HrEmployeeRequestPage'));
 const HrEditRequestPage = React.lazy(() => import('@/pages/hr/HrEditRequestPage'));
 const HrLeaveRequestPage = React.lazy(() => import('@/pages/hr/HrLeaveRequestPage'));
+const HrApplicationRequestPage = React.lazy(() => import('@/pages/hr/HrApplicationRequestPage'));
 const HrHubsPage = React.lazy(() => import('@/pages/hr/HrHubsPage'));
 const HrAccessControlPage = React.lazy(() => import('@/pages/hr/HrAccessControlPage'));
 const HrAttendancePage = React.lazy(() => import('@/pages/hr/HrAttendancePage'));
@@ -47,10 +49,6 @@ const EmployeeProfileDetailPage = React.lazy(() => import('@/pages/employee/Empl
 const EditRequestsPanel = React.lazy(() => import('@/components/EditRequestsManagementPanel').then(m => ({ default: m.EditRequestsPanel })));
 const LeaveRequestsPanel = React.lazy(() => import('@/components/LeaveRequestsPanel').then(m => ({ default: m.LeaveRequestsPanel })));
 const EmployeeLeaveRequestForm = React.lazy(() => import('@/components/EmployeeLeaveRequestForm').then(m => ({ default: m.EmployeeLeaveRequestForm })));
-
-// Styles
-import '@/styles/globals.css';
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -152,6 +150,7 @@ function AppRoutes() {
                 <Route path="security-alerts" element={<SecurityAlertsPage />} />
                 <Route path="predictions" element={<PredictionsPage />} />
                 <Route path="payment-accounts" element={<AdminPaymentAccountsPage />} />
+                <Route path="application-requests" element={<ApplicationRequestsPanel />} />
               </Routes>
               </DashboardLayout>
           </ProtectedRoute>
@@ -181,6 +180,7 @@ function AppRoutes() {
                 <Route path="edit-requests/:id" element={<HrEditRequestPage />} />
                 <Route path="predictions" element={<PredictionsPage />} />
                 <Route path="payment-accounts" element={<AdminPaymentAccountsPage />} />
+                <Route path="application-requests" element={<HrApplicationRequestPage />} />
               </Routes>
             </DashboardLayout>
           </ProtectedRoute>
@@ -217,29 +217,30 @@ function AppRoutes() {
   );
 }
 
+// Heartbeat pinger: mark authenticated users as active every 15s
+function Heartbeat() {
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const send = async () => {
+      try {
+        await employeeAPI.heartbeat();
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    send();
+    const id = setInterval(send, 15000);
+    return () => clearInterval(id);
+  }, [isAuthenticated]);
+
+  return null;
+}
+
 function App() {
-  // Heartbeat pinger: mark authenticated users as active every 15s
-  const Heartbeat = () => {
-    const { isAuthenticated } = useAuth();
-
-    useEffect(() => {
-      if (!isAuthenticated) return;
-
-      const send = async () => {
-        try {
-          await employeeAPI.heartbeat();
-        } catch (e) {
-          // ignore
-        }
-      };
-
-      send();
-      const id = setInterval(send, 15000);
-      return () => clearInterval(id);
-    }, [isAuthenticated]);
-
-    return null;
-  };
 
   return (
     <QueryClientProvider client={queryClient}>

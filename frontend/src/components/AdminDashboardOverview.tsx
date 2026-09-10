@@ -356,8 +356,21 @@ export const AdminDashboardOverview = () => {
           )}
         </Card>
 
+        {/* Workforce Status – compact list (beside Total Delivery Centers) */}
+        <Card className="p-3 flex flex-col justify-center text-xs">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-400 mb-1">Workforce Status</span>
+          {isLoading ? <Skeleton className="h-14 w-full" /> : (
+            <div className="space-y-1">
+              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">Active</span><span className="font-bold text-green-600 dark:text-green-400">{empStatus.Active}</span></div>
+              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">AWOL</span><span className="font-bold text-orange-500">{empStatus.AWOL}</span></div>
+              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">Resign</span><span className="font-bold text-gray-500 dark:text-gray-400">{empStatus.Resign}</span></div>
+              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">Blacklist</span><span className="font-bold text-red-500">{empStatus.Blacklist}</span></div>
+            </div>
+          )}
+        </Card>
+
         {/* Employee Status – mini donut */}
-        <Card className="p-3 flex flex-col">
+        <Card className="p-3 flex flex-col col-span-2 sm:col-span-1">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-400 mb-1">Employee Status</span>
           <div className="flex-1 flex items-center gap-3">
             <div className="w-14 h-14 relative shrink-0">
@@ -393,7 +406,7 @@ export const AdminDashboardOverview = () => {
         </Card>
 
         {/* Employment Type – compact bars */}
-        <Card className="p-3 flex flex-col justify-center gap-2 text-xs">
+        <Card className="p-3 flex flex-col justify-center gap-2 text-xs col-span-2 sm:col-span-1">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-400">Employment Type</span>
           {isLoading ? (
             <div className="space-y-3"><Skeleton className="h-5 w-full" /><Skeleton className="h-5 w-full" /></div>
@@ -418,19 +431,6 @@ export const AdminDashboardOverview = () => {
                 </div>
               </div>
             </>
-          )}
-        </Card>
-
-        {/* Workforce Status – compact list */}
-        <Card className="p-3 flex flex-col justify-center text-xs">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-400 mb-1">Workforce Status</span>
-          {isLoading ? <Skeleton className="h-14 w-full" /> : (
-            <div className="space-y-1">
-              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">Active</span><span className="font-bold text-green-600 dark:text-green-400">{empStatus.Active}</span></div>
-              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">AWOL</span><span className="font-bold text-orange-500">{empStatus.AWOL}</span></div>
-              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">Resign</span><span className="font-bold text-gray-500 dark:text-gray-400">{empStatus.Resign}</span></div>
-              <div className="flex justify-between"><span className="text-gray-700 dark:text-gray-300">Blacklist</span><span className="font-bold text-red-500">{empStatus.Blacklist}</span></div>
-            </div>
           )}
         </Card>
 

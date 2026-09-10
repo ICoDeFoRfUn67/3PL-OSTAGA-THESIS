@@ -229,6 +229,7 @@ export const PayslipDetailModal = ({
             {onBack ? (
               <button
                 onClick={onBack}
+                data-pdf-hide="true"
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-all border border-white/10"
                 title="Back to Payroll"
               >
@@ -238,6 +239,7 @@ export const PayslipDetailModal = ({
             <button
               onClick={handleDownload}
               disabled={isDownloading}
+              data-pdf-hide="true"
               className="hover:bg-white/10 disabled:opacity-50 p-2 rounded-full transition-all flex items-center gap-1.5 border border-white/10"
               aria-label="Download PDF"
               title="Download as PDF"

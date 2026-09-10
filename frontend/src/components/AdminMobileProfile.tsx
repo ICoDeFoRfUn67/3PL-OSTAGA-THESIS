@@ -15,6 +15,8 @@ import {
   FileText,
   ShieldAlert,
   Lock,
+  Briefcase,
+  Sparkles,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +33,12 @@ const iconMap: Record<string, any> = {
   '/admin/activity-logs': FileText,
   '/admin/security-alerts': ShieldAlert,
   '/admin/access-control': Lock,
+  '/admin/application-requests': Briefcase,
+  '/hr/application-requests': Briefcase,
+  '/admin/payment-accounts': CreditCard,
+  '/hr/payment-accounts': CreditCard,
+  '/admin/predictions': Sparkles,
+  '/hr/predictions': Sparkles,
 };
 
 const titleMap: Record<string, string> = {
@@ -44,6 +52,12 @@ const titleMap: Record<string, string> = {
   '/admin/activity-logs': 'Activity Logs',
   '/admin/security-alerts': 'Security Alerts',
   '/admin/access-control': 'Access Control',
+  '/admin/application-requests': 'Application Requests',
+  '/hr/application-requests': 'Application Requests',
+  '/admin/payment-accounts': 'Payment Accounts',
+  '/hr/payment-accounts': 'Payment Accounts',
+  '/admin/predictions': 'Predictions',
+  '/hr/predictions': 'Predictions',
 };
 
 const subtitleMap: Record<string, string> = {
@@ -57,6 +71,12 @@ const subtitleMap: Record<string, string> = {
   '/admin/activity-logs': 'System audit trail',
   '/admin/security-alerts': 'Monitor system events',
   '/admin/access-control': 'Roles & permissions',
+  '/admin/application-requests': 'Submitted job applications',
+  '/hr/application-requests': 'Submitted job applications',
+  '/admin/payment-accounts': 'Disbursement accounts & methods',
+  '/hr/payment-accounts': 'Disbursement accounts & methods',
+  '/admin/predictions': 'Workforce planning & predictive models',
+  '/hr/predictions': 'Workforce planning & predictive models',
 };
 
 function AdminMobileProfile() {

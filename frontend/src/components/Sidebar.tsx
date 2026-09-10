@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ThemeToggle, useTheme } from '@/context/ThemeContext';
@@ -35,8 +35,10 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
   const [employeeRequestOpen, setEmployeeRequestOpen] = useState(
     window.location.pathname === '/admin/edit-requests' ||
       window.location.pathname === '/admin/leave-requests' ||
+      window.location.pathname === '/admin/application-requests' ||
       window.location.pathname === '/hr/edit-requests' ||
-      window.location.pathname === '/hr/leave-requests'
+      window.location.pathname === '/hr/leave-requests' ||
+      window.location.pathname === '/hr/application-requests'
   );
 
   const handleLogout = async () => {
@@ -53,7 +55,7 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
       ? 'hr'
       : rawRole;
 
-  const navItems = [
+  const navItems = useMemo(() => [
     {
       label: 'Dashboard',
       icon: Home,
@@ -97,6 +99,13 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
             normalizedRole === 'admin'
               ? '/admin/leave-requests'
               : '/hr/leave-requests',
+        },
+        {
+          label: 'Application Request',
+          path:
+            normalizedRole === 'admin'
+              ? '/admin/application-requests'
+              : '/hr/application-requests',
         },
       ],
     },
@@ -193,10 +202,11 @@ export const Sidebar = ({ open: _open, onToggle, hideThemeToggle = false }: Side
           : '/hr/predictions',
       roles: ['admin', 'hr'],
     },
-  ];
+  ], [normalizedRole]);
 
-  const filteredNavItems = navItems.filter((item) =>
-    item.roles.includes(normalizedRole)
+  const filteredNavItems = useMemo(() => 
+    navItems.filter((item) => item.roles.includes(normalizedRole)),
+    [navItems, normalizedRole]
   );
 
   return (

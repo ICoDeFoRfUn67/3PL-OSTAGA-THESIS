@@ -14,6 +14,7 @@ urlpatterns = [
 
     # App API
     path("api/", include("employees.urls")),
+    path("api/", include("recruitment.urls")),
 ]
 
 

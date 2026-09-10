@@ -1,24 +1,15 @@
 import React, { useMemo } from 'react';
 import { Card, EmptyState } from '@/components/common';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Search, MapPin, Users, Home, FileText, Plus } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { Search, MapPin, Users } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import HubsEmployeeChart from '@/components/HubsEmployeeChart';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import AdminMobileProfile from '@/components/AdminMobileProfile';
+import { AdminDashboardOverview } from '@/components/AdminDashboardOverview';
 
-// Shared Colors from AdminDashboard
-const STATUS_COLORS: Record<string, string> = {
-  'Active': '#22C55E',      
-  'AWOL': '#F97316',        
-  'Blacklist': '#EF4444',   
-  'Resign': '#9CA3AF',      
-};
-
-// employment colors are handled via class-mapping helper
 
 const getHubCoordinates = (hub: any): [number, number] => {
   if (hub.latitude && hub.longitude && !isNaN(hub.latitude) && !isNaN(hub.longitude)) {
@@ -62,21 +53,6 @@ export const MobileAdminDashboardView = ({
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
 
-  const getStatusBgClass = (name: string) => {
-    switch ((name || '').toLowerCase()) {
-      case 'active':
-        return 'bg-[#22C55E]';
-      case 'awol':
-        return 'bg-[#F97316]';
-      case 'blacklist':
-        return 'bg-[#EF4444]';
-      case 'resign':
-        return 'bg-[#9CA3AF]';
-      default:
-        return 'bg-gray-400';
-    }
-  };
-
   const getStatusTextClass = (name: string) => {
     switch ((name || '').toLowerCase()) {
       case 'active':
@@ -90,23 +66,6 @@ export const MobileAdminDashboardView = ({
       default:
         return 'text-gray-400';
     }
-  };
-
-  const getEmploymentBgClass = (name: string) => {
-    switch ((name || '').toLowerCase()) {
-      case 'full-time':
-      case 'full time':
-        return 'bg-[#1E40AF]';
-      case 'ocw':
-        return 'bg-[#3B82F6]';
-      default:
-        return 'bg-[#3B82F6]';
-    }
-  };
-
-  const pctToWidthClass = (pct: number) => {
-    const n = Math.max(1, Math.round((pct / 100) * 12));
-    return `w-${n}/12`;
   };
 
   const [showMapSearch, setShowMapSearch] = React.useState(false);
@@ -162,112 +121,9 @@ export const MobileAdminDashboardView = ({
       <div className="px-4 space-y-4 mt-2">
         {/* Mobile page title removed — AdminMobileProfile provides the header */}
         
-        {/* Top Cards Row */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 flex flex-col justify-between`}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-blue-400" />
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Employees</p>
-              <p className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{totalEmployees}</p>
-            </div>
-          </Card>
+        {/* Full Dashboard Analytics & Charts (Complete Parity with Desktop Dashboard) */}
+        <AdminDashboardOverview />
 
-          <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 flex flex-col justify-between`}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-blue-400" />
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Delivery Centers</p>
-              <p className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{hubs.length}</p>
-            </div>
-          </Card>
-        </div>
-
-        {/* Stats Section (Employee Status, Employment Type, Workforce Status) */}
-        {/* Scrollable horizontally to match the 3-column feel without squashing */}
-        <div className="flex overflow-x-auto pb-2 -mx-4 px-4 gap-4 snap-x hide-scrollbar">
-          
-          {/* Employee Status */}
-          <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 min-w-[280px] snap-center flex flex-col`}>
-            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Employee Status</h3>
-            <div className="flex items-center gap-4 flex-1">
-              <div className="w-24 h-24">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={statusData} cx="50%" cy="50%" innerRadius={25} outerRadius={40} dataKey="value" stroke="none">
-                      {statusData.map((entry: any, index: number) => (
-                        <Cell key={index} fill={STATUS_COLORS[entry.name] || '#3B82F6'} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-2">
-                {statusData.map((entry: any, idx: number) => {
-                  const pct = Math.round((entry.value / totalEmployees) * 100);
-                  return (
-                    <div key={idx} className="flex justify-between items-center text-[10px]">
-                      <div className="flex items-center gap-2">
-                        {/* status color */}
-                        <div className={`w-2 h-2 rounded-full ${getStatusBgClass(entry.name)}`} />
-                        <span className="text-gray-400">{entry.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium`}>{pct}%</span>
-                        <span className="text-gray-500">({entry.value})</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </Card>
-
-          {/* Employment Type */}
-          <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 min-w-[280px] snap-center flex flex-col`}>
-            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Employment Type</h3>
-            <div className="space-y-4 flex-1 mt-2">
-              {employmentTypeData.map((entry: any, idx: number) => {
-                const pct = Math.round((entry.value / totalEmployees) * 100);
-                return (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-[10px]">
-                      <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>{entry.name}</span>
-                      <div className="flex gap-2">
-                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{entry.value}</span>
-                        <span className="text-gray-500">({pct}%)</span>
-                      </div>
-                    </div>
-                    <div className={`h-1.5 w-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} rounded-full overflow-hidden`}>
-                      <div className={`h-full rounded-full ${getEmploymentBgClass(entry.name)} ${pctToWidthClass(pct)}`} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Workforce Status */}
-          <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} p-4 min-w-[280px] snap-center flex flex-col`}>
-            <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Workforce Status</h3>
-            <div className="space-y-3 flex-1 mt-1">
-              {statusData.map((entry: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-center relative pl-3">
-                  <div className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-full ${getStatusBgClass(entry.name)}`} />
-                  <span className="text-[11px] text-gray-400">{entry.name}</span>
-                  <span className={`text-[11px] font-semibold ${getStatusTextClass(entry.name)}`}>{entry.value}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-        </div>
 
         {/* Map */}
         <Card className={`${isDarkMode ? 'bg-[#111827] border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'} overflow-hidden relative`}>
@@ -462,31 +318,6 @@ export const MobileAdminDashboardView = ({
           </div>
         </Card>
 
-      </div>
-
-      {/* Floating Bottom Nav */}
-      <div className={`fixed bottom-0 left-0 right-0 h-16 ${isDarkMode ? 'bg-[#0B1120] border-gray-800' : 'bg-white border-gray-200'} border-t flex justify-around items-center px-2 z-[9000]`}>
-        <div onClick={() => navigate('/admin')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
-          <Home className="w-5 h-5 text-blue-500" />
-          <span className="text-[9px] text-blue-500 font-medium">Dashboard</span>
-        </div>
-        <div onClick={() => navigate('/admin/hubs')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
-          <MapPin className={`w-5 h-5 ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`} />
-          <span className={`text-[9px] ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>Hubs</span>
-        </div>
-        <div className="relative -top-5">
-          <div onClick={() => navigate('/admin/employees')} className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)] cursor-pointer">
-            <Plus className="w-6 h-6 text-white" />
-          </div>
-        </div>
-        <div onClick={() => navigate('/admin/employees')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
-          <Users className={`w-5 h-5 ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`} />
-          <span className={`text-[9px] ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>Employees</span>
-        </div>
-        <div onClick={() => navigate('/admin/edit-requests')} className="flex flex-col items-center justify-center w-16 gap-1 cursor-pointer">
-          <FileText className={`w-5 h-5 ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`} />
-          <span className={`text-[9px] ${isDarkMode ? 'text-white/90' : 'text-gray-500'}`}>Edit</span>
-        </div>
       </div>
 
     </div>

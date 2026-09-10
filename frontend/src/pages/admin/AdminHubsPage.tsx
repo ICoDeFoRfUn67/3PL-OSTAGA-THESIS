@@ -1279,12 +1279,14 @@ export const AdminHubsPage = () => {
 
   return (
     <>
-      <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <div className="hidden lg:block">
+        <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      </div>
 
       <div className="min-h-screen bg-gray-50 dark:bg-[#020817] lg:ml-64 transition-colors duration-300">
         <AdminMobileProfile />
         
-        <div className="p-3 sm:p-5 lg:p-8 space-y-5 max-w-[1400px] mx-auto lg:px-10">
+        <div className="p-3 sm:p-5 lg:p-8 space-y-5 max-w-[1400px] mx-auto lg:px-10 pb-32 lg:pb-8">
           <div className="hidden md:flex items-start justify-between gap-4 mb-2">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
@@ -1865,9 +1867,9 @@ className="h-16 w-16 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center 
         className="
           md:hidden
           fixed
-          bottom-28
+          bottom-24
           right-4
-          z-50
+          z-30
           w-12
           h-12
           rounded-full

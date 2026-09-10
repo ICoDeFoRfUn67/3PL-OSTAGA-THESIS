@@ -148,46 +148,41 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'approved_at',
         ]
 
-    def get_permanent_clock_in_image_url(self, obj):
+    def _get_saved_image(self, obj, image_type):
+        prefetched = getattr(obj, '_prefetched_objects_cache', {}).get('saved_images')
+        if prefetched is not None:
+            for img in prefetched:
+                if img.image_type == image_type:
+                    return img
+            return None
+        cache_attr = f'_cached_saved_{image_type}'
+        if hasattr(obj, cache_attr):
+            return getattr(obj, cache_attr)
         from .models import SavedImage
+        saved = SavedImage.objects.filter(attendance=obj, image_type=image_type).first()
+        setattr(obj, cache_attr, saved)
+        return saved
 
-        saved_image = SavedImage.objects.filter(
-            attendance=obj,
-            image_type='clock_in'
-        ).first()
-
+    def get_permanent_clock_in_image_url(self, obj):
+        saved_image = self._get_saved_image(obj, 'clock_in')
         if saved_image:
             return absolute_media_url(
                 self.context.get('request'),
                 f"/api/saved-images/{saved_image.id}/"
             )
-
         return None
 
     def get_permanent_clock_out_image_url(self, obj):
-        from .models import SavedImage
-
-        saved_image = SavedImage.objects.filter(
-            attendance=obj,
-            image_type='clock_out'
-        ).first()
-
+        saved_image = self._get_saved_image(obj, 'clock_out')
         if saved_image:
             return absolute_media_url(
                 self.context.get('request'),
                 f"/api/saved-images/{saved_image.id}/"
             )
-
         return None
 
     def get_clock_in_image(self, obj):
-        from .models import SavedImage
-
-        saved = SavedImage.objects.filter(
-            attendance=obj,
-            image_type='clock_in'
-        ).first()
-
+        saved = self._get_saved_image(obj, 'clock_in')
         if saved and saved.image_data:
             return absolute_media_url(
                 self.context.get('request'),
@@ -203,13 +198,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         return None
 
     def get_clock_out_image(self, obj):
-        from .models import SavedImage
-
-        saved = SavedImage.objects.filter(
-            attendance=obj,
-            image_type='clock_out'
-        ).first()
-
+        saved = self._get_saved_image(obj, 'clock_out')
         if saved and saved.image_data:
             return absolute_media_url(
                 self.context.get('request'),

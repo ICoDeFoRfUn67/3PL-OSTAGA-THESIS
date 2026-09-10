@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Button, Badge, LoadingSpinner, EmptyState } from '@/components/common';
@@ -79,7 +79,8 @@ export const AdminPaymentAccountsPage = () => {
   const { data, isLoading } = useGetPaymentAccounts(
     typeFilter !== 'All' ? { account_type: typeFilter } : undefined
   );
-  const { data: empData } = useGetEmployees();
+  // Only fetch full employee list when the Add/Edit form modal is actually open
+  const { data: empData } = useGetEmployees(undefined, { enabled: showForm });
   const createMutation = useCreatePaymentAccount();
   const updateMutation = useUpdatePaymentAccount();
   const deleteMutation = useDeletePaymentAccount();
@@ -87,18 +88,18 @@ export const AdminPaymentAccountsPage = () => {
   const rawAccounts: PaymentAccount[] = normalizeApiResponse(data) || [];
   const employees: any[] = normalizeApiResponse(empData) || [];
 
-  const accounts = rawAccounts.filter((a) => {
-    if (!searchTerm.trim()) return true;
+  const accounts = useMemo(() => {
+    if (!searchTerm.trim()) return rawAccounts;
     const q = searchTerm.toLowerCase();
-    return (
+    return rawAccounts.filter((a) => (
       (a.employee_name || '').toLowerCase().includes(q) ||
       (a.account_name || '').toLowerCase().includes(q) ||
       (a.jtp_code || '').toLowerCase().includes(q) ||
       (a.account_number || '').toLowerCase().includes(q) ||
       (a.account_type || '').toLowerCase().includes(q) ||
       (a.bank_name || '').toLowerCase().includes(q)
-    );
-  });
+    ));
+  }, [rawAccounts, searchTerm]);
 
   const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(true); };
 
@@ -160,10 +161,12 @@ export const AdminPaymentAccountsPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
       {/* Sidebar View */}
-      <Sidebar
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
+      <div className="hidden lg:block">
+        <Sidebar
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+        />
+      </div>
 
       <div className="lg:ml-64">
         <AdminMobileProfile />

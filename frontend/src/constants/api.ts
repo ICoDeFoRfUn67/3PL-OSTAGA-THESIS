@@ -119,6 +119,11 @@ export const API_ENDPOINTS = {
   PAYMENT_ACCOUNTS: '/payment-accounts/',
   PAYMENT_ACCOUNT_DETAIL: (id: number) => `/payment-accounts/${id}/`,
   PAYMENT_ACCOUNT_DELETE_QR: (id: number) => `/payment-accounts/${id}/delete-qr/`,
+
+  // Application Requests (Recruitment)
+  APPLICATIONS_LIST: '/admin/applications/',
+  APPLICATION_DETAIL: (ref: string) => `/applications/${ref}/`,
+  APPLICATION_ACTION: (ref: string) => `/admin/applications/${ref}/action/`,
 } as const;
 
 export const QUERY_KEYS = {
@@ -142,5 +147,6 @@ export const QUERY_KEYS = {
   TOP_EMPLOYEES_BY_HUB: ['top-employees-by-hub'],
   EMPLOYEES_ONLINE: ['employees-online'],
   PAYMENT_ACCOUNTS: ['payment-accounts'],
+  APPLICATION_REQUESTS: ['application-requests'],
 } as const;
 

@@ -304,35 +304,38 @@ export const DocumentsSection = ({
         )}
       </div>
 
-      {/* ── Separate Category Containers ── */}
-      <div className="space-y-5">
-        {PHILIPPINE_ID_CATEGORIES.map((category) => {
+      {/* ── Separate Category Containers (Balanced 2-Column Grid) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {PHILIPPINE_ID_CATEGORIES.map((category, index) => {
           const categoryDocs = groupedDocuments[category.key] || [];
           const hasDocs = categoryDocs.length > 0;
           const isUploadingThis = uploadingCategory === category.key;
           const IconComp = category.icon;
+          const isLast = index === PHILIPPINE_ID_CATEGORIES.length - 1;
 
           return (
             <div
               key={category.key}
-              className="bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700"
+              className={`bg-white dark:bg-[#090F1D] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between ${
+                isLast ? 'md:col-span-2' : ''
+              }`}
             >
               {/* Category Container Header */}
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center text-white shadow-xs`}>
-                    <IconComp size={18} />
+              <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center text-white shrink-0 shadow-xs`}>
+                    <IconComp size={16} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                         {category.title}
                       </h4>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${category.badgeBg}`}>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${category.badgeBg}`}>
                         {categoryDocs.length} {categoryDocs.length === 1 ? 'file' : 'files'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                       {category.subtitle}
                     </p>
                   </div>
@@ -340,23 +343,23 @@ export const DocumentsSection = ({
 
                 {/* Container Actions: Scan or Upload specifically into this container */}
                 {!readOnly && (
-                  <div className="flex items-center gap-2 self-end sm:self-center">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => setScannerCategory(category.key)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition-all active:scale-95"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-semibold shadow-2xs transition-all active:scale-95"
                     >
-                      <ScanLine size={13} className="text-blue-500" />
+                      <ScanLine size={12} className="text-blue-500" />
                       <span>Scan ID</span>
                     </button>
                     <button
                       onClick={() => fileInputRefs.current[category.key]?.click()}
                       disabled={isUploadingThis}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold shadow-2xs transition-all active:scale-95 disabled:opacity-50"
                     >
                       {isUploadingThis ? (
-                        <Loader2 size={13} className="animate-spin" />
+                        <Loader2 size={12} className="animate-spin" />
                       ) : (
-                        <Upload size={13} />
+                        <Upload size={12} />
                       )}
                       <span>Upload</span>
                     </button>
@@ -375,9 +378,9 @@ export const DocumentsSection = ({
               </div>
 
               {/* Category Container Body */}
-              <div className="p-4 md:p-5">
+              <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-center">
                 {hasDocs ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {categoryDocs.map((doc, idx) => {
                       const filename = doc.file_name || '';
                       const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(filename || doc.file_url || '');
@@ -387,26 +390,26 @@ export const DocumentsSection = ({
                         <div
                           key={doc.id ?? idx}
                           onClick={() => handleDocumentAction(doc)}
-                          className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 hover:border-blue-300 dark:hover:border-blue-600/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all cursor-pointer group shadow-2xs"
+                          className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 hover:border-blue-300 dark:hover:border-blue-600/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all cursor-pointer group shadow-2xs"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             {/* Thumbnail or File Icon */}
                             {isImage && doc.file_url ? (
-                              <div className="w-12 h-12 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 bg-white dark:bg-slate-800">
+                              <div className="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 bg-white dark:bg-slate-800">
                                 <img src={doc.file_url} alt="ID" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               </div>
                             ) : (
-                              <div className="w-12 h-12 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                <span className="text-[9px] font-black">{isPdf ? 'PDF' : 'DOC'}</span>
-                                <FileText size={16} />
+                              <div className="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                <span className="text-[8px] font-black">{isPdf ? 'PDF' : 'DOC'}</span>
+                                <FileText size={14} />
                               </div>
                             )}
 
                             <div className="min-w-0">
-                              <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">
+                              <p className="font-semibold text-xs text-slate-900 dark:text-white truncate">
                                 {filename}
                               </p>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                                 <span>{displaySize(doc)}</span>
                                 <span>•</span>
                                 <span>
@@ -423,15 +426,15 @@ export const DocumentsSection = ({
                           </div>
 
                           {/* Actions */}
-                          <div className="flex items-center gap-1.5 shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1 shrink-0 ml-1.5" onClick={(e) => e.stopPropagation()}>
                             {isImage ? (
                               <button
                                 type="button"
                                 onClick={() => setPreviewFile({ url: doc.file_url, type: 'image' })}
-                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
                                 title="Preview"
                               >
-                                <Eye size={15} />
+                                <Eye size={13} />
                               </button>
                             ) : (
                               <a
@@ -439,10 +442,10 @@ export const DocumentsSection = ({
                                 download={filename}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
                                 title="Download"
                               >
-                                <Download size={15} />
+                                <Download size={13} />
                               </a>
                             )}
 
@@ -450,10 +453,10 @@ export const DocumentsSection = ({
                               <button
                                 type="button"
                                 onClick={() => handleDelete(Number(doc.id), filename)}
-                                className="p-1.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                className="p-1 rounded-lg border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
                                 title="Delete"
                               >
-                                <Trash2 size={15} />
+                                <Trash2 size={13} />
                               </button>
                             )}
                           </div>
@@ -463,9 +466,13 @@ export const DocumentsSection = ({
                   </div>
                 ) : (
                   /* Empty state for this specific container */
-                  <div className="py-6 px-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-900/20">
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                      No {category.title} uploaded yet. Click <span className="font-semibold text-slate-600 dark:text-slate-300">Scan ID</span> or <span className="font-semibold text-slate-600 dark:text-slate-300">Upload</span> above to add.
+                  <div className="py-4 px-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-900/20">
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                      {readOnly ? (
+                        <span>No {category.title} uploaded</span>
+                      ) : (
+                        <span>No {category.title} uploaded yet. Click <span className="font-semibold text-slate-600 dark:text-slate-300">Scan ID</span> or <span className="font-semibold text-slate-600 dark:text-slate-300">Upload</span> above.</span>
+                      )}
                     </p>
                   </div>
                 )}

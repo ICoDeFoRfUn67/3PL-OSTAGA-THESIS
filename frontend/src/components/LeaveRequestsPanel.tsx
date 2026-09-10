@@ -169,13 +169,15 @@ export const LeaveRequestsPanel = ({ initialFilter = 'pending' }: { initialFilte
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
-      <Sidebar
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
+      <div className="hidden lg:block">
+        <Sidebar
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+        />
+      </div>
       <div className="lg:ml-64">
         <AdminMobileProfile />
-        <div className="p-4 lg:p-6 space-y-6">
+        <div className="p-4 lg:p-6 space-y-6 pb-32 lg:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="hidden md:block">
               <h1 className="text-3xl font-bold mb-2">Leave Requests</h1>

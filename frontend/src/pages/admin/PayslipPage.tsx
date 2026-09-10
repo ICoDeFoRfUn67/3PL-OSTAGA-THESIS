@@ -382,10 +382,12 @@ export const PayslipPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
-      <Sidebar
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
+      <div className="hidden lg:block">
+        <Sidebar
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+        />
+      </div>
 
       <div className="lg:ml-64">
         <AdminMobileProfile />

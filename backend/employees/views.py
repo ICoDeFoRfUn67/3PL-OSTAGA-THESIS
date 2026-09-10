@@ -821,7 +821,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = Attendance.objects.exclude(employee__role__in=['Admin', 'HR']).select_related('employee', 'employee__hub').order_by('-date', '-clock_in_time')
+        queryset = Attendance.objects.exclude(employee__role__in=['Admin', 'HR']).select_related('employee', 'employee__hub').prefetch_related('saved_images').order_by('-date', '-clock_in_time')
         queryset = apply_hr_hub_filter(queryset, self.request.user, hub_field='employee__hub')
         hub_id = self.request.query_params.get('hub_id')
         employee_id = self.request.query_params.get('employee_id')
@@ -3314,12 +3314,15 @@ class ServeSavedImageView(APIView):
 
 
 class DashboardAnalyticsView(APIView):
-    """Single endpoint returning all analytics data for the admin dashboard."""
+    """Single endpoint returning all analytics data for the admin dashboard.
+    Optimized to use database-level aggregations instead of loop queries.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         from datetime import date as date_cls, timedelta
         from collections import defaultdict
+        from django.db.models import Q, Count, Sum
 
         today = timezone.localdate()
         thirty_days_ago = today - timedelta(days=29)
@@ -3338,27 +3341,37 @@ class DashboardAnalyticsView(APIView):
                 return qs.filter(id__in=managed_hub_ids)
             return qs
 
-        # ── 1. Attendance Trend last 30 days (daily present/late/absent) ──
-        attendance_trend = []
+        # ── 1. Status & Employment Type Counts (Single Aggregate Query) ──
         base_emp_qs = filter_employees(Employee.objects.all())
-        all_active = base_emp_qs.filter(status='Active')
-        active_count = all_active.count()
-        total_employees_count = base_emp_qs.count()
-        total_hubs_count = filter_hubs(Hub.objects.all()).count()
+        hubs_qs = filter_hubs(Hub.objects.all())
+
+        status_agg = base_emp_qs.aggregate(
+            total=Count('id'),
+            active=Count('id', filter=Q(status='Active')),
+            resign=Count('id', filter=Q(status__in=['Resign', 'Resigned'])),
+            awol=Count('id', filter=Q(status='AWOL')),
+            blacklist=Count('id', filter=Q(status='Blacklist')),
+            full_time=Count('id', filter=Q(status='Active', employment_type__in=['Full-time', 'Full time'])),
+            ocw=Count('id', filter=Q(status='Active', employment_type='OCW')),
+        )
+
+        total_employees_count = status_agg['total'] or 0
+        active_count = status_agg['active'] or 0
+        total_hubs_count = hubs_qs.count()
 
         employee_status_counts = {
             'Active': active_count,
-            'Resign': base_emp_qs.filter(status='Resign').count(),
-            'AWOL': base_emp_qs.filter(status='AWOL').count(),
-            'Blacklist': base_emp_qs.filter(status='Blacklist').count(),
+            'Resign': status_agg['resign'] or 0,
+            'AWOL': status_agg['awol'] or 0,
+            'Blacklist': status_agg['blacklist'] or 0,
         }
 
         employment_type_counts = {
-            'Full-time': all_active.filter(employment_type='Full-time').count(),
-            'OCW': all_active.filter(employment_type='OCW').count(),
+            'Full-time': status_agg['full_time'] or 0,
+            'OCW': status_agg['ocw'] or 0,
         }
 
-        # Get attendance records for last 30 days
+        # ── 2. Attendance Trend last 30 days (daily present/late/absent) ──
         att_qs = Attendance.objects.filter(
             date__gte=thirty_days_ago,
             date__lte=today
@@ -3366,12 +3379,12 @@ class DashboardAnalyticsView(APIView):
         if managed_hub_ids is not None:
             att_qs = att_qs.filter(employee__hub_id__in=managed_hub_ids)
 
-        # Group by date
-        att_by_date = defaultdict(lambda: {'present': 0, 'late': 0, 'on_leave': 0})
-        for a in att_qs.select_related('employee'):
-            key = str(a.date)
-            if a.clock_in_time:
-                if a.clock_in_time.hour >= 10:
+        att_by_date = defaultdict(lambda: {'present': 0, 'late': 0})
+        # Use values() to avoid instantiating thousands of model objects
+        for a in att_qs.values('date', 'clock_in_time'):
+            if a['clock_in_time']:
+                key = str(a['date'])
+                if a['clock_in_time'].hour >= 10:
                     att_by_date[key]['late'] += 1
                 else:
                     att_by_date[key]['present'] += 1
@@ -3386,14 +3399,15 @@ class DashboardAnalyticsView(APIView):
             leave_qs = leave_qs.filter(employee__hub_id__in=managed_hub_ids)
 
         leave_by_date = defaultdict(int)
-        for lr in leave_qs:
-            cur = lr.start_date
-            while cur <= lr.end_date:
+        for lr in leave_qs.values('start_date', 'end_date'):
+            cur = lr['start_date']
+            end = lr['end_date']
+            while cur <= end:
                 if thirty_days_ago <= cur <= today:
                     leave_by_date[str(cur)] += 1
                 cur += timedelta(days=1)
 
-        # Build 30-day trend list
+        attendance_trend = []
         cur_date = thirty_days_ago
         while cur_date <= today:
             key = str(cur_date)
@@ -3411,79 +3425,100 @@ class DashboardAnalyticsView(APIView):
             })
             cur_date += timedelta(days=1)
 
-        # ── 2. Top Hubs by Active Employee Count ──
-        hubs_qs = filter_hubs(Hub.objects.all())
-        hub_active_counts = []
-        for hub in hubs_qs:
-            count = filter_employees(Employee.objects.filter(hub=hub, status='Active')).count()
-            hub_active_counts.append({'hub_name': hub.name, 'active_count': count})
+        # ── 3. Top Hubs by Active Employee Count (Single GroupBy Query) ──
+        active_by_hub = dict(
+            base_emp_qs.filter(status='Active', hub__isnull=False)
+            .values('hub__name')
+            .annotate(active_count=Count('id'))
+            .values_list('hub__name', 'active_count')
+        )
+        hub_active_counts = [
+            {'hub_name': h.name, 'active_count': active_by_hub.get(h.name, 0)}
+            for h in hubs_qs
+        ]
         hub_active_counts.sort(key=lambda x: x['active_count'], reverse=True)
 
-        # ── 3. AWOL / Resign / Blacklist by Hub ──
-        awol_resign_blacklist = []
-        for hub in hubs_qs:
-            awol = filter_employees(Employee.objects.filter(hub=hub, status='AWOL')).count()
-            resign = filter_employees(Employee.objects.filter(hub=hub, status='Resign')).count()
-            blacklist = filter_employees(Employee.objects.filter(hub=hub, status='Blacklist')).count()
-            if awol + resign + blacklist > 0:
-                awol_resign_blacklist.append({
-                    'hub_name': hub.name,
-                    'awol': awol,
-                    'resign': resign,
-                    'blacklist': blacklist,
-                })
+        # ── 4. AWOL / Resign / Blacklist by Hub (Single GroupBy Query) ──
+        hub_status_rows = (
+            base_emp_qs.filter(status__in=['AWOL', 'Resign', 'Resigned', 'Blacklist'], hub__isnull=False)
+            .values('hub__name')
+            .annotate(
+                awol=Count('id', filter=Q(status='AWOL')),
+                resign=Count('id', filter=Q(status__in=['Resign', 'Resigned'])),
+                blacklist=Count('id', filter=Q(status='Blacklist')),
+            )
+        )
+        awol_resign_blacklist = [
+            {
+                'hub_name': row['hub__name'],
+                'awol': row['awol'],
+                'resign': row['resign'],
+                'blacklist': row['blacklist'],
+            }
+            for row in hub_status_rows
+            if (row['awol'] + row['resign'] + row['blacklist']) > 0
+        ]
         awol_resign_blacklist.sort(key=lambda x: x['awol'] + x['resign'] + x['blacklist'], reverse=True)
 
-        # ── 4. Attendance Approval Status (today) ──
+        # ── 5. Attendance Approval Status (today) (Single Aggregate Query) ──
         att_today_qs = Attendance.objects.filter(date=today)
         if managed_hub_ids is not None:
             att_today_qs = att_today_qs.filter(employee__hub_id__in=managed_hub_ids)
-        att_approved = att_today_qs.filter(is_approved=True).count()
-        att_pending = att_today_qs.filter(is_approved=False).count()
-        att_total = att_today_qs.count()
+        att_approval_agg = att_today_qs.aggregate(
+            approved=Count('id', filter=Q(is_approved=True)),
+            pending=Count('id', filter=Q(is_approved=False)),
+            total=Count('id'),
+        )
         attendance_approval = {
-            'approved': att_approved,
-            'pending': att_pending,
-            'total': att_total,
+            'approved': att_approval_agg['approved'] or 0,
+            'pending': att_approval_agg['pending'] or 0,
+            'total': att_approval_agg['total'] or 0,
         }
 
-        # ── 5. Top Employees by Attendance Rate (best hub = most active) ──
-        # Find hub with most active employees
+        # ── 6. Top Employees by Attendance Rate ──
         top_hub = None
         top_hub_name = 'All Hubs'
         if hub_active_counts:
             top_hub_name = hub_active_counts[0]['hub_name']
             top_hub = hubs_qs.filter(name=top_hub_name).first()
 
-        # Calculate attendance rates for employees in the top hub
-        top_employees = []
-        if top_hub:
-            hub_employees = filter_employees(Employee.objects.filter(hub=top_hub, status='Active'))
-        else:
-            hub_employees = filter_employees(Employee.objects.filter(status='Active'))
-
-        # Count working days in last 30 days (weekdays only)
         working_days = 0
         cur = thirty_days_ago
         while cur <= today:
-            if cur.weekday() < 5:  # Monday=0 ... Friday=4
+            if cur.weekday() < 5:
                 working_days += 1
             cur += timedelta(days=1)
         working_days = max(1, working_days)
 
-        for emp_obj in hub_employees[:20]:  # limit to avoid N+1 slowness
-            att_count = Attendance.objects.filter(
-                employee=emp_obj,
-                date__gte=thirty_days_ago,
-                date__lte=today,
-                clock_in_time__isnull=False
-            ).count()
-            late_count = Attendance.objects.filter(
-                employee=emp_obj,
-                date__gte=thirty_days_ago,
-                date__lte=today,
-                clock_in_time__hour__gte=10
-            ).count()
+        if top_hub:
+            hub_employees = list(filter_employees(Employee.objects.filter(hub=top_hub, status='Active').select_related('hub'))[:20])
+        else:
+            hub_employees = list(filter_employees(Employee.objects.filter(status='Active').select_related('hub'))[:20])
+
+        emp_ids = [e.id for e in hub_employees]
+        att_stats_dict = defaultdict(lambda: {'att_count': 0, 'late_count': 0})
+        if emp_ids:
+            att_records = (
+                Attendance.objects.filter(
+                    employee_id__in=emp_ids,
+                    date__gte=thirty_days_ago,
+                    date__lte=today,
+                    clock_in_time__isnull=False
+                )
+                .values('employee_id')
+                .annotate(
+                    att_count=Count('id'),
+                    late_count=Count('id', filter=Q(clock_in_time__hour__gte=10))
+                )
+            )
+            for r in att_records:
+                att_stats_dict[r['employee_id']] = r
+
+        top_employees = []
+        for emp_obj in hub_employees:
+            r = att_stats_dict[emp_obj.id]
+            att_count = r['att_count']
+            late_count = r['late_count']
             absent_count = max(0, working_days - att_count)
             rate = round((att_count / working_days) * 100, 1)
             top_employees.append({
@@ -3497,43 +3532,54 @@ class DashboardAnalyticsView(APIView):
         top_employees.sort(key=lambda x: float(x['attendance_rate'].replace('%', '')), reverse=True)
         top_employees = top_employees[:10]
 
-        # ── 6. Top Hubs by Overtime Hours (this month) ──
+        # ── 7. Top Hubs by Overtime Hours (Single Attendance Scan) ──
         month_start = date_cls(today.year, today.month, 1)
-        hub_overtime = []
+        hub_overtime_map = defaultdict(float)
         STANDARD_DAY_HOURS = 8
-        for hub in hubs_qs:
-            hub_att_qs = Attendance.objects.filter(
-                employee__hub=hub,
+        overtime_records = (
+            Attendance.objects.filter(
+                employee__hub__in=hubs_qs,
                 date__gte=month_start,
                 date__lte=today,
                 clock_in_time__isnull=False,
                 clock_out_time__isnull=False
             )
-            overtime_seconds = 0.0
-            for a in hub_att_qs:
-                diff = (a.clock_out_time - a.clock_in_time).total_seconds()
-                if diff > 0:
-                    hours = diff / 3600.0
-                    if hours > STANDARD_DAY_HOURS:
-                        overtime_seconds += (hours - STANDARD_DAY_HOURS) * 3600.0
-            overtime_hours = round(overtime_seconds / 3600.0, 1)
-            if overtime_hours > 0:
-                hub_overtime.append({'hub_name': hub.name, 'overtime_hours': overtime_hours})
+            .values('employee__hub__name', 'clock_in_time', 'clock_out_time')
+        )
+        for a in overtime_records:
+            diff = (a['clock_out_time'] - a['clock_in_time']).total_seconds()
+            if diff > 0:
+                hours = diff / 3600.0
+                if hours > STANDARD_DAY_HOURS:
+                    hub_overtime_map[a['employee__hub__name']] += (hours - STANDARD_DAY_HOURS)
+
+        hub_overtime = [
+            {'hub_name': name, 'overtime_hours': round(hours, 1)}
+            for name, hours in hub_overtime_map.items()
+            if hours > 0
+        ]
         hub_overtime.sort(key=lambda x: x['overtime_hours'], reverse=True)
 
-        # ── 7. Leave Requests Overview ──
+        # ── 8. Leave Requests Overview (Single Aggregate Query) ──
         leave_all_qs = LeaveRequest.objects.all()
         if managed_hub_ids is not None:
             leave_all_qs = leave_all_qs.filter(employee__hub_id__in=managed_hub_ids)
+        leave_agg = leave_all_qs.aggregate(
+            approved=Count('id', filter=Q(status='approved')),
+            pending=Count('id', filter=Q(status='pending')),
+            rejected=Count('id', filter=Q(status='rejected')),
+            cancelled=Count('id', filter=Q(status='cancelled')),
+            total=Count('id'),
+        )
         leave_overview = {
-            'approved': leave_all_qs.filter(status='approved').count(),
-            'pending': leave_all_qs.filter(status='pending').count(),
-            'rejected': leave_all_qs.filter(status='rejected').count(),
-            'cancelled': leave_all_qs.filter(status='cancelled').count(),
-            'total': leave_all_qs.count(),
+            'approved': leave_agg['approved'] or 0,
+            'pending': leave_agg['pending'] or 0,
+            'rejected': leave_agg['rejected'] or 0,
+            'cancelled': leave_agg['cancelled'] or 0,
+            'total': leave_agg['total'] or 0,
         }
 
-        # ── 8. Security Alerts Summary ──
+        # ── 9. Security Alerts Summary (Single Aggregate Query) ──
         alerts_qs = SecurityAlert.objects.all().order_by('-created_at')
         if is_hr:
             alerts_qs = alerts_qs.exclude(employee__role='Admin')
@@ -3553,22 +3599,29 @@ class DashboardAnalyticsView(APIView):
                 'is_resolved': alert.is_resolved,
             })
 
+        alert_agg = alerts_qs.aggregate(
+            high=Count('id', filter=Q(severity='high')),
+            medium=Count('id', filter=Q(severity='medium')),
+            low=Count('id', filter=Q(severity='low')),
+            critical=Count('id', filter=Q(severity='critical')),
+            total=Count('id'),
+            unresolved=Count('id', filter=Q(is_resolved=False)),
+        )
         alert_counts = {
-            'high': alerts_qs.filter(severity='high').count(),
-            'medium': alerts_qs.filter(severity='medium').count(),
-            'low': alerts_qs.filter(severity='low').count(),
-            'critical': alerts_qs.filter(severity='critical').count(),
-            'total': alerts_qs.count(),
-            'unresolved': alerts_qs.filter(is_resolved=False).count(),
+            'high': alert_agg['high'] or 0,
+            'medium': alert_agg['medium'] or 0,
+            'low': alert_agg['low'] or 0,
+            'critical': alert_agg['critical'] or 0,
+            'total': alert_agg['total'] or 0,
+            'unresolved': alert_agg['unresolved'] or 0,
         }
 
-        # ── 9. Online employees (same detection as /employees/online/) ──
+        # ── 10. Online employees ──
         online_ids = _get_online_employee_ids(window_minutes=5)
         online_qs = filter_employees(Employee.objects.filter(id__in=online_ids))
         online_count = online_qs.count()
 
-        # ── 10. Payroll / Payslip Analytics per 15 days ──
-        from django.db.models import Sum
+        # ── 11. Payroll / Payslip Analytics per 15 days ──
         payroll_qs = Payroll.objects.all()
         if managed_hub_ids is not None:
             payroll_qs = payroll_qs.filter(employee__hub_id__in=managed_hub_ids)
@@ -3587,10 +3640,20 @@ class DashboardAnalyticsView(APIView):
                 'total_pay': float(pt['total_net_pay'] or 0),
             })
 
-        # ── 11. Highest Paid Employee per Hub ──
+        # ── 12. Highest Paid Employee per Hub (Optimized Query) ──
         highest_paid_employees = []
+        top_payrolls_by_hub = {}
+        for p in (
+            Payroll.objects.filter(employee__hub__in=hubs_qs)
+            .select_related('employee', 'employee__hub')
+            .order_by('employee__hub_id', '-net_pay')
+        ):
+            hid = p.employee.hub_id
+            if hid not in top_payrolls_by_hub:
+                top_payrolls_by_hub[hid] = p
+
         for hub in hubs_qs:
-            top_payroll = Payroll.objects.filter(employee__hub=hub).order_by('-net_pay').first()
+            top_payroll = top_payrolls_by_hub.get(hub.id)
             if top_payroll:
                 highest_paid_employees.append({
                     'hub_name': hub.name,
@@ -3605,14 +3668,17 @@ class DashboardAnalyticsView(APIView):
                 })
         highest_paid_employees.sort(key=lambda x: x['amount'], reverse=True)
 
-        # ── 12. Total Payroll Pay per Hub ──
-        hub_total_pay = []
-        for hub in hubs_qs:
-            total_pay = Payroll.objects.filter(employee__hub=hub).aggregate(total=Sum('net_pay'))['total'] or 0
-            hub_total_pay.append({
-                'hub_name': hub.name,
-                'total_pay': float(total_pay),
-            })
+        # ── 13. Total Payroll Pay per Hub (Single GroupBy Query) ──
+        hub_total_pay_dict = dict(
+            Payroll.objects.filter(employee__hub__in=hubs_qs)
+            .values('employee__hub__name')
+            .annotate(total=Sum('net_pay'))
+            .values_list('employee__hub__name', 'total')
+        )
+        hub_total_pay = [
+            {'hub_name': h.name, 'total_pay': float(hub_total_pay_dict.get(h.name, 0) or 0)}
+            for h in hubs_qs
+        ]
         hub_total_pay.sort(key=lambda x: x['total_pay'], reverse=True)
 
         return Response({
@@ -3639,11 +3705,15 @@ class DashboardAnalyticsView(APIView):
 
 
 class TopEmployeesByHubView(APIView):
-    """Return top 10 employees ranked by attendance rate for a specific hub."""
+    """Return top 10 employees ranked by attendance rate for a specific hub.
+    Optimized to aggregate attendance in a single query.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         from datetime import date as date_cls, timedelta
+        from collections import defaultdict
+        from django.db.models import Q, Count
 
         today = timezone.localdate()
         thirty_days_ago = today - timedelta(days=29)
@@ -3668,7 +3738,7 @@ class TopEmployeesByHubView(APIView):
                 return Response({'top_employees': [], 'hub_name': 'Invalid Hub', 'working_days': working_days})
             if managed_hub_ids is not None and hub_id_int not in managed_hub_ids:
                 return Response({'top_employees': [], 'hub_name': 'Access Denied', 'working_days': working_days})
-            hub_employees = Employee.objects.filter(hub_id=hub_id_int, status='Active').select_related('hub')
+            hub_employees = list(Employee.objects.filter(hub_id=hub_id_int, status='Active').select_related('hub')[:50])
             hub_name = Hub.objects.filter(id=hub_id_int).values_list('name', flat=True).first() or 'Unknown Hub'
         else:
             hubs_qs = Hub.objects.all()
@@ -3678,26 +3748,35 @@ class TopEmployeesByHubView(APIView):
                 active_count=models.Count('employees', filter=models.Q(employees__status='Active'))
             ).order_by('-active_count').first()
             if top_hub:
-                hub_employees = Employee.objects.filter(hub=top_hub, status='Active').select_related('hub')
+                hub_employees = list(Employee.objects.filter(hub=top_hub, status='Active').select_related('hub')[:50])
                 hub_name = top_hub.name
             else:
                 return Response({'top_employees': [], 'hub_name': 'N/A', 'working_days': working_days})
 
-        # Build ranked list
+        emp_ids = [e.id for e in hub_employees]
+        att_stats_dict = defaultdict(lambda: {'att_count': 0, 'late_count': 0})
+        if emp_ids:
+            att_records = (
+                Attendance.objects.filter(
+                    employee_id__in=emp_ids,
+                    date__gte=thirty_days_ago,
+                    date__lte=today,
+                    clock_in_time__isnull=False,
+                )
+                .values('employee_id')
+                .annotate(
+                    att_count=Count('id'),
+                    late_count=Count('id', filter=Q(clock_in_time__hour__gte=10)),
+                )
+            )
+            for r in att_records:
+                att_stats_dict[r['employee_id']] = r
+
         results = []
-        for emp_obj in hub_employees[:50]:  # cap to avoid slowness
-            att_count = Attendance.objects.filter(
-                employee=emp_obj,
-                date__gte=thirty_days_ago,
-                date__lte=today,
-                clock_in_time__isnull=False,
-            ).count()
-            late_count = Attendance.objects.filter(
-                employee=emp_obj,
-                date__gte=thirty_days_ago,
-                date__lte=today,
-                clock_in_time__hour__gte=10,
-            ).count()
+        for emp_obj in hub_employees:
+            r = att_stats_dict[emp_obj.id]
+            att_count = r['att_count']
+            late_count = r['late_count']
             absent_count = max(0, working_days - att_count)
             rate = round((att_count / working_days) * 100, 1)
             results.append({

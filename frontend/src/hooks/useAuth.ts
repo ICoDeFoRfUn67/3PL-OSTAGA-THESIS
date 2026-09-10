@@ -1,43 +1,49 @@
 import { useAuthStore } from '@/context/authStore';
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { authAPI } from '@/api/apiService';
 
-export const useAuth = () => {
-  const store = useAuthStore();
-  
-  // Initialize from localStorage on mount
-  useEffect(() => {
+// One-time initial migration/sync from legacy localStorage keys to authStore if needed
+let initialized = false;
+function syncInitialAuth() {
+  if (initialized) return;
+  initialized = true;
+  try {
     const token = localStorage.getItem('access_token');
-    const currentUser = localStorage.getItem('currentUser');
-    const currentEmployee = localStorage.getItem('currentEmployee');
-    
     if (token) {
-      store.setToken(token);
-      store.setIsAuthenticated(true);
-      
-      if (currentUser) {
-        try {
-          const user = JSON.parse(currentUser);
-          store.setUser(user);
-        } catch (e) {
-          console.error('Failed to parse user from localStorage:', e);
+      const store = useAuthStore.getState();
+      if (!store.token) store.setToken(token);
+      if (!store.isAuthenticated) store.setIsAuthenticated(true);
+      if (!store.user) {
+        const cu = localStorage.getItem('currentUser');
+        if (cu) {
+          try { store.setUser(JSON.parse(cu)); } catch {}
         }
       }
-      
-      if (currentEmployee) {
-        try {
-          const employee = JSON.parse(currentEmployee);
-          store.setEmployee(employee);
-        } catch (e) {
-          console.error('Failed to parse employee from localStorage:', e);
+      if (!store.employee) {
+        const ce = localStorage.getItem('currentEmployee');
+        if (ce) {
+          try { store.setEmployee(JSON.parse(ce)); } catch {}
         }
       }
     }
-  }, []);
-  
-  const isHR = store.employee?.role?.toLowerCase() === 'hr';
-  const isAdmin = store.employee?.role?.toLowerCase() === 'admin' || store.user?.role?.toLowerCase() === 'admin';
-  const permissions = store.employee?.hr_permissions || {};
+  } catch {}
+}
+syncInitialAuth();
+
+export const useAuth = () => {
+  const user = useAuthStore((s) => s.user);
+  const employee = useAuthStore((s) => s.employee);
+  const token = useAuthStore((s) => s.token);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const setUser = useAuthStore((s) => s.setUser);
+  const setEmployee = useAuthStore((s) => s.setEmployee);
+  const setToken = useAuthStore((s) => s.setToken);
+  const setIsAuthenticated = useAuthStore((s) => s.setIsAuthenticated);
+  const storeLogout = useAuthStore((s) => s.logout);
+
+  const isHR = employee?.role?.toLowerCase() === 'hr';
+  const isAdmin = employee?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin';
+  const permissions = employee?.hr_permissions || {};
 
   const logout = useCallback(async () => {
     try {
@@ -48,14 +54,14 @@ export const useAuth = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentEmployee');
-    store.logout();
-  }, [store]);
+    storeLogout();
+  }, [storeLogout]);
 
   return {
-    user: store.user,
-    employee: store.employee,
-    token: store.token || localStorage.getItem('access_token'),
-    isAuthenticated: store.isAuthenticated,
+    user,
+    employee,
+    token: token || localStorage.getItem('access_token'),
+    isAuthenticated,
     isAdmin,
     isHR,
     
@@ -66,10 +72,10 @@ export const useAuth = () => {
     canDeleteEmployees: isAdmin || (isHR && permissions.can_delete_employees),
     canResetPassword: isAdmin || (isHR && permissions.can_reset_password),
 
-    setUser: store.setUser,
-    setEmployee: store.setEmployee,
-    setToken: store.setToken,
-    setIsAuthenticated: store.setIsAuthenticated,
+    setUser,
+    setEmployee,
+    setToken,
+    setIsAuthenticated,
     logout,
   };
 };

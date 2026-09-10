@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/context/ThemeContext';
 import { useGetPayroll, useGetDocuments } from '@/hooks/useQueries';
 
 // removed unused InfoCard imports
@@ -159,33 +160,9 @@ export const EmployeeDashboard = () => {
 
   const queryClient = useQueryClient();
   const { success: toastSuccess, error: toastError } = useToast();
-
-  const [darkMode, setDarkMode] =
-    useState<boolean>(() => {
-      return (
-        localStorage.getItem('theme') ===
-        'dark'
-      );
-    });
-
-  /* ===================================
-     THEME
-  =================================== */
-
-  useEffect(() => {
-    const root = document.documentElement;
-
-    if (darkMode) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem(
-        'theme',
-        'light'
-      );
-    }
-  }, [darkMode]);
+  const { isDarkMode, toggleDarkMode } = useTheme();
+  const darkMode = isDarkMode;
+  const setDarkMode = () => toggleDarkMode();
 
   /* ===================================
      LEAVE HISTORY DATA FETCH
@@ -1424,7 +1401,7 @@ export const EmployeeDashboard = () => {
             {/* RIGHT */}
             <div className="flex items-center gap-2.5 md:gap-3.5">
               <button
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={toggleDarkMode}
                 className={`relative w-14 h-8 rounded-full p-1 transition-colors flex items-center cursor-pointer border ${
                   darkMode
                     ? 'bg-slate-950/40 border-white/5'
