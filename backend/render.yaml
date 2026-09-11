@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: threeplcjfinal-backend
+    name: 3pl-ostaga-thesis-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && python manage.py migrate
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
     startCommand: gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
@@ -17,8 +17,9 @@ services:
       - key: DB_SSL_REQUIRE
         value: "True"
       - key: ALLOWED_HOSTS
-        value: three-pl-company.onrender.com,*.vercel.app
-      - key: PUBLIC_SITE_URL
-        value: https://three-pl-company.onrender.com
+        value: .onrender.com,*.vercel.app,cj-3pl-ostaga.vercel.app
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://*.onrender.com,https://*.vercel.app,https://cj-3pl-ostaga.vercel.app
       - key: CORS_ALLOWED_ORIGIN_REGEXES
         value: "^https://.*\\.vercel\\.app$"
+

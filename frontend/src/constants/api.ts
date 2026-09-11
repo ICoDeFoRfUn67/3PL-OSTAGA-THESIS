@@ -23,15 +23,14 @@ function normalizeEnvApiBase(raw: string): string {
  */
 function resolveApiBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL?.trim();
-  const prod = !!import.meta.env.PROD;
-
-  if (prod) {
-    // In production, always use the backend directly with CORS
-    return 'https://three-pl-company.onrender.com/api';
-  }
-
   if (raw) {
     return normalizeEnvApiBase(raw);
+  }
+
+  const prod = !!import.meta.env.PROD;
+  if (prod) {
+    // Default fallback in production if VITE_API_URL is not configured
+    return 'https://three-pl-company.onrender.com/api';
   }
 
   return devFallback;

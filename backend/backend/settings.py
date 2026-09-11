@@ -49,16 +49,18 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS'
 SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'True' if not DEBUG else 'False').lower() in ('1', 'true', 'yes')
 # Read from env var for flexibility, default to hardcoded for production
 _ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '').strip()
-if _ALLOWED_HOSTS_ENV:
-    ALLOWED_HOSTS = [host.strip() for host in _ALLOWED_HOSTS_ENV.split(',')]
-else:
-    ALLOWED_HOSTS = [
+ALLOWED_HOSTS = [
+    ".onrender.com",
     "three-pl-company.onrender.com",
     "threepl-backend-wf79.onrender.com",
     ".vercel.app",
+    "cj-3pl-ostaga.vercel.app",
     "localhost",
     "127.0.0.1",
 ]
+if _ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS.extend([host.strip() for host in _ALLOWED_HOSTS_ENV.split(',') if host.strip() not in ALLOWED_HOSTS])
+
 
 
 # Application definition
@@ -150,9 +152,15 @@ else:
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",
+    "https://*.onrender.com",
+    "https://cj-3pl-ostaga.vercel.app",
     "https://threepl-backend-wf79.onrender.com",
     "https://three-pl-company.onrender.com",
 ]
+
+_CSRF_TRUSTED_ORIGINS_ENV = os.environ.get('CSRF_TRUSTED_ORIGINS', '').strip()
+if _CSRF_TRUSTED_ORIGINS_ENV:
+    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in _CSRF_TRUSTED_ORIGINS_ENV.split(',') if origin.strip() not in CSRF_TRUSTED_ORIGINS])
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -233,7 +241,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5175",
     "https://3-plcjfinal-79xnpq3is-cj-g-a-js-projects.vercel.app",  # Old Vercel frontend
     "https://3-plcj-again.vercel.app",  # Old Vercel frontend
-    "https://3-pl-cj.vercel.app",  # ✅ Current Vercel frontend
+    "https://3-pl-cj.vercel.app",  # Old Vercel frontend
+    "https://cj-3pl-ostaga.vercel.app",  # ✅ Current Vercel frontend
 ]
 # Production + preview deployments on Vercel (URLs change per branch)
 CORS_ALLOWED_ORIGIN_REGEXES = [
