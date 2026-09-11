@@ -117,9 +117,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Use PostgreSQL exclusively. Set DATABASE_URL in environment or fallback to local DB.
+_env_file = BASE_DIR / '.env'
+if _env_file.exists() and not os.environ.get('DATABASE_URL'):
+    for _line in _env_file.read_text(encoding='utf-8').splitlines():
+        if _line.strip().startswith('DATABASE_URL='):
+            os.environ['DATABASE_URL'] = _line.strip().split('=', 1)[1].strip()
+            break
+
 _DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
-# For local development, fallback to a sqlite DB if no DATABASE_URL provided
 if not _DATABASE_URL:
     _DATABASE_URL = f'sqlite:///{BASE_DIR / "db.sqlite3"}'
 
