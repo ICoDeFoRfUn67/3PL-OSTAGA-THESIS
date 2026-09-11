@@ -821,7 +821,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = Attendance.objects.exclude(employee__role__in=['Admin', 'HR']).select_related('employee', 'employee__hub').prefetch_related('saved_images').order_by('-date', '-clock_in_time')
+        queryset = Attendance.objects.exclude(
+            employee__role__in=['Admin', 'HR']
+        ).select_related('employee', 'employee__hub').prefetch_related(
+            Prefetch('saved_images', queryset=SavedImage.objects.only('id', 'image_type', 'attendance_id'))
+        ).order_by('-date', '-clock_in_time')
         queryset = apply_hr_hub_filter(queryset, self.request.user, hub_field='employee__hub')
         hub_id = self.request.query_params.get('hub_id')
         employee_id = self.request.query_params.get('employee_id')
@@ -1921,7 +1925,13 @@ class PayrollViewSet(viewsets.ModelViewSet):
         year = self.request.query_params.get('year')
 
         # Existing payroll rows
-        queryset = Payroll.objects.exclude(employee__role__in=['Admin', 'HR']).select_related('employee', 'employee__hub').order_by('-period_end')
+        queryset = Payroll.objects.exclude(
+            employee__role__in=['Admin', 'HR']
+        ).select_related(
+            'employee', 'employee__hub'
+        ).prefetch_related(
+            Prefetch('employee__saved_images', queryset=SavedImage.objects.only('id', 'image_type', 'employee_id', 'description'))
+        ).order_by('-period_end')
         queryset = apply_hr_hub_filter(queryset, self.request.user, hub_field='employee__hub')
 
         if getattr(self, 'action', None) != 'list':
@@ -1953,7 +1963,11 @@ class PayrollViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(employee_id=employee_id)
 
         # Build list of employees for the hub (or all)
-        employees_qs = Employee.objects.exclude(role__in=['Admin', 'HR']).select_related('hub')
+        employees_qs = Employee.objects.exclude(
+            role__in=['Admin', 'HR']
+        ).select_related('hub').prefetch_related(
+            Prefetch('saved_images', queryset=SavedImage.objects.only('id', 'image_type', 'employee_id', 'description'))
+        )
         if hub:
             employees_qs = employees_qs.filter(hub__name=hub)
 

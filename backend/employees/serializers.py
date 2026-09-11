@@ -159,7 +159,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         if hasattr(obj, cache_attr):
             return getattr(obj, cache_attr)
         from .models import SavedImage
-        saved = SavedImage.objects.filter(attendance=obj, image_type=image_type).first()
+        saved = SavedImage.objects.only('id', 'image_type', 'attendance_id').filter(attendance=obj, image_type=image_type).first()
         setattr(obj, cache_attr, saved)
         return saved
 
@@ -336,13 +336,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     )
     user_info = UserSerializer(source='user', read_only=True)
 
-    attendance_history = AttendanceSerializer(
-        source='attendance_records',
-        many=True,
-        read_only=True
-    )
-
-    documents = EmployeeDocumentSerializer(many=True, read_only=True)
+    attendance_history = serializers.SerializerMethodField()
+    documents = serializers.SerializerMethodField()
     hr_permissions = HRPermissionSerializer(read_only=True)
 
     profile_image_url = serializers.SerializerMethodField()
@@ -361,6 +356,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'can_login': {'required': False}
         }
     
+    def get_attendance_history(self, obj):
+        if self.context.get('include_attendance', False):
+            return AttendanceSerializer(obj.attendance_records.all(), many=True, context=self.context).data
+        return []
+
+    def get_documents(self, obj):
+        if self.context.get('include_documents', False):
+            return EmployeeDocumentSerializer(obj.documents.all(), many=True, context=self.context).data
+        return []
+
     def validate(self, data):
         """Automatically disable login for Blacklist and Resign employees"""
         status = data.get('status')
@@ -371,33 +376,35 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return f"{obj.firstname} {obj.middle_initial} {obj.lastname}".strip()
 
+    def _get_profile_saved_image(self, obj):
+        prefetched = getattr(obj, '_prefetched_objects_cache', {}).get('saved_images')
+        if prefetched is not None:
+            for s in prefetched:
+                if s.image_type == 'profile':
+                    return s
+            return None
+        return obj.saved_images.only('id', 'image_type', 'employee_id').filter(image_type='profile').order_by('-id').first()
+
     def get_profile_image_url(self, obj):
-        # 1. Try permanent DB-backed URL first
-        from .models import SavedImage
-        saved = obj.saved_images.filter(image_type='profile').order_by('-id').first()
-        if saved and saved.image_data:
+        saved = self._get_profile_saved_image(obj)
+        if saved:
             return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
-            
-        # 2. Fallback to filesystem URL
         if obj.profile_image:
             return absolute_media_url(self.context.get('request'), obj.profile_image.url)
         return None
 
     def get_permanent_profile_image_url(self, obj):
-        from .models import SavedImage
-        saved_image = obj.saved_images.filter(image_type='profile').order_by('-id').first()
-        if saved_image:
-            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved_image.id}/")
+        saved = self._get_profile_saved_image(obj)
+        if saved:
+            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
         return None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         req = self.context.get('request')
         
-        # Prioritize permanent DB-backed URL for the main profile_image field too
-        from .models import SavedImage
-        saved = instance.saved_images.filter(image_type='profile').order_by('-id').first()
-        if saved and saved.image_data:
+        saved = self._get_profile_saved_image(instance)
+        if saved:
             data['profile_image'] = absolute_media_url(req, f"/api/saved-images/{saved.id}/")
         else:
             pi = data.get('profile_image')
@@ -730,14 +737,18 @@ class PayrollSerializer(serializers.ModelSerializer):
         return ''
 
     def get_profile_image(self, obj):
-        if not obj.employee:
+        if not getattr(obj, 'employee', None):
             return None
-        
-        from .models import SavedImage
-        saved = obj.employee.saved_images.filter(image_type='profile').order_by('-id').first()
-        if saved and saved.image_data:
-            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
-            
+        prefetched = getattr(obj.employee, '_prefetched_objects_cache', {}).get('saved_images')
+        if prefetched is not None:
+            for s in prefetched:
+                if s.image_type == 'profile':
+                    return absolute_media_url(self.context.get('request'), f"/api/saved-images/{s.id}/")
+        else:
+            from .models import SavedImage
+            saved = obj.employee.saved_images.only('id', 'image_type', 'employee_id').filter(image_type='profile').order_by('-id').first()
+            if saved:
+                return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
         if obj.employee.profile_image:
             return absolute_media_url(self.context.get('request'), obj.employee.profile_image.url)
         return None
@@ -907,13 +918,26 @@ class PayrollSerializer(serializers.ModelSerializer):
         )
 
     def get_payslip_image_url(self, obj):
-        # 1. Try permanent DB-backed URL first
-        from .models import SavedImage
-        saved = SavedImage.objects.filter(employee=obj.employee, image_type='payslip', description__contains=str(obj.period_start)).first()
-        if saved and saved.image_data:
-            return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
+        if not getattr(obj, 'employee', None):
+            return None
+        prefetched = getattr(obj.employee, '_prefetched_objects_cache', {}).get('saved_images')
+        if prefetched is not None:
+            p_str = str(obj.period_start) if obj.period_start else ''
+            for s in prefetched:
+                if s.image_type == 'payslip' and (not p_str or p_str in (s.description or '')):
+                    return absolute_media_url(self.context.get('request'), f"/api/saved-images/{s.id}/")
+        else:
+            from .models import SavedImage
+            saved = SavedImage.objects.only('id', 'image_type', 'employee_id').filter(
+                employee=obj.employee,
+                image_type='payslip'
+            )
+            if obj.period_start:
+                saved = saved.filter(description__contains=str(obj.period_start))
+            saved = saved.first()
+            if saved:
+                return absolute_media_url(self.context.get('request'), f"/api/saved-images/{saved.id}/")
             
-        # 2. Fallback to filesystem URL
         if obj.payslip_image:
             return absolute_media_url(self.context.get('request'), obj.payslip_image.url)
         return None
@@ -922,79 +946,74 @@ class PayrollSerializer(serializers.ModelSerializer):
         from datetime import date
         return date(obj.period_end.year, obj.period_end.month, 1)
 
-    # Attendance-derived fields (computed live)
-    def get_total_hours(self, obj):
-        try:
-            from datetime import timedelta
-            total_seconds = 0.0
-            cumulative_start = self._get_cumulative_start(obj)
-            qs = obj.employee.attendance_records.filter(date__gte=cumulative_start, date__lte=obj.period_end)
-            from django.utils import timezone as djtz
-            today = djtz.now().date()
-            for a in qs:
-                if a.clock_in_time and a.clock_out_time:
-                    diff = (a.clock_out_time - a.clock_in_time).total_seconds()
-                    if diff > 0:
-                        total_seconds += diff
-                elif a.clock_in_time and not a.clock_out_time:
-                    # approximate until now if it's today's record
-                    try:
-                        if a.date == today:
-                            diff = (djtz.now() - a.clock_in_time).total_seconds()
-                            if diff > 0:
-                                total_seconds += diff
-                    except Exception:
-                        pass
-            return float(round(total_seconds / 3600.0, 2))
-        except Exception:
-            return float(obj.total_hours or 0)
+    def _get_attendance_summary(self, obj):
+        if hasattr(obj, '_cached_summary'):
+            return obj._cached_summary
 
-    def get_overtime_hours(self, obj):
+        stored_total = getattr(obj, 'total_hours', None)
+        stored_ot = getattr(obj, 'overtime_hours', None)
+        stored_late = getattr(obj, 'lates', None)
+        stored_absent = getattr(obj, 'absences', None)
+        if stored_total is not None and float(stored_total) > 0:
+            summary = {
+                'total_hours': float(stored_total),
+                'overtime_hours': float(stored_ot or 0),
+                'lates': int(stored_late or 0),
+                'absences': int(stored_absent or 0),
+            }
+            obj._cached_summary = summary
+            return summary
+
+        if not getattr(obj, 'period_end', None):
+            summary = {
+                'total_hours': float(stored_total or 0),
+                'overtime_hours': float(stored_ot or 0),
+                'lates': int(stored_late or 0),
+                'absences': int(stored_absent or 0),
+            }
+            obj._cached_summary = summary
+            return summary
+
         try:
             from datetime import timedelta
-            overtime_seconds = 0.0
-            STANDARD_DAY_HOURS = 8
             cumulative_start = self._get_cumulative_start(obj)
-            qs = obj.employee.attendance_records.filter(date__gte=cumulative_start, date__lte=obj.period_end)
+            qs = obj.employee.attendance_records.filter(
+                date__gte=cumulative_start,
+                date__lte=obj.period_end
+            ).values('clock_in_time', 'clock_out_time', 'date')
+
+            total_seconds = 0.0
+            overtime_seconds = 0.0
+            lates = 0
+            STANDARD_DAY_HOURS = 8
+            LATE_HOUR = 10
             from django.utils import timezone as djtz
             today = djtz.now().date()
+            present_days = set()
+
             for a in qs:
-                if a.clock_in_time and a.clock_out_time:
-                    diff = (a.clock_out_time - a.clock_in_time).total_seconds()
-                    if diff > 0:
-                        hours = diff / 3600.0
-                        if hours > STANDARD_DAY_HOURS:
-                            overtime_seconds += (hours - STANDARD_DAY_HOURS) * 3600.0
-                elif a.clock_in_time and not a.clock_out_time:
-                    try:
-                        if a.date == today:
-                            diff = (djtz.now() - a.clock_in_time).total_seconds()
+                ci = a['clock_in_time']
+                co = a['clock_out_time']
+                d = a['date']
+                if ci:
+                    present_days.add(d)
+                    if getattr(ci, 'hour', 0) >= LATE_HOUR:
+                        lates += 1
+                    if co:
+                        diff = (co - ci).total_seconds()
+                        if diff > 0:
+                            total_seconds += diff
                             hours = diff / 3600.0
                             if hours > STANDARD_DAY_HOURS:
                                 overtime_seconds += (hours - STANDARD_DAY_HOURS) * 3600.0
-                    except Exception:
-                        pass
-            return float(round(overtime_seconds / 3600.0, 2))
-        except Exception:
-            return float(obj.overtime_hours or 0)
+                    elif d == today:
+                        try:
+                            diff = (djtz.now() - ci).total_seconds()
+                            if diff > 0:
+                                total_seconds += diff
+                        except Exception:
+                            pass
 
-    def get_lates(self, obj):
-        try:
-            LATE_HOUR = 10
-            count = 0
-            cumulative_start = self._get_cumulative_start(obj)
-            qs = obj.employee.attendance_records.filter(date__gte=cumulative_start, date__lte=obj.period_end)
-            for a in qs:
-                if a.clock_in_time and getattr(a.clock_in_time, 'hour', None) is not None:
-                    if a.clock_in_time.hour >= LATE_HOUR:
-                        count += 1
-            return int(count)
-        except Exception:
-            return int(obj.lates or 0)
-
-    def get_absences(self, obj):
-        try:
-            from datetime import timedelta
             def count_weekdays(start, end):
                 days = 0
                 cur = start
@@ -1004,28 +1023,51 @@ class PayrollSerializer(serializers.ModelSerializer):
                     cur += timedelta(days=1)
                 return days
 
-            cumulative_start = self._get_cumulative_start(obj)
             working_days = count_weekdays(cumulative_start, obj.period_end)
-            qs = obj.employee.attendance_records.filter(date__gte=cumulative_start, date__lte=obj.period_end)
-            present_days = set()
-            for a in qs:
-                if a.clock_in_time:
-                    present_days.add(a.date)
+            approved_leaves = LeaveRequest.objects.filter(
+                employee=obj.employee,
+                status='approved',
+                start_date__lte=obj.period_end,
+                end_date__gte=cumulative_start
+            ).values_list('start_date', 'end_date')
 
-            approved_leaves = LeaveRequest.objects.filter(employee=obj.employee, status='approved')
             leave_days = 0
-            for lr in approved_leaves:
-                ls = lr.start_date
-                le = lr.end_date
+            for ls, le in approved_leaves:
                 overlap_start = max(ls, cumulative_start)
                 overlap_end = min(le, obj.period_end)
                 if overlap_start <= overlap_end:
                     leave_days += count_weekdays(overlap_start, overlap_end)
 
             absences_count = max(0, working_days - len(present_days) - leave_days)
-            return int(absences_count)
+
+            summary = {
+                'total_hours': float(round(total_seconds / 3600.0, 2)),
+                'overtime_hours': float(round(overtime_seconds / 3600.0, 2)),
+                'lates': int(lates),
+                'absences': int(absences_count),
+            }
         except Exception:
-            return int(obj.absences or 0)
+            summary = {
+                'total_hours': float(stored_total or 0),
+                'overtime_hours': float(stored_ot or 0),
+                'lates': int(stored_late or 0),
+                'absences': int(stored_absent or 0),
+            }
+
+        obj._cached_summary = summary
+        return summary
+
+    def get_total_hours(self, obj):
+        return self._get_attendance_summary(obj)['total_hours']
+
+    def get_overtime_hours(self, obj):
+        return self._get_attendance_summary(obj)['overtime_hours']
+
+    def get_lates(self, obj):
+        return self._get_attendance_summary(obj)['lates']
+
+    def get_absences(self, obj):
+        return self._get_attendance_summary(obj)['absences']
 
     
 
