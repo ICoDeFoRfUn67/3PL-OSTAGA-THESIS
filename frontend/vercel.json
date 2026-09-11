@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://threepl-backend-wf79.onrender.com/api/:path*"
+      "destination": "https://threepl-ostaga-thesis.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",

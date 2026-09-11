@@ -30,7 +30,7 @@ function resolveApiBaseUrl(): string {
   const prod = !!import.meta.env.PROD;
   if (prod) {
     // Default fallback in production if VITE_API_URL is not configured
-    return 'https://three-pl-company.onrender.com/api';
+    return 'https://threepl-ostaga-thesis.onrender.com/api';
   }
 
   return devFallback;
