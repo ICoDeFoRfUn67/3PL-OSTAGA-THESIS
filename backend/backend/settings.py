@@ -51,6 +51,7 @@ SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'True' if not DEBUG 
 _ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '').strip()
 ALLOWED_HOSTS = [
     ".onrender.com",
+    "threepl-ostaga-thesis.onrender.com",
     "threepl-cj-capstone.onrender.com",
     "three-pl-company.onrender.com",
     "threepl-backend-wf79.onrender.com",
@@ -61,7 +62,10 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
 ]
 if _ALLOWED_HOSTS_ENV:
-    ALLOWED_HOSTS.extend([host.strip() for host in _ALLOWED_HOSTS_ENV.split(',') if host.strip() not in ALLOWED_HOSTS])
+    for _raw_host in _ALLOWED_HOSTS_ENV.split(','):
+        _cleaned_host = _raw_host.strip().replace('https://', '').replace('http://', '').split('/')[0].strip()
+        if _cleaned_host and _cleaned_host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_cleaned_host)
 
 
 
@@ -161,6 +165,7 @@ else:
 CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",
     "https://*.onrender.com",
+    "https://threepl-ostaga-thesis.onrender.com",
     "https://capstone-cj-final.vercel.app",
     "https://threepl-cj-capstone.onrender.com",
     "https://cj-3pl-ostaga.vercel.app",
@@ -170,7 +175,13 @@ CSRF_TRUSTED_ORIGINS = [
 
 _CSRF_TRUSTED_ORIGINS_ENV = os.environ.get('CSRF_TRUSTED_ORIGINS', '').strip()
 if _CSRF_TRUSTED_ORIGINS_ENV:
-    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in _CSRF_TRUSTED_ORIGINS_ENV.split(',') if origin.strip() not in CSRF_TRUSTED_ORIGINS])
+    for _raw_origin in _CSRF_TRUSTED_ORIGINS_ENV.split(','):
+        _o = _raw_origin.strip()
+        if _o:
+            if not _o.startswith('http://') and not _o.startswith('https://'):
+                _o = f'https://{_o}'
+            if _o not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_o)
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 

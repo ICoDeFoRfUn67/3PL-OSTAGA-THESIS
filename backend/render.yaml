@@ -17,8 +17,8 @@ services:
       - key: DB_SSL_REQUIRE
         value: "True"
       - key: ALLOWED_HOSTS
-        value: .onrender.com,*.vercel.app,capstone-cj-final.vercel.app,threepl-cj-capstone.onrender.com
+        value: .onrender.com,*.vercel.app,capstone-cj-final.vercel.app,threepl-ostaga-thesis.onrender.com,threepl-cj-capstone.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
-        value: https://*.onrender.com,https://*.vercel.app,https://capstone-cj-final.vercel.app,https://threepl-cj-capstone.onrender.com
+        value: https://*.onrender.com,https://*.vercel.app,https://capstone-cj-final.vercel.app,https://threepl-ostaga-thesis.onrender.com,https://threepl-cj-capstone.onrender.com
       - key: CORS_ALLOWED_ORIGIN_REGEXES
         value: "^https://.*\\.vercel\\.app$"
