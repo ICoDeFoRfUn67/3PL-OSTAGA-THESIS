@@ -4,8 +4,10 @@ from django.views.static import serve
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from employees.views import health_check
 
 urlpatterns = [
+    path('healthz/', health_check, name='healthz'),
     path('admin/', admin.site.urls),
 
     # JWT endpoints (SimpleJWT)

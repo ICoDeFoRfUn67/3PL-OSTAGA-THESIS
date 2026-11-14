@@ -19,6 +19,7 @@ router.register(r'hr-permissions', views.HRPermissionViewSet, basename='hr-permi
 router.register(r'payment-accounts', PaymentAccountViewSet, basename='payment-accounts')
 
 urlpatterns = [
+    path('health/', views.health_check, name='health_check'),
     path('meta/', views.MetaView.as_view(), name='meta'),
     path('meta/<str:key>/', views.MetaView.as_view(), name='meta_item'),
     path('login/', views.LoginView.as_view(), name='login'),

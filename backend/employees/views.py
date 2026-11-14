@@ -20,6 +20,13 @@ import json
 from .models import Hub, Employee, EditRequest, LeaveRequest, Attendance, ManualAttendance, LiveLocation, Payroll, EmployeeDocument, ActivityLog, SecurityAlert, HRPermission, SavedImage, PaymentAccount
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """Zero-overhead ping endpoint for keep-alive monitoring and health checks."""
+    return Response({'status': 'ok', 'service': 'threepl-backend', 'time': timezone.now().isoformat()})
+
+
 # ── Custom Pagination Classes ──────────────────────────────────────────────────
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -3742,6 +3749,14 @@ class DashboardAnalyticsView(APIView):
         managed_hub_ids = get_managed_hub_ids(request.user)
         is_hr = managed_hub_ids is not None
 
+        from django.core.cache import cache
+        force_refresh = request.query_params.get('refresh', '').lower() == 'true'
+        cache_key = f"dashboard_analytics_{request.user.id}_{managed_hub_ids}"
+        if not force_refresh:
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return Response(cached_data)
+
         def filter_employees(qs):
             if managed_hub_ids is not None:
                 return qs.filter(hub_id__in=managed_hub_ids)
@@ -4124,7 +4139,7 @@ class DashboardAnalyticsView(APIView):
         ]
         hub_total_pay.sort(key=lambda x: x['total_pay'], reverse=True)
 
-        return Response({
+        analytics_payload = {
             'attendance_trend': attendance_trend,
             'top_hubs_active': hub_active_counts,
             'awol_resign_blacklist': awol_resign_blacklist,
@@ -4145,7 +4160,9 @@ class DashboardAnalyticsView(APIView):
             'highest_paid_employees': highest_paid_employees,
             'hub_total_pay': hub_total_pay,
             'hub_employee_distribution': hub_employee_distribution,
-        })
+        }
+        cache.set(cache_key, analytics_payload, timeout=20)
+        return Response(analytics_payload)
 
 
 class TopEmployeesByHubView(APIView):
